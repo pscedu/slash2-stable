@@ -226,7 +226,8 @@ struct rpmi_ios {
 	/*
 	 * Aggregate bandwidth for all incoming and outgoing replication traffic.
 	 */
-	int64_t			  si_repl_pending;
+	int64_t			  si_repl_ingress_pending;
+	int64_t			  si_repl_egress_pending;
 	int64_t			  si_repl_ingress_aggr;
 	int64_t			  si_repl_egress_aggr;
 };
@@ -403,6 +404,14 @@ extern int			 slm_preclaim_enabled;
 extern struct psc_hashtbl	 slm_roots;
 
 extern int			 debug_ondisk_inode;
+
+extern int	mds_update_boot_file(void);
+
+extern int	mds_open_file(char *, int, void **);
+extern int	mds_read_file(void *, void *, uint64_t, size_t *, off_t);
+extern int	mds_write_file(void *, void *, uint64_t, size_t *, off_t);
+extern int	mds_release_file(void *);
+
 
 /*
  * List of fault point that will be auto-registered on startup.

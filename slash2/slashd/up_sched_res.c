@@ -90,32 +90,6 @@ void (*upd_proctab[])(struct slm_update_data *);
 extern struct slrpc_batch_rep_handler slm_batch_rep_preclaim;
 extern struct slrpc_batch_rep_handler slm_batch_rep_repl;
 
-void
-upd_rpmi_add(struct resprof_mds_info *rpmi, struct slm_update_data *upd)
-{
-	int locked;
-
-	locked = RPMI_RLOCK(rpmi);
-	if (!psc_dynarray_add_ifdne(&rpmi->rpmi_upschq, upd))
-		UPD_INCREF(upd);
-	RPMI_URLOCK(rpmi, locked);
-}
-
-void
-upd_rpmi_remove(struct resprof_mds_info *rpmi,
-    struct slm_update_data *upd)
-{
-	int locked, idx;
-
-	locked = RPMI_RLOCK(rpmi);
-	idx = psc_dynarray_finditem(&rpmi->rpmi_upschq, upd);
-	if (idx != -1)
-		psc_dynarray_removepos(&rpmi->rpmi_upschq, idx);
-	RPMI_URLOCK(rpmi, locked);
-	if (idx != -1)
-		UPD_DECREF(upd);
-}
-
 /*
  * Handle batch replication finish/error.  If success, we update the
  * bmap to the new residency states.  If error, we revert all changes
@@ -177,7 +151,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 		retifset[BREPLST_REPL_SCHED] = 1;
 		retifset[BREPLST_REPL_QUEUED] = 1;
 
-		OPSTAT2_ADD("repl-compl", bsr->bsr_amt);
+		OPSTAT2_ADD("repl-success", bsr->bsr_amt);
 	} else {
 		if (pp == NULL ||
 		    rc == PFLERR_ALREADY ||
@@ -201,10 +175,14 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 		    src_resm ? src_resm->resm_name : NULL,
 		    dst_resm ? dst_resm->resm_name : NULL,
 		    rc);
+
+		OPSTAT2_ADD("repl-failure", bsr->bsr_amt);
 	}
 
 	if (mds_repl_bmap_apply(b, tract, retifset, bsr->bsr_off))
 		mds_bmap_write_logrepls(b);
+	else
+		OPSTAT_INCR("repl-in-vain");
 
  out:
 	if (b)
@@ -739,8 +717,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 		iosid = fcmh_2_repl(f, dst_res_i.ri_rnd_idx);
 		dst_res = libsl_id2res(iosid);
 		if (dst_res == NULL) {
-			DEBUG_BMAP(PLL_ERROR, b, "invalid iosid: %u",
-			    iosid);
+			DEBUG_BMAP(PLL_ERROR, b, "invalid iosid: %u(0x%x)",
+			    iosid, iosid);
 			continue;
 		}
 		off = SL_BITS_PER_REPLICA * dst_res_i.ri_rnd_idx;
@@ -880,11 +858,15 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	rc = slm_fcmh_get(&upg->upg_fg, &f);
 	if (rc)
 		goto out;
+
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
+
 	rc = bmap_get(f, upg->upg_bno, SL_WRITE, &b);
 	if (rc)
 		goto out;
-	BMAP_ULOCK(b);
 
+	BMAP_ULOCK(b);
 	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
 		mds_inox_ensure_loaded(fcmh_2_inoh(f));
 
@@ -897,9 +879,6 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		retifset[BREPLST_GARBAGE_SCHED] = 1;
 	}
 
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
-
 	BMAP_LOCK(b);
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
@@ -910,7 +889,6 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		rc = 1;
 
 	BMAP_ULOCK(b);
-	FCMH_UNBUSY(f, 1);
 
  out:
 	if (rc) {
@@ -929,11 +907,13 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 			wk->bno = BMAPNO_ANY;
 		pfl_workq_putitemq(&slm_db_lopri_workq, wk);
 	}
-	if (b) {
+	if (b)
 		bmap_op_done(b);
-	}
-	if (f)
+
+	if (f) {
+		FCMH_UNBUSY(f, 1);
 		fcmh_op_done(f);
+	}
 }
 
 int

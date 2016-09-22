@@ -515,8 +515,8 @@ main(int argc, char *argv[])
 		 * Sometimes you need to do an export/import cycle
 		 * or just run zfs mount -a.
 		 */
-		errx(1, "No ZFS file system found! Try zpool import -a "
-			"or pool-name with zfs-fuse first.");
+		errx(1, "No ZFS file system found! Try zpool import or zfs mount "
+			"with zfs-fuse first.");
 
 	found = 0;
 	for (vfsid = 0; vfsid < zfs_nmounts; vfsid++) {
@@ -701,6 +701,8 @@ main(int argc, char *argv[])
 	slmbchrqthr_spawn();
 	slmupschthr_spawn();
 	sl_freapthr_spawn(SLMTHRT_FREAP, "slmfreapthr");
+
+	mds_update_boot_file();
 
 	time(&now);
 	psclogs_info(SLMSS_INFO, "SLASH2 %s version %d started at %s",

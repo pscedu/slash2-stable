@@ -162,6 +162,14 @@ slm_bmap_resetnonce(struct bmap *b)
 	memset(&a, 0, sizeof(a));
 	a.b = b;
 
+	/*
+ 	 * XXX we have to do this each time the bmap is evicted
+ 	 * from the cache or we reboot.
+ 	 *
+ 	 * Instead of associating a nonce with each bmap, we can
+ 	 * associating it with the whole table.
+ 	 *
+ 	 */
 	dbdo(slm_bmap_resetnonce_cb, &a,
 	    " SELECT	nonce,"
 	    "		resid"
@@ -212,6 +220,7 @@ mds_bmap_read(struct bmap *b, int flags)
 		mds_bmap_initnew(b);
 		goto out2;
 	}
+	OPSTAT_INCR("bmap-read");
 
 	iovs[0].iov_base = bmi_2_ondisk(bmi);
 	iovs[0].iov_len = BMAP_OD_CRCSZ;

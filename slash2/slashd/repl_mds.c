@@ -767,6 +767,9 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	if (rc)
 		return (-rc);
 
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
+
 	if (!fcmh_isdir(f) && !fcmh_isreg(f))
 		PFL_GOTOERR(out, rc = -PFLERR_NOTSUP);
 
@@ -795,14 +798,15 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	brepls_init(tract, -1);
 	tract[BREPLST_INVALID] = BREPLST_REPL_QUEUED;
 	tract[BREPLST_GARBAGE] = BREPLST_REPL_QUEUED;
+	/*
+	 * Is this Okay because we have not sent an RPC out?
+	 */
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_REPL_QUEUED;
 
 	/* Wildcards shouldn't result in errors on zero-length files. */
 	if (*nbmaps != (sl_bmapno_t)-1)
 		rc = -SLERR_BMAP_INVALID;
 
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	for (; *nbmaps && bmapno < fcmh_nvalidbmaps(f);
 	    bmapno++, --*nbmaps, nbmaps_processed++) {
 
@@ -815,7 +819,7 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		if (rc) {
 			if (rc == -SLERR_BMAP_ZERO)
 				rc = 0;
-			break;
+			PFL_GOTOERR(out, rc);
 		}
 
 		/*
@@ -872,11 +876,12 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 			break;
 		}
 	}
-	FCMH_UNBUSY(f, 1);
 
  out:
-	if (f)
+	if (f) {
+		FCMH_UNBUSY(f, 1);
 		fcmh_op_done(f);
+	}
 	*nbmaps = nbmaps_processed;
 	return (rc);
 }
@@ -984,12 +989,11 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 
 		rc = -bmap_get(f, bmapno, SL_WRITE, &b);
 		if (rc) {
-			if (rc == -SLERR_BMAP_ZERO) {
+			if (rc == -SLERR_BMAP_ZERO)
 				rc = 0;
-				break;
-			}
 			PFL_GOTOERR(out, rc);
 		}
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
 		/*
 		 * Before blindly doing the transition, we have to check
@@ -1064,13 +1068,13 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 
 	/* reserve */
 	if (amt > 0) {
-		if ((is->si_repl_pending + amt > cap * BW_UNITSZ) || 
-		    (id->si_repl_pending + amt > cap * BW_UNITSZ)) {
+		if ((is->si_repl_ingress_pending + is->si_repl_egress_pending + amt > cap * BW_UNITSZ) || 
+		     id->si_repl_ingress_pending + id->si_repl_egress_pending + amt > cap * BW_UNITSZ) { 
 			ret = 0;
 			goto out;
 		}
-		is->si_repl_pending += amt;
-		id->si_repl_pending += amt;
+		is->si_repl_egress_pending += amt;
+		id->si_repl_ingress_pending += amt;
 
 		psclog_diag("adjust bandwidth; src=%s dst=%s amt=%"PRId64,
 		    src->resm_name, dst->resm_name, amt);
@@ -1078,10 +1082,10 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 
 	/* unreserve */
 	if (amt < 0) {
-		is->si_repl_pending += amt;
-		id->si_repl_pending += amt;
-		psc_assert(is->si_repl_pending >= 0);
-		psc_assert(id->si_repl_pending >= 0);
+		is->si_repl_egress_pending += amt;
+		id->si_repl_ingress_pending += amt;
+		psc_assert(is->si_repl_egress_pending >= 0);
+		psc_assert(id->si_repl_ingress_pending >= 0);
 		if (!rc) {
 			is->si_repl_egress_aggr += -amt;
 			id->si_repl_ingress_aggr += -amt;
