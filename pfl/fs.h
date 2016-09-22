@@ -167,8 +167,6 @@ struct pfl_fsthr {
 	struct pscfs_req		*pft_pfr;
 	char				 pft_uprog[128];
 	void				*pft_private;	// XXX make per-module
-	struct pfl_multiwait		 pft_multiwait;
-	struct pfl_multiwaitcond	 pft_multiwaitcond;
 };
 
 void	pscfs_addarg(struct pscfs_args *, const char *);

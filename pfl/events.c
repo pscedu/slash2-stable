@@ -339,15 +339,26 @@ pscrpc_reply_in_callback(lnet_event_t *ev)
 	req->rq_receiving_reply = 0;
 
 	if (ev->type == LNET_EVENT_PUT && ev->status == 0) {
-		struct timespec ts;
+		struct timespec ts, tmp;
 
 		req->rq_replied = 1;
 		req->rq_nob_received = ev->mlength;
 
 		PFL_GETTIMESPEC(&ts);
-		timespecsub(&ts, &req->rq_sent_ts, &ts);
-		pfl_opstats_grad_incr(&pfl_rpc_client_request_latencies,
-		    ts.tv_sec);
+		timespecsub(&ts, &req->rq_sent_ts, &tmp);
+		/*
+ 		 * 09/21/2016: hit segfault during kernel 4.4 build:
+ 		 *
+ 		 * {tv_sec = -1, tv_nsec = 692443857}
+ 		 *
+ 		 * usocklnd_read_handler() --> usocklnd_read_msg() --> 
+ 		 * lnet_finalize() --> lnet_enq_event_locked() -->
+ 		 * pscrpc_master_callback() --> pscrpc_reply_in_callback().
+ 		 *
+ 		 */
+		if (tmp.tv_sec >= 0)
+			pfl_opstats_grad_incr(&pfl_rpc_client_request_latencies, 
+			    tmp.tv_sec);
 	}
 
 	if (req->rq_compl)
