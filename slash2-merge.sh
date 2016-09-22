@@ -131,5 +131,5 @@ git pull -X subtree=distrib/iozone -X theirs --no-edit distrib.iozone master
 bail-if-fail
 
 echo
-echo "Please do a recursive diff to make sure (e.g., diff -dru -x .git tree1 tree2)!"
+echo "Please do a recursive diff to make sure that two trees are identical (e.g., diff -dru -x .git tree1 tree2)!"
 exit 0
