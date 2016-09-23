@@ -79,6 +79,8 @@ mds_replay_bmap(void *jent, int op)
 	if (rc)
 		goto out;
 
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	rc = bmap_getf(f, cp->bno, SL_WRITE, BMAPGETF_CREATE, &b);
 	if (rc)
 		goto out;
@@ -145,8 +147,6 @@ mds_replay_bmap(void *jent, int op)
 		 * So we have some changes in the journal, but not
 		 * in the sql table.
 		 */
-		FCMH_LOCK(b->bcm_fcmh);
-		FCMH_WAIT_BUSY(b->bcm_fcmh, 1);
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
@@ -197,26 +197,23 @@ mds_replay_bmap(void *jent, int op)
 				break;
 			}
 
-		FCMH_UNBUSY(b->bcm_fcmh, 1);
 		break;
 	}
 
 	DEBUG_BMAPOD(PLL_DIAG, b, "replayed bmap op=%d", op);
 
-	FCMH_LOCK(b->bcm_fcmh);
-	FCMH_WAIT_BUSY(b->bcm_fcmh, 1);
-
 	BMAP_LOCK(b);
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	rc = mds_bmap_write(b, NULL, NULL);
 	BMAP_ULOCK(b);
-	FCMH_UNBUSY(b->bcm_fcmh, 1);
 
  out:
 	if (b)
 		bmap_op_done(b);
-	if (f)
+	if (f) {
+		FCMH_UNBUSY(f, 1);
 		fcmh_op_done(f);
+	}
 	return (rc);
 }
 

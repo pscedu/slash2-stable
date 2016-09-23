@@ -200,7 +200,7 @@ slm_bmap_resetnonce(struct bmap *b)
 int
 mds_bmap_read(struct bmap *b, int flags)
 {
-	int rc, new, unbusy, vfsid, retifset[NBREPLST];
+	int rc, new, vfsid, retifset[NBREPLST];
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct slm_update_data *upd;
 	struct fidc_membh *f;
@@ -215,6 +215,8 @@ mds_bmap_read(struct bmap *b, int flags)
 
 	new = 0;
 	f = b->bcm_fcmh;
+	FCMH_BUSY_ENSURE(f);
+
 	if (flags & BMAPGETF_NODISKREAD) {
 		new = 1;
 		mds_bmap_initnew(b);
@@ -277,13 +279,6 @@ mds_bmap_read(struct bmap *b, int flags)
 
  out2:
 
-	unbusy = 0;
-	FCMH_LOCK(f);
-	if (!FCMH_HAS_BUSY(f)) {
-		unbusy = 1;
-		FCMH_WAIT_BUSY(f, 1);
-	} else
-		FCMH_ULOCK(f);
 	BMAP_LOCK(b);
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
@@ -305,8 +300,6 @@ mds_bmap_read(struct bmap *b, int flags)
 	}
 
 	BMAP_ULOCK(b);
-	if (unbusy)
-		FCMH_UNBUSY(f, 1);
 	return (0);
 }
 
@@ -421,11 +414,8 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	if (vfsid != current_vfsid)
 		return (-EINVAL);
 
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	idx = mds_repl_ios_lookup(vfsid, ih, iosid);
 	if (idx < 0) {
-		FCMH_UNBUSY(f, 1);
 		psclog_warnx("CRC update: invalid IOS %x", iosid);
 		return (idx);
 	}
@@ -440,7 +430,6 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	    &idx, 1, NULL, NULL);
 	if (!rc) {
 		BMAP_ULOCK(bmap);
-		FCMH_UNBUSY(f, 1);
 		OPSTAT_INCR("crcup-invalid");
 		return (-EINVAL);
 	}
@@ -489,7 +478,6 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	rc = mds_bmap_write(bmap, mdslog_bmap_crc, &crclog);
 
 	BMAP_ULOCK(bmap);
-	FCMH_UNBUSY(f, 1);
 	return (rc);
 }
 

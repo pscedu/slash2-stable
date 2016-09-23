@@ -1436,7 +1436,10 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 		PFL_GOTOERR(out, rc);
 	}
 
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	rc = bmap_get(f, bia->bia_bmapno, SL_WRITE, &b);
+	FCMH_UNBUSY(f, 1);
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "failed to load bmap %u (rc=%d)",
 		    bia->bia_bmapno, rc);
@@ -1538,6 +1541,7 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 	 * XXX XXX fcmh is not locked here
 	 */
 	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 0);
 	if (fcmh_2_gen(f) != c->fg.fg_gen) {
 		int x = (fcmh_2_gen(f) > c->fg.fg_gen) ? 1 : 0;
 
@@ -1643,53 +1647,9 @@ mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
 		/* BMAP_OP #2, drop lookup ref */
 		bmap_op_done(bmap);
 
+	FCMH_UNBUSY(f, 1);
 	fcmh_op_done(f);
 	return (rc);
-}
-
-/*
- * Load a bmap if disk I/O is successful and the bmap has been
- * initialized (i.e. is not all zeroes).
- * @f: fcmh.
- * @bmapno: bmap index number to load.
- * @bp: value-result bmap pointer.
- * NOTE: callers must issue bmap_op_done() if mds_bmap_loadvalid() is
- *	successful.
- */
-int
-mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
-    struct bmap **bp)
-{
-	struct bmap_mds_info *bmi;
-	struct bmap *b;
-	int n, rc;
-
-	*bp = NULL;
-
-	/* BMAP_OP #3 via lookup */
-	rc = bmap_get(f, bmapno, SL_WRITE, &b);
-	if (rc)
-		return (rc);
-
-	bmi = bmap_2_bmi(b);
-	for (n = 0; n < SLASH_SLVRS_PER_BMAP; n++)
-		/*
-		 * XXX need a bitmap to see which CRCs are
-		 * actually uninitialized and not just happen
-		 * to be zero.
-		 */
-		if (bmi->bmi_crcstates[n]) {
-			BMAP_ULOCK(b);
-			*bp = b;
-			return (0);
-		}
-
-	/*
-	 * BMAP_OP #3, unref if bmap is empty.
-	 * NOTE: our callers must drop this ref.
-	 */
-	bmap_op_done(b);
-	return (SLERR_BMAP_ZERO);
 }
 
 void
@@ -1759,14 +1719,17 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 		FCMH_ULOCK(f);
 		return (-SLERR_BMAP_IN_PTRUNC);
 	}
-	FCMH_ULOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 
 	bflags = BMAPGETF_CREATE;
 	if (new)
 		bflags |= BMAPGETF_NODISKREAD;
 	rc = bmap_getf(f, bmapno, SL_WRITE, bflags, &b);
-	if (rc)
+	if (rc) {
+		FCMH_UNBUSY(f, 1);
 		return (rc);
+	}
+	FCMH_UNBUSY(f, 1);
 
 	bml = mds_bml_new(b, exp,
 	    (rw == SL_WRITE ? BML_WRITE : BML_READ) |
@@ -1831,7 +1794,12 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	struct bmap *b;
 	int rc;
 
+	FCMH_LOCK(f);
+
+	FCMH_WAIT_BUSY(f, 1);
 	rc = bmap_get(f, sbd_in->sbd_bmapno, SL_WRITE, &b);
+	FCMH_UNBUSY(f, 1);
+
 	if (rc)
 		return (rc);
 
@@ -1932,7 +1900,10 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	int rc, rw;
 
 	OPSTAT_INCR("lease-renew");
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f,1);
 	rc = bmap_get(f, sbd_in->sbd_bmapno, SL_WRITE, &b);
+	FCMH_UNBUSY(f,1);
 	if (rc)
 		return (rc);
 
@@ -2187,6 +2158,8 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	 * Inform lease holders to give up their leases.  This is only
 	 * best-effort.
 	 */
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
 	i = fmi->fmi_ptrunc_size / SLASH_BMAP_SIZE;
 	for (;; i++) {
 		if (bmap_getf(f, i, SL_WRITE, BMAPGETF_CREATE |
@@ -2225,6 +2198,7 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 		}
 		bmap_op_done(b);
 	}
+	FCMH_UNBUSY(f, 1);
 
 	FCMH_LOCK(f);
 	to_set = PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_PTRUNCGEN;

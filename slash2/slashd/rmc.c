@@ -228,6 +228,8 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	mp->rc = -slm_fcmh_get(&mq->sbd.sbd_fg, &f);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
+
+	/* XXX Busy fcmh if we ever want to read the bmap */
 	mp->rc = -bmap_lookup(f, mq->sbd.sbd_bmapno, &b);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
@@ -1285,19 +1287,16 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
+	FCMH_LOCK(f);
+	FCMH_WAIT_BUSY(f, 1);
+
 	if (!mds_bmap_exists(f, mq->bmapno))
 		PFL_GOTOERR(out, mp->rc = -SLERR_BMAP_INVALID);
 	mp->rc = -bmap_get(f, mq->bmapno, SL_WRITE, &b);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	BMAP_ULOCK(b);
-
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
-
-	BMAP_LOCK(b);
-	bmap_wait_locked(b, b->bcm_flags &BMAPF_REPLMODWR);
+	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
 	bmap_2_replpol(b) = mq->pol;
 
@@ -1305,13 +1304,14 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	/* XXX upd_enqueue */
 
 	BMAP_ULOCK(b);
-	FCMH_UNBUSY(f, 1);
 
  out:
 	if (b)
 		bmap_op_done(b);
-	if (f)
+	if (f) {
+		FCMH_UNBUSY(f, 1);
 		fcmh_op_done(f);
+	}
 	return (0);
 }
 
