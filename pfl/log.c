@@ -68,6 +68,8 @@
 #define PSC_LOG_FMT "[%s.%06u00 %n:%I:%T %B %F %l] "
 #endif
 
+int				 psc_log_console;
+
 const char			*psc_logfmt = PSC_LOG_FMT;
 int				 psc_logfmt_error = 0;
 
