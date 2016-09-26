@@ -477,7 +477,12 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 	    level >= 0 && level < (int)nitems(pfl_syslog_map))
 		syslog(pfl_syslog_map[level], "%s", buf);
 
-	if (level <= PLL_WARN && pflog_ttyfp)
+	/*
+ 	 * On 2.6.32-131.12.1.el6.x86_64-netboot, a spate of log
+ 	 * messages cause the thread to hang in the following
+ 	 * fprintf(), dragging everyone down.
+ 	 */
+	if (level <= PLL_WARN && psc_log_console && pflog_ttyfp)
 		fprintf(pflog_ttyfp, "%s\n", buf);
 
 	if (level == PLL_FATAL) {
