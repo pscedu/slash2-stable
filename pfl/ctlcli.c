@@ -108,8 +108,10 @@ psc_ctlmsg_sendlast(void)
 	/* Send last queued control messages. */
 	siz = psc_ctl_msghdr->mh_size + sizeof(*psc_ctl_msghdr);
 	rc = write(psc_ctl_sock, psc_ctl_msghdr, siz);
-	if (rc != siz)
-		psc_fatalx("write, rc = %zd", rc);
+	if (rc != siz) {
+		/* 09/23/2016: Hit rc = -1 with msctl -R repl-status */
+		psc_fatal("write, rc = %zd", rc);
+	}
 	freelock(&psc_ctl_lock);
 }
 

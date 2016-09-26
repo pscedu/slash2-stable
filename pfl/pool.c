@@ -378,7 +378,11 @@ psc_pool_try_shrink(struct psc_poolmgr *m, int n)
 			p = POOL_TRYGETOBJ(m);
 			/* XXX Hit NULL p case below, don't know why */
 			if (!p) {
-				fprintf(stderr, "corrupt? m = %p, name = %s.\n",  
+				/*
+				 * 09/23/2016: hit this message with pool bmpce. Need
+				 * to double check locking.
+				 */
+				fprintf(stderr, "pool corrupt? m = %p, name = %s.\n",  
 				    m, m->ppm_master->pms_name);
 				return (i);
 			}
