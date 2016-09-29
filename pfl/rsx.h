@@ -70,6 +70,13 @@ struct rsx_msg_portablizer {
 		*_rcp = 0;						\
 		if (((mq0) = pscrpc_msg_buf((rq)->rq_reqmsg, 0,		\
 		    (q0len))) == NULL) {				\
+			/*						\
+			 * 09/29/2016					\
+			 *						\
+			 * XXX This could be triggered by mismatch	\
+			 * of SRMT_CONNECT request sizes.  Check	\
+			 * the version of both MDS and client.		\
+			 */						\
 			/* XXX tie into pscmem reap */			\
 			psclog_errorx("request is NULL");		\
 			*_rcp = -ENOMEM;				\
