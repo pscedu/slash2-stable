@@ -181,4 +181,6 @@ void	psc_ctlthr_main(const char *, const struct psc_ctlop *, int, int, int);
 int	psc_ctl_applythrop(int, struct psc_ctlmsghdr *, void *, const char *,
 		int (*)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *));
 
+void	psc_ctlthr_mainloop(struct psc_thread *);
+
 #endif /* _PFL_CTLSVR_H_ */
