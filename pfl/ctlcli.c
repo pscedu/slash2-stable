@@ -616,9 +616,9 @@ int
 psc_ctlmsg_opstat_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-42s %13s %13s %13s\n",
-	    "opstat", "rate10s", "ratecur", "total");
-	return(PSC_CTL_DISPLAY_WIDTH+4);
+	printf("%-42s %13s %13s %13s %13s\n",
+	    "opstat", "rate10s", "max10s", "ratecur", "total");
+	return(PSC_CTL_DISPLAY_WIDTH+17);
 }
 
 void
@@ -636,6 +636,7 @@ psc_ctlmsg_opstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 	// 11.2
 	psc_ctl_prnumber(base10, opst->opst_avg, 11, "/s ");
+	psc_ctl_prnumber(base10, opst->opst_max, 11, "/s ");
 	psc_ctl_prnumber(base10, opst->opst_intv, 11, "/s ");
 	psc_ctl_prnumber(base10, psc_atomic64_read(&opst->opst_lifetime), 13, "");
 	printf("\n");
