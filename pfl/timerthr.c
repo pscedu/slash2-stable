@@ -79,7 +79,8 @@ pfl_opstimerthr_main(struct psc_thread *thr)
 			/* compute time weighted average */
 			opst->opst_avg = alpha * len + (1 - alpha) *
 			    opst->opst_avg;
-
+			if (opst->opst_avg > opst->opst_max)
+				opst->opst_max = opst->opst_avg;
 			opst->opst_last = curr;
 		}
 		freelock(&pfl_opstats_lock);

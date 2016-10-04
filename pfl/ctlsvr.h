@@ -132,6 +132,8 @@ int	psc_ctlrep_param(int, struct psc_ctlmsghdr *, void *);
 int	psc_ctlparam_get_rss(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 
+int	psc_ctlparam_log_console(int, struct psc_ctlmsghdr *,
+		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_log_file(int, struct psc_ctlmsghdr *,
 		struct psc_ctlmsg_param *, char **, int, struct psc_ctlparam_node *);
 int	psc_ctlparam_log_format(int, struct psc_ctlmsghdr *,
@@ -178,5 +180,7 @@ void	pfl_ctl_destroy(struct pfl_ctl_data *);
 void	psc_ctlthr_main(const char *, const struct psc_ctlop *, int, int, int);
 int	psc_ctl_applythrop(int, struct psc_ctlmsghdr *, void *, const char *,
 		int (*)(int, struct psc_ctlmsghdr *, void *, struct psc_thread *));
+
+void	psc_ctlthr_mainloop(struct psc_thread *);
 
 #endif /* _PFL_CTLSVR_H_ */

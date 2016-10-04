@@ -380,6 +380,7 @@ __dead void _psc_fatal(const struct pfl_callerinfo *, int, int,
     __attribute__((__format__(__printf__, 4, 5)))
     __attribute__((nonnull(4, 4)));
 
+extern int			 psc_log_console;
 extern int			 psc_logfmt_error;
 extern const char		*psc_logfmt;
 extern char			 psclog_eol[8];

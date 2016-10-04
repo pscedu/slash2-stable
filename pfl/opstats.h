@@ -53,6 +53,7 @@ struct pfl_opstat {
 	int64_t			 opst_last;	/* last second lifetime value */
 	int64_t			 opst_intv;	/* last second counter */
 	double			 opst_avg;	/* 10-second average */
+	double			 opst_max;	/* max 10-second average */
 	char			 opst_name[0];
 };
 

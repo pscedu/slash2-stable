@@ -495,6 +495,31 @@ psc_ctlmsg_param_send(int fd, const struct psc_ctlmsghdr *mh,
 }
 
 int
+psc_ctlparam_log_console(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
+{
+	long val;
+	int rc, set;
+	char buf[16];
+
+	if (nlevels > 2)
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
+
+	rc = 0;
+	set = (mh->mh_type == PCMT_SETPARAM);
+	if (set) {
+		val = strtol(pcp->pcp_value, NULL, 10);
+		psc_log_console = val;
+	} else {
+		snprintf(buf, sizeof(buf), "%d", psc_log_console);
+		rc = psc_ctlmsg_param_send(fd, mh, pcp,
+		    PCTHRNAME_EVERYONE, levels, 2, buf);
+	}
+	return (rc);
+}
+
+int
 psc_ctlparam_log_level(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     __unusedx struct psc_ctlparam_node *pcn)
@@ -2513,5 +2538,4 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	pcd->pcd_refcnt++;
 	psc_waitq_wakeall(&pcd->pcd_waitq);
 	freelock(&pcd->pcd_lock);
-	psc_ctlthr_mainloop(me);
 }
