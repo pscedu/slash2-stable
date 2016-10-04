@@ -402,6 +402,7 @@ main(int argc, char *argv[])
 	int rc, vfsid, c, found;
 	struct psc_thread *thr;
 	time_t now;
+	struct psc_thread *me;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -580,6 +581,14 @@ main(int argc, char *argv[])
 
 	mds_bmap_timeotbl_init();
 
+	slrpc_initcli();
+	mds_update_boot_file();
+
+	slmctlthr_spawn(sfn);
+	pfl_opstimerthr_spawn(SLMTHRT_OPSTIMER, "slmopstimerthr");
+	time(&now);
+	psclog_max("SLASH2 utility slmctl is now ready at %s", ctime(&now));
+
 	sqlite3_enable_shared_cache(1);
 	//dbdo(NULL, NULL, "PRAGMA page_size=");
 	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
@@ -639,13 +648,11 @@ main(int argc, char *argv[])
 
 	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
 
-	slrpc_initcli();
-
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
 	mds_journal_init(zfs_mounts[current_vfsid].zm_uuid);
 	dbdo(NULL, NULL, "COMMIT");
 
-	dbdo(slm_upsch_revert_cb, NULL,
+	dbdo(slm_upsch_requeue_cb, NULL,
 	    " SELECT	fid,"
 	    "		bno"
 	    " FROM	upsch"
@@ -695,14 +702,11 @@ main(int argc, char *argv[])
 	pscthr_init(SLMTHRT_BKDB, slmbkdbthr_main, 0, "slmbkdbthr");
 
 	slmbmaptimeothr_spawn();
-	pfl_opstimerthr_spawn(SLMTHRT_OPSTIMER, "slmopstimerthr");
 	slmconnthr_spawn();
 	slm_rpc_initsvc();
 	slmbchrqthr_spawn();
 	slmupschthr_spawn();
 	sl_freapthr_spawn(SLMTHRT_FREAP, "slmfreapthr");
-
-	mds_update_boot_file();
 
 	time(&now);
 	psclogs_info(SLMSS_INFO, "SLASH2 %s version %d started at %s",
@@ -712,6 +716,7 @@ main(int argc, char *argv[])
 
 	pfl_fault_register(RMC_HANDLE_FAULT);
 
-	slmctlthr_main(sfn);
+	me = pscthr_get();
+	psc_ctlthr_mainloop(me);
 	exit(0);
 }

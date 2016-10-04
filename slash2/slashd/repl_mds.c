@@ -71,7 +71,7 @@ struct sl_mds_iosinfo	 slm_null_iosinfo = {
  * Max number of allowable bandwidth units (BW_UNITSZ) in any sliod's
  * bwqueue.
  */
-int slm_upsch_bandwidth = 8 * 32;
+int slm_upsch_bandwidth = 512;
 
 __static int
 iosidx_cmp(const void *a, const void *b)
@@ -145,6 +145,10 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	res = libsl_id2res(ios);
 	if (res == NULL || !RES_ISFS(res))
 		PFL_GOTOERR(out, rc = -SLERR_RES_BADTYPE);
+
+	/*
+	 * 09/29/2016: Hit SLERR_SHORTIO in the function. Need more investigation.
+	 */
 
 	/*
  	 * Return ENOENT by default for IOSV_LOOKUPF_DEL & IOSV_LOOKUPF_LOOKUP.
@@ -591,7 +595,7 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	struct fidc_membh *f;
 	struct sl_resource *r;
 	sl_ios_id_t resid;
-	unsigned n;
+	unsigned n, nrepls;
 
 	bmi = bmap_2_bmi(b);
 	f = b->bcm_fcmh;
@@ -603,8 +607,8 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	add.nios = 0;
 	del.nios = 0;
 	chg.nios = 0;
-	for (n = 0, off = 0; n < fcmh_2_nrepls(f);
-	    n++, off += SL_BITS_PER_REPLICA) {
+	nrepls = fcmh_2_nrepls(f);
+	for (n = 0, off = 0; n < nrepls; n++, off += SL_BITS_PER_REPLICA) {
 		resid = fcmh_2_repl(f, n);
 		vold = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_orepls, off);
 		vnew = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
@@ -802,6 +806,7 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	 * Is this Okay because we have not sent an RPC out?
 	 */
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_REPL_QUEUED;
+	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 
 	/* Wildcards shouldn't result in errors on zero-length files. */
 	if (*nbmaps != (sl_bmapno_t)-1)
@@ -1053,6 +1058,7 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 	int ret = 1;
 	struct resprof_mds_info *r_min, *r_max;
 	struct rpmi_ios *is, *id;
+	int64_t src_total, dst_total;
 	int64_t cap = (int64_t)slm_upsch_bandwidth;
 
 	/* sort by addr to avoid deadlock */
@@ -1068,8 +1074,13 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 
 	/* reserve */
 	if (amt > 0) {
-		if ((is->si_repl_ingress_pending + is->si_repl_egress_pending + amt > cap * BW_UNITSZ) || 
-		     id->si_repl_ingress_pending + id->si_repl_egress_pending + amt > cap * BW_UNITSZ) { 
+		src_total = is->si_repl_ingress_pending + 
+		    is->si_repl_egress_pending + amt;
+		dst_total = is->si_repl_ingress_pending + 
+		    is->si_repl_egress_pending + amt;
+
+		if ((src_total > cap * BW_UNITSZ) || 
+		     dst_total > cap * BW_UNITSZ) { 
 			ret = 0;
 			goto out;
 		}

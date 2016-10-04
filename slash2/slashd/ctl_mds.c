@@ -512,12 +512,13 @@ slmctlparam_upsch_get(char *val)
 }
 
 void
-slmctlthr_main(const char *fn)
+slmctlthr_spawn(const char *fn)
 {
 	pfl_journal_register_ctlops(slmctlops);
 	pflrpc_register_ctlops(slmctlops);
 
 	psc_ctlparam_register("faults", psc_ctlparam_faults);
+	psc_ctlparam_register("log.console", psc_ctlparam_log_console);
 
 #ifdef Linux
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);

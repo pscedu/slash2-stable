@@ -80,9 +80,11 @@ mds_bmap_initnew(struct bmap *b)
 	INOH_ULOCK(fcmh_2_inoh(f));
 
 	bmap_2_replpol(b) = pol;
+	BHGEN_SET(b, &sl_sys_upnonce);
 
 	bmi->bmi_sys_prio = -1;
 	bmi->bmi_usr_prio = -1;
+	OPSTAT_INCR("bmap-init");
 }
 
 void
@@ -153,10 +155,13 @@ slm_bmap_resetnonce_cb(struct slm_sth *sth, void *p)
 	return (0);
 }
 
-/* Introduced by commit 18a5f376d02847e075461819d4b315d228bcfde6 */
-void
+/* Introduced by commit 18a5f376d02847e075461819d4b315d228bcfde6 (07/13) */
+static void
 slm_bmap_resetnonce(struct bmap *b)
 {
+	int tract[NBREPLST];
+	int rc, retifset[NBREPLST];
+#if 0
 	struct bmap_nonce_cbarg a;
 
 	memset(&a, 0, sizeof(a));
@@ -190,6 +195,20 @@ slm_bmap_resetnonce(struct bmap *b)
 		    SQLITE_INTEGER, b->bcm_bmapno);
 		mds_bmap_write_logrepls(b);
 	}
+#endif
+
+	brepls_init(tract, -1);
+	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+	brepls_init(retifset, 0);
+	retifset[BREPLST_REPL_SCHED] = 1;
+	retifset[BREPLST_GARBAGE_SCHED] = 1;
+
+	rc = mds_repl_bmap_walk_all(b, tract, retifset, 0);
+	if (rc) {
+		OPSTAT_INCR("bmap-requeue-normal");
+		mds_bmap_write_logrepls(b);
+	}
 }
 
 /*
@@ -200,13 +219,14 @@ slm_bmap_resetnonce(struct bmap *b)
 int
 mds_bmap_read(struct bmap *b, int flags)
 {
-	int rc, new, vfsid, retifset[NBREPLST];
+	int rc, new, vfsid;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct slm_update_data *upd;
 	struct fidc_membh *f;
 	struct iovec iovs[2];
 	uint64_t crc, od_crc = 0;
 	size_t nb;
+	sl_bmapgen_t bgen;
 
 	upd = bmap_2_upd(b);
 	upd_init(upd, UPDT_BMAP);
@@ -252,8 +272,7 @@ mds_bmap_read(struct bmap *b, int flags)
 	if (nb == 0 || (nb == BMAP_OD_SZ && od_crc == 0 &&
 	    pfl_memchk(bmi_2_ondisk(bmi), 0, BMAP_OD_CRCSZ))) {
 		mds_bmap_initnew(b);
-		DEBUG_BMAPOD(PLL_DIAG, b, "initialized new bmap, nb=%d",
-		    nb);
+		DEBUG_BMAPOD(PLL_DIAG, b, "initialized new bmap, nb=%d", nb);
 		return (0);
 	}
 
@@ -275,6 +294,7 @@ mds_bmap_read(struct bmap *b, int flags)
 		return (rc);
 	}
 
+	OPSTAT_INCR("bmap-load");
 	DEBUG_BMAPOD(PLL_DIAG, b, "successfully loaded from disk");
 
  out2:
@@ -290,13 +310,29 @@ mds_bmap_read(struct bmap *b, int flags)
 		 */
 		mds_bmap_ensure_valid(b);
 
-	if (slm_opstate != SLM_OPSTATE_REPLAY) {
-		brepls_init(retifset, 0);
-		retifset[BREPLST_REPL_SCHED] = 1;
-		retifset[BREPLST_GARBAGE_SCHED] = 1;
-		if (mds_repl_bmap_walk_all(b, NULL, retifset,
-		    REPL_WALKF_SCIRCUIT))
+	/*
+ 	 * During the REPLAY stage, we rely on slm_upsch_revert_cb() to 
+ 	 * do the work.
+ 	 *
+ 	 * During the NORMAL stage, we rely on the generation number to
+ 	 * do the work.
+ 	 *
+	 * (gdb) p ((struct bmap_mds_info *)(b+1))->bmi_extrastate.bes_gen
+ 	 *
+ 	 */
+	BHGEN_GET(b, &bgen);
+	if (bgen == sl_sys_upnonce) {
+		OPSTAT_INCR("bmap-gen-same");
+	} else {
+		OPSTAT_INCR("bmap-gen-diff");
+		BHGEN_SET(b, &sl_sys_upnonce);
+		if (slm_opstate != SLM_OPSTATE_REPLAY) {
+			/*
+ 			 * If we were scheduled by a previous incarnation 
+ 			 * of MDS, revert SCHED to QUEUED.
+ 			 */
 			slm_bmap_resetnonce(b);
+		}
 	}
 
 	BMAP_ULOCK(b);
@@ -318,6 +354,7 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 	struct slm_wkdata_wr_brepl *wk;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
+	OPSTAT_INCR("bmap-write");
 	mds_bmap_ensure_valid(b);
 
 	psc_crc64_calc(&crc, bmi_2_ondisk(bmi), BMAP_OD_CRCSZ);
@@ -349,6 +386,9 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 	    b->bcm_bmapno, rc);
 
 	if (!rc && logf == (void *)mdslog_bmap_repls) {
+		/*
+		 * Schedule an update of the SQLite database.
+		 */
 		BMAP_LOCK_ENSURE(b);
 		b->bcm_flags |= BMAPF_REPLMODWR;
 		psc_assert(slm_opstate == SLM_OPSTATE_NORMAL);
@@ -357,6 +397,7 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 		wk->b = b;
 		bmap_op_start_type(b, BMAP_OPCNT_WORK);
 		pfl_workq_putitemq_head(&slm_db_hipri_workq, wk);
+		OPSTAT_INCR("bmap-write-log");
 	}
 
 	return (rc);

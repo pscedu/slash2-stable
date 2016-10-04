@@ -133,6 +133,12 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 
 	// XXX check fgen
 
+	/*
+	 * This check, if needed, does not have to be in the
+	 * permanent storage. With batch RPC in place, if
+	 * the MDS restarts, the batch RPC request will be
+	 * accepted in the first place.
+	 */
 	BHGEN_GET(b, &bgen);
 	if (!rc && q->bgen != bgen)
 		rc = SLERR_GEN_OLD;
@@ -147,11 +153,15 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
  		 * mds_repl_delrq().
  		 */
 		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
+		/*
+ 		 * Wow, we just don't redo the work.
+ 		 */
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		retifset[BREPLST_REPL_SCHED] = 1;
 		retifset[BREPLST_REPL_QUEUED] = 1;
 
-		OPSTAT2_ADD("repl-success", bsr->bsr_amt);
+		OPSTAT_INCR("repl-success");
+		OPSTAT2_ADD("repl-success-aggr", bsr->bsr_amt);
 	} else {
 		if (pp == NULL ||
 		    rc == PFLERR_ALREADY ||
@@ -167,8 +177,12 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 
 		retifset[BREPLST_REPL_SCHED] = 1;
 
-		/* ECONNRESET = 104 */
-		/* PFLERR_ALREADY = _PFLERR_START + 3 = 503 */
+		/* 
+		 * Common error codes:
+		 *
+		 * ECONNRESET = 104
+		 * PFLERR_ALREADY = _PFLERR_START + 3 = 503
+		 */
 		DEBUG_BMAP(PLL_WARN, b, "replication "
 		    "arrangement failure; src=%s dst=%s "
 		    "rc=%d",
@@ -176,7 +190,8 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 		    dst_resm ? dst_resm->resm_name : NULL,
 		    rc);
 
-		OPSTAT2_ADD("repl-failure", bsr->bsr_amt);
+		OPSTAT_INCR("repl-failure");
+		OPSTAT2_ADD("repl-failure-aggr", bsr->bsr_amt);
 	}
 
 	if (mds_repl_bmap_apply(b, tract, retifset, bsr->bsr_off))
@@ -717,7 +732,11 @@ upd_proc_bmap(struct slm_update_data *upd)
 		iosid = fcmh_2_repl(f, dst_res_i.ri_rnd_idx);
 		dst_res = libsl_id2res(iosid);
 		if (dst_res == NULL) {
-			DEBUG_BMAP(PLL_ERROR, b, "invalid iosid: %u(0x%x)",
+			/*
+			 * IOS can be removed during the lifetime of a 
+			 * deployment. So this is not an error.
+			 */
+			DEBUG_BMAP(PLL_WARN, b, "invalid iosid: %u(0x%x)",
 			    iosid, iosid);
 			continue;
 		}
@@ -834,6 +853,20 @@ upd_proc_bmap(struct slm_update_data *upd)
 			if (rc > 0)
 				goto out;
 			break;
+		case BREPLST_VALID:
+	 		/* 
+			 * I guess it is possible that the state has 
+			 * already been marked as valid (a user requeue 
+			 * a request and the previous request has come 
+			 * back successfully in between.
+			 *
+			 * In fact, there is a window between we update
+			 * the bmap and we update the SQL table. So we
+			 * might want users to requeue. Of course, if
+			 * the SQL table is gone, we have to requeue.
+			 */ 
+			OPSTAT_INCR("upsch-already-valid");
+			break;
 		}
 	}
  out:
@@ -870,6 +903,11 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
 		mds_inox_ensure_loaded(fcmh_2_inoh(f));
 
+	/*
+ 	 * XXX why do we care about SCHED here?  upd_proc_bmap()
+ 	 * does not really care about them.  This seems fine
+ 	 * today because we only page in requests in 'Q' state.
+ 	 */
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_QUEUED] = 1;
 	retifset[BREPLST_REPL_SCHED] = 1;
@@ -968,17 +1006,6 @@ upd_proc_pagein(struct slm_update_data *upd)
 	struct sl_mds_iosinfo *si;
 	struct sl_resource *r;
 
-	upg = upd_getpriv(upd);
-	if (upg->upg_resm) {
-		r = upg->upg_resm->resm_res;
-		rpmi = res2rpmi(r);
-		si = res2iosinfo(r);
-
-		RPMI_LOCK(rpmi);
-		si->si_flags &= ~SIF_UPSCH_PAGING;
-		RPMI_ULOCK(rpmi);
-	}
-
 	/*
 	 * Page some work in.  We make a heuristic here to avoid a large
 	 * number of operations inside the database callback.
@@ -988,6 +1015,9 @@ upd_proc_pagein(struct slm_update_data *upd)
 	 * selects a different user at random, so over time, no users
 	 * will starve.
 	 */
+	upg = upd_getpriv(upd);
+	if (upg->upg_resm)
+		r = upg->upg_resm->resm_res;
 
 #define UPSCH_PAGEIN_BATCH 128
 
@@ -1011,6 +1041,16 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
 	    upg->upg_resm ? r->res_id : 0,
 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
+
+	if (upg->upg_resm) {
+		r = upg->upg_resm->resm_res;
+		rpmi = res2rpmi(r);
+		si = res2iosinfo(r);
+
+		RPMI_LOCK(rpmi);
+		si->si_flags &= ~SIF_UPSCH_PAGING;
+		RPMI_ULOCK(rpmi);
+	}
 }
 
 #if 0
@@ -1109,14 +1149,17 @@ slm_upsch_tally_cb(struct slm_sth *sth, void *p)
  * Called at startup to reset all in-progress changes back to starting
  * (e.g. SCHED -> QUEUED).
  */
+
 int
-slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
+slm_upsch_requeue_cb(struct slm_sth *sth, __unusedx void *p)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST];
 	struct fidc_membh *f = NULL;
 	struct bmap *b = NULL;
 	struct sl_fidgen fg;
 	sl_bmapno_t bno;
+
+	OPSTAT_INCR("revert-cb");
 
 	fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
 	fg.fg_gen = FGEN_ANY;
@@ -1144,8 +1187,10 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 	rc = mds_repl_bmap_walk_all(b, tract, retifset, 0);
-	if (rc)
+	if (rc) {
+		OPSTAT_INCR("bmap-requeue-replay");
 		mds_bmap_write(b, NULL, NULL);
+	}
 	BMAP_ULOCK(b);
 
  out:

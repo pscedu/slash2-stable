@@ -409,7 +409,7 @@ msl_try_get_replica_res(struct bmap *b, int iosidx, int require_valid,
 
 	if (require_valid && SL_REPL_GET_BMAP_IOS_STAT(bci->bci_repls,
 	    iosidx * SL_BITS_PER_REPLICA) != BREPLST_VALID)
-		return (-2);
+		return (-3);
 
 	fci = fcmh_2_fci(b->bcm_fcmh);
 	res = libsl_id2res(fci->fci_inode.reptbl[iosidx].bs_id);
@@ -422,7 +422,7 @@ msl_try_get_replica_res(struct bmap *b, int iosidx, int require_valid,
 		DEBUG_FCMH(PLL_WARN, b->bcm_fcmh,
 		    "unknown or obsolete IOS in reptbl: %#x",
 		    fci->fci_inode.reptbl[iosidx].bs_id);
-		return (-1);
+		return (-2);
 	}
 
 	/* XXX not a real shuffle */
@@ -2319,6 +2319,9 @@ msreadaheadthr_main(struct psc_thread *thr)
 		    BMAPF_LOADED) {
 			bmap_op_done(b);
 			fcmh_op_done(f);
+			/*
+ 			 * XXX spin when this is the last item on the list.
+ 			 */
 			lc_add(&msl_readaheadq, rarq);
 			continue;
 		}
