@@ -1142,13 +1142,6 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive, struct sl_resm **pm,
 				return (0);
 			case -1: /* resident but offline */
 				has_residency = 1;
-				/*
-		 		 * A quick fix so that we don't return 
-		 		 * ETIMEDOUT when an IOS is contacted 
-		 		 * first for an operation (e.g.,read 
-		 		 * a file.
- 				 */
-				sleep(3);
 				break;
 			case -2: /* not resident */
 			case -3:
