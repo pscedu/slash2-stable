@@ -304,7 +304,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	}
 
 	rc = slrpc_batch_req_add(dst_res,
-	    &slm_db_lopri_workq, csvc, SRMT_REPL_SCHEDWK,
+	    &slm_db_hipri_workq, csvc, SRMT_REPL_SCHEDWK,
 	    SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &q, sizeof(q), bsr,
 	    &slm_batch_rep_repl, slm_upsch_delay);
 	if (rc)
@@ -923,8 +923,10 @@ upd_pagein_wk(void *p)
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
 		upsch_enqueue(bmap_2_upd(b));
-	else
+	else {
+		OPSTAT_INCR("upsch-no-work");
 		rc = 1;
+	}
 	BMAP_ULOCK(b);
 
  out:
@@ -1005,8 +1007,8 @@ upd_proc_pagein(struct slm_update_data *upd)
 	struct sl_resource *r;
 	struct psc_dynarray da = DYNARRAY_INIT;
 
-	while (lc_nitems(&slm_db_lopri_workq))
-		usleep(1000000/2);
+	while (lc_nitems(&slm_db_hipri_workq) || lc_nitems(&slm_db_lopri_workq))
+		usleep(1000000/4);
 	/*
 	 * Page some work in.  We make a heuristic here to avoid a large
 	 * number of operations inside the database callback.
