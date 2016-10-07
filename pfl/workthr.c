@@ -106,14 +106,14 @@ pfl_workq_init(size_t bufsiz)
 }
 
 void
-pfl_wkthr_spawn(int thrtype, int nthr, const char *thrname)
+pfl_wkthr_spawn(int thrtype, int nthr, int extra, const char *thrname)
 {
 	struct psc_thread *thr;
 	int i;
 
 	for (i = 0; i < nthr; i++) {
 		thr = pscthr_init(thrtype, pfl_wkthr_main,
-		    sizeof(struct pfl_wk_thread), thrname, i);
+		    sizeof(struct pfl_wk_thread)+extra, thrname, i);
 		pfl_wkthr(thr)->wkt_workq = &pfl_workq;
 		pscthr_setready(thr);
 	}

@@ -52,7 +52,7 @@ struct pfl_wk_thread {
 					    &pfl_workq.plc_lock)
 
 void   pfl_wkthr_main(struct psc_thread *);
-void   pfl_wkthr_spawn(int, int, const char *);
+void   pfl_wkthr_spawn(int, int, int, const char *);
 void *_pfl_workq_getitem(const char *, int (*)(void *), size_t, int);
 void   pfl_workq_init(size_t);
 void  _pfl_workq_putitemq(struct psc_listcache *, void *, int);
