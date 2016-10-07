@@ -77,13 +77,15 @@
 
 psc_spinlock_t           slm_upsch_lock;
 struct psc_waitq	 slm_upsch_waitq;
+
+/* (gdb) p &slm_upsch_queue.plc_explist.pexl_nseen.opst_lifetime */
 struct psc_listcache     slm_upsch_queue;
 
 struct psc_poolmaster	 slm_upgen_poolmaster;
 struct psc_poolmgr	*slm_upgen_pool;
 
 int	upsch_total;
-int	slm_upsch_delay = 10;
+int	slm_upsch_delay = 5;
 
 void (*upd_proctab[])(struct slm_update_data *);
 
@@ -122,8 +124,6 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 	if (tmprc)
 		goto out;
 
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	tmprc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (tmprc)
 		goto out;
@@ -155,6 +155,9 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
 		/*
  		 * Wow, we just don't redo the work.
+ 		 *
+ 		 * If the state of the bmap changes in between, we
+ 		 * ignore the work as well.
  		 */
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		retifset[BREPLST_REPL_SCHED] = 1;
@@ -202,13 +205,11 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
  out:
 	if (b)
 		bmap_op_done(b);
-	if (f) {
-		FCMH_UNBUSY(f, 1);
+	if (f)
 		fcmh_op_done(f);
-	}
 
 	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, rc);
-	upschq_resm(dst_resm, UPDT_PAGEIN);
+	//upschq_resm(dst_resm, UPDT_PAGEIN);
 }
 
 /*
@@ -241,7 +242,6 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		mds_repl_bmap_apply(b, tract, NULL, off);
 		mds_bmap_write_logrepls(b);
-		upschq_resm(dst_resm, UPDT_PAGEIN);
 		return (1);
 	}
 
@@ -320,11 +320,6 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	if (rc)
 		goto out;
 
-	/*
-	 * We have successfully scheduled some work, page in more.
-	 */
-	upschq_resm(dst_resm, UPDT_PAGEIN);
-
 	return (1);
 
  out:
@@ -336,12 +331,10 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		brepls_init(tract, -1);
 		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 
-		FCMH_WAIT_BUSY(f, 1);
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		mds_repl_bmap_apply(b, tract, NULL, off);
 		BMAP_ULOCK(b);
-		FCMH_UNBUSY(f, 1);
 	}
 
 	resmpair_bw_adj(src_resm, dst_resm, -bsr->bsr_amt, rc);
@@ -380,7 +373,6 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 		    BREPLST_TRUNCPNDG : BREPLST_VALID;
 		brepls_init_idx(retifset);
 
-		FCMH_WAIT_BUSY(f, 1);
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		ret = mds_repl_bmap_apply(b, tract, retifset, off);
@@ -388,7 +380,6 @@ slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
 			DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
 		mds_bmap_write_logrepls(b);
 		BMAP_ULOCK(b);
-		FCMH_UNBUSY(f, 1);
 	}
 
 	if (!rc) {
@@ -537,14 +528,6 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	rc = slm_fcmh_get(&q->fg, &f);
 	if (rc)
 		goto out;
-
-	/*
- 	 * XXX Should we drop the lock on the fcmh?  Otherwise the work thread
- 	 * won't be able to be done with a bmap and then move on to clear the
- 	 * BMAPF_REPLMODWR flag of other bmaps in the same file.
- 	 */
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	rc = bmap_get(f, q->bno, SL_WRITE, &b);
 	if (rc)
 		goto out;
@@ -560,10 +543,8 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
  out:
 	if (b)
 		bmap_op_done(b);
-	if (f) {
-		FCMH_UNBUSY(f, 1);
+	if (f)
 		fcmh_op_done(f);
-	}
 }
 
 int
@@ -676,7 +657,6 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 			psclog_error("iosv_lookup: rc=%d", rc);
 			goto next;
 		}
-		FCMH_WAIT_BUSY(b->bcm_fcmh, 1);
 		BMAP_LOCK(b);
 		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		if (mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx,
@@ -685,7 +665,6 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 		}
 
 		BMAP_ULOCK(b);
-		FCMH_UNBUSY(b->bcm_fcmh, 1);
  next:
 		UPD_DECREF(upd);
 
@@ -717,8 +696,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 
 	DEBUG_FCMH(PLL_DEBUG, f, "upd=%p", upd);
 
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	BMAP_LOCK(b);
 	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 
@@ -872,7 +849,6 @@ upd_proc_bmap(struct slm_update_data *upd)
  out:
 
 	BMAP_ULOCK(b);
-	FCMH_UNBUSY(f, 1);
 }
 
 /*
@@ -885,15 +861,15 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	struct slm_update_generic *upg;
 	struct fidc_membh *f = NULL;
 	struct bmap *b = NULL;
-	int rc, retifset[NBREPLST];
+	int rc, sched = 0, retifset[NBREPLST];
+
+	struct resprof_mds_info *rpmi;
+	struct sl_mds_iosinfo *si;
 
 	upg = upd_getpriv(upd);
 	rc = slm_fcmh_get(&upg->upg_fg, &f);
 	if (rc)
 		goto out;
-
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 
 	rc = bmap_get(f, upg->upg_bno, SL_WRITE, &b);
 	if (rc)
@@ -933,6 +909,9 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		/*
 		 * XXX Do we need to do any work if rc is an error code
 		 * instead 1 here?
+		 *
+		 * We only try once because an IOS might down. So it is
+		 * up to the user to requeue his request.
 		 */
 		struct slm_wkdata_upsch_purge *wk;
 
@@ -943,21 +922,37 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 			wk->bno = b->bcm_bmapno;
 		else
 			wk->bno = BMAPNO_ANY;
-		pfl_workq_putitemq(&slm_db_lopri_workq, wk);
+		pfl_workq_putitem_head(wk);
 	}
+
+	rpmi = res2rpmi(upg->upg_resm->resm_res);
+	si = res2iosinfo(upg->upg_resm->resm_res);
+	RPMI_LOCK(rpmi);
+	si->si_paging--;
+	if (!si->si_paging) {
+		si->si_flags &= ~SIF_UPSCH_PAGING;
+		sched = 1;
+	}
+	RPMI_ULOCK(rpmi);
+	if (sched)
+		upschq_resm(upg->upg_resm, UPDT_PAGEIN);
+
 	if (b)
 		bmap_op_done(b);
 
-	if (f) {
-		FCMH_UNBUSY(f, 1);
+	if (f)
 		fcmh_op_done(f);
-	}
 }
 
 int
 upd_pagein_wk(void *p)
 {
+	int sched = 0;
 	struct slm_wkdata_upschq *wk = p;
+
+	struct resprof_mds_info *rpmi;
+	struct sl_mds_iosinfo *si;
+#if 0
 	struct slm_update_generic *upg;
 
 	upg = psc_pool_get(slm_upgen_pool);
@@ -970,24 +965,110 @@ upd_pagein_wk(void *p)
 	upg->upg_fg.fg_fid = wk->fg.fg_fid;
 	upg->upg_fg.fg_gen = FGEN_ANY;
 	upg->upg_bno = wk->bno;
+	upg->upg_resm = wk->resm;
 	upsch_enqueue(&upg->upg_upd);
 	
 	spinlock(&upg->upg_upd.upd_lock);
 	UPD_UNBUSY(&upg->upg_upd);
+#endif
+
+	struct fidc_membh *f = NULL;
+	struct bmap *b = NULL;
+	int rc, retifset[NBREPLST];
+	struct sl_fidgen fg;
+
+	fg.fg_fid = wk->fg.fg_fid;
+	fg.fg_gen = FGEN_ANY;
+	rc = slm_fcmh_get(&fg, &f);
+	if (rc)
+		goto out;
+
+	rc = bmap_get(f, wk->bno, SL_WRITE, &b);
+	if (rc)
+		goto out;
+
+	BMAP_ULOCK(b);
+	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
+		mds_inox_ensure_loaded(fcmh_2_inoh(f));
+
+	/*
+ 	 * XXX why do we care about SCHED here?  upd_proc_bmap()
+ 	 * does not really care about them.  This seems fine
+ 	 * today because we only page in requests in 'Q' state.
+ 	 */
+	brepls_init(retifset, 0);
+	retifset[BREPLST_REPL_QUEUED] = 1;
+	retifset[BREPLST_REPL_SCHED] = 1;
+	retifset[BREPLST_TRUNCPNDG] = 1;
+	if (slm_preclaim_enabled) {
+		retifset[BREPLST_GARBAGE] = 1;
+		retifset[BREPLST_GARBAGE_SCHED] = 1;
+	}
+
+	BMAP_LOCK(b);
+	if (mds_repl_bmap_walk_all(b, NULL, retifset,
+	    REPL_WALKF_SCIRCUIT))
+		upsch_enqueue(bmap_2_upd(b));
+	else
+		rc = 1;
+	BMAP_ULOCK(b);
+
+ out:
+	if (rc) {
+		/*
+		 * XXX Do we need to do any work if rc is an error code
+		 * instead 1 here?
+		 *
+		 * We only try once because an IOS might down. So it is
+		 * up to the user to requeue his request.
+		 */
+		struct slm_wkdata_upsch_purge *purge_wk;
+
+		purge_wk = pfl_workq_getitem(slm_wk_upsch_purge,
+		    struct slm_wkdata_upsch_purge);
+		purge_wk->fid = fg.fg_fid;
+		if (b)
+			purge_wk->bno = b->bcm_bmapno;
+		else
+			purge_wk->bno = BMAPNO_ANY;
+		pfl_workq_putitemq(&slm_db_lopri_workq, purge_wk);
+	}
+	rpmi = res2rpmi(wk->resm->resm_res);
+	si = res2iosinfo(wk->resm->resm_res);
+	RPMI_LOCK(rpmi);
+	si->si_paging--;
+	if (!si->si_paging) {
+		si->si_flags &= ~SIF_UPSCH_PAGING;
+		sched = 1;
+	}
+	RPMI_ULOCK(rpmi);
+	if (sched)
+		upschq_resm(wk->resm, UPDT_PAGEIN);
+
+	if (b)
+		bmap_op_done(b);
+
+	if (f) 
+		fcmh_op_done(f);
 	return (0);
 }
 
 int
-upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
+upd_proc_pagein_cb(struct slm_sth *sth, void *p)
 {
 	struct slm_wkdata_upschq *wk;
+	struct psc_dynarray *da = p;
 
+	/*
+ 	 * Accumulate work items here and submit them in a batch later
+ 	 * so that we know when the paging is really done.
+ 	 */
 	OPSTAT_INCR("upsch-db-pagein");
 
 	wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
 	wk->fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
 	wk->bno = sqlite3_column_int(sth->sth_sth, 1);
-	pfl_workq_putitem(wk);
+	psc_dynarray_add(da, wk);
 	return (0);
 }
 
@@ -1001,10 +1082,13 @@ upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
 void
 upd_proc_pagein(struct slm_update_data *upd)
 {
+	int i;
+	struct slm_wkdata_upschq *wk;
 	struct slm_update_generic *upg;
-	struct resprof_mds_info *rpmi;
+	struct resprof_mds_info *rpmi = NULL;
 	struct sl_mds_iosinfo *si;
 	struct sl_resource *r;
+	struct psc_dynarray da = DYNARRAY_INIT;
 
 	/*
 	 * Page some work in.  We make a heuristic here to avoid a large
@@ -1016,12 +1100,17 @@ upd_proc_pagein(struct slm_update_data *upd)
 	 * will starve.
 	 */
 	upg = upd_getpriv(upd);
-	if (upg->upg_resm)
+	if (upg->upg_resm) {
 		r = upg->upg_resm->resm_res;
+		rpmi = res2rpmi(r);
+		si = res2iosinfo(r);
+	}
 
-#define UPSCH_PAGEIN_BATCH 128
+#define UPSCH_PAGEIN_BATCH	128
 
-	dbdo(upd_proc_pagein_cb, NULL,
+	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
+
+	dbdo(upd_proc_pagein_cb, &da,
 	    " SELECT	fid,"
 	    "		bno,"
 	    "		nonce"
@@ -1042,15 +1131,24 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    upg->upg_resm ? r->res_id : 0,
 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
 
-	if (upg->upg_resm) {
-		r = upg->upg_resm->resm_res;
-		rpmi = res2rpmi(r);
-		si = res2iosinfo(r);
-
+	if (rpmi)
 		RPMI_LOCK(rpmi);
+
+	if (!psc_dynarray_len(&da)) {
 		si->si_flags &= ~SIF_UPSCH_PAGING;
-		RPMI_ULOCK(rpmi);
+		OPSTAT_INCR("upsch-empty");
+	} else {
+		DYNARRAY_FOREACH(wk, i, &da) {
+			if (rpmi)
+				si->si_paging++;
+			wk->resm = upg->upg_resm;
+			pfl_workq_putitem(wk);
+		}
 	}
+
+	if (rpmi)
+		RPMI_ULOCK(rpmi);
+	psc_dynarray_free(&da);
 }
 
 #if 0
@@ -1169,8 +1267,6 @@ slm_upsch_requeue_cb(struct slm_sth *sth, __unusedx void *p)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	rc = bmap_getf(f, bno, SL_WRITE, BMAPGETF_CREATE, &b);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1196,10 +1292,8 @@ slm_upsch_requeue_cb(struct slm_sth *sth, __unusedx void *p)
  out:
 	if (b)
 		bmap_op_done(b);
-	if (f) {
-		FCMH_UNBUSY(f, 1);
+	if (f)
 		fcmh_op_done(f);
-	}
 	return (0);
 }
 
@@ -1255,14 +1349,16 @@ void
 slmupschthr_main(struct psc_thread *thr)
 {
 	struct slm_update_data *upd;
+#if 0
 	struct sl_resource *r;
 	struct sl_resm *m;
 	struct sl_site *s;
 	int i, j;
-	struct timespec ts;
+#endif
 
 	while (pscthr_run(thr)) {
-		if (lc_nitems(&slm_upsch_queue) < 32) {
+#if 0
+		if (lc_nitems(&slm_upsch_queue) < 128) {
 			CONF_FOREACH_RESM(s, r, i, m, j) {
 				if (!RES_ISFS(r))
 					continue;
@@ -1270,11 +1366,9 @@ slmupschthr_main(struct psc_thread *thr)
 				upschq_resm(m, UPDT_PAGEIN);
 			}
 		}
-		ts.tv_nsec = 0;
-		ts.tv_sec = time(NULL) + 3;
-		upd = lc_gettimed(&slm_upsch_queue, &ts);
-		if (upd)
-			upd_proc(upd);
+#endif
+		upd = lc_getwait(&slm_upsch_queue);
+		upd_proc(upd);
 	}
 }
 
@@ -1296,12 +1390,22 @@ void
 slmupschthr_spawn(void)
 {
 	struct psc_thread *thr;
-	int i;
+	struct sl_resource *r;
+	struct sl_resm *m;
+	struct sl_site *s;
+	int i, j;
 
 	for (i = 0; i < SLM_NUPSCHED_THREADS; i++) {
 		thr = pscthr_init(SLMTHRT_UPSCHED, slmupschthr_main,
 		    sizeof(struct slmupsch_thread), "slmupschthr%d", i);
 		pscthr_setready(thr);
+	}
+	/* jump start */
+	CONF_FOREACH_RESM(s, r, i, m, j) {
+		if (!RES_ISFS(r))
+			continue;
+			/* schedule a call to upd_proc_pagein() */
+			upschq_resm(m, UPDT_PAGEIN);
 	}
 }
 
@@ -1420,9 +1524,9 @@ upsch_enqueue(struct slm_update_data *upd)
 	if (!(upd->upd_flags & UPDF_LIST)) {
 		upd->upd_flags |= UPDF_LIST;
 		if (upd->upd_type == UPDT_BMAP)
-			lc_addhead(&slm_upsch_queue, upd);
-		else
 			lc_addtail(&slm_upsch_queue, upd);
+		else
+			lc_addhead(&slm_upsch_queue, upd);
 		UPD_INCREF(upd);
 	}
 	freelock(&upd->upd_lock);

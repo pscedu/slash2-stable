@@ -113,7 +113,12 @@ struct slmupsch_thread {
 	struct slmthr_dbh	  sus_dbh;
 };
 
+struct slmwork_thread {
+	struct slmthr_dbh	  work_dbh;
+};
+
 PSCTHR_MKCAST(slmctlthr, psc_ctlthr, SLMTHRT_CTL)
+PSCTHR_MKCAST(slmworkthr, pfl_wk_thread, SLMTHRT_WORKER)
 PSCTHR_MKCAST(slmdbwkthr, slmdbwk_thread, SLMTHRT_DBWORKER)
 PSCTHR_MKCAST(slmrcmthr, slmrcm_thread, SLMTHRT_RCM)
 PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
@@ -127,6 +132,12 @@ slmctlthr_getpri(struct psc_thread *thr)
 	return ((void *)(slmctlthr(thr) + 1));
 }
 
+static __inline struct slmwork_thread *
+slmworkthr_getpri(struct psc_thread *thr)
+{
+	return ((void *)(slmworkthr(thr) + 1));
+}
+
 static __inline struct slmthr_dbh *
 slmthr_getdbh(void)
 {
@@ -136,6 +147,8 @@ slmthr_getdbh(void)
 	switch (thr->pscthr_type) {
 	case SLMTHRT_CTL:
 		return (&slmctlthr_getpri(thr)->smct_dbh);
+	case SLMTHRT_WORKER:
+		return (&slmworkthr_getpri(thr)->work_dbh);
 	case SLMTHRT_RCM:
 		return (&slmrcmthr(thr)->srcm_dbh);
 	case SLMTHRT_RMC:
@@ -220,6 +233,7 @@ struct rpmi_ios {
 #define si_batchno si_batchmeter.pm_cur
 	int			  si_index;		/* index into the reclaim progress file */
 	int			  si_flags;
+	int			  si_paging;
 	struct srt_statfs	  si_ssfb;
 	struct timespec		  si_ssfb_send;
 
@@ -318,6 +332,7 @@ struct slm_wkdata_upsch_cb {
 struct slm_wkdata_upschq {
 	struct sl_fidgen	 fg;
 	sl_bmapno_t		 bno;
+	struct sl_resm          *resm;
 };
 
 struct slm_wkdata_rmdir_ino {
@@ -340,8 +355,8 @@ struct mio_rootnames {
 	struct pfl_hashentry	 rn_hentry;
 };
 
-#define SLM_NWORKER_THREADS	4
-#define SLM_NUPSCHED_THREADS	2
+#define SLM_NWORKER_THREADS	6
+#define SLM_NUPSCHED_THREADS	4
 
 enum {
 	SLM_OPSTATE_INIT = 0,

@@ -79,8 +79,6 @@ mds_replay_bmap(void *jent, int op)
 	if (rc)
 		goto out;
 
-	FCMH_LOCK(f);
-	FCMH_WAIT_BUSY(f, 1);
 	rc = bmap_getf(f, cp->bno, SL_WRITE, BMAPGETF_CREATE, &b);
 	if (rc)
 		goto out;
@@ -210,10 +208,8 @@ mds_replay_bmap(void *jent, int op)
  out:
 	if (b)
 		bmap_op_done(b);
-	if (f) {
-		FCMH_UNBUSY(f, 1);
+	if (f)
 		fcmh_op_done(f);
-	}
 	return (rc);
 }
 
@@ -306,6 +302,10 @@ mds_replay_ino(void *jent, int op)
 			if (sjir->sjir_repls[0] == 0)
 				psclog_errorx("ino_repls[0] should be set for "
 				    "newly created inode");
+			/*
+ 			 * 10/05/2016: I hit this today. However, a new inode
+ 			 * can inherit the value from its parent.
+ 			 */
 			if (sjir->sjir_nrepls != 1)
 				psclog_errorx("ino_nrepls (%d) in "
 				    "should be 1 for newly created inode",

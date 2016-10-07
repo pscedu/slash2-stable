@@ -399,7 +399,7 @@ main(int argc, char *argv[])
 {
 	char *path_env, *zpcachefn = NULL, *zpname, *estr;
 	const char *cfn, *sfn, *p;
-	int rc, vfsid, c, found;
+	int i, c, rc, vfsid, found;
 	struct psc_thread *thr;
 	time_t now;
 	struct psc_thread *me;
@@ -676,28 +676,28 @@ main(int argc, char *argv[])
 
 	pfl_workq_lock();
 	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS,
-	    "slmwkthr%d");
+	    sizeof(struct slmwork_thread), "slmwkthr%d");
 	pfl_workq_waitempty();
 
 	lc_reginit(&slm_db_lopri_workq, struct pfl_workrq, wkrq_lentry,
 	    "db-lopri-workq");
-	LIST_CACHE_LOCK(&slm_db_lopri_workq);
-	thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
-	    sizeof(struct slmdbwk_thread), "slmdblowkthr");
-	slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_lopri_workq;
-	pscthr_setready(thr);
-	psc_waitq_wait(&slm_db_lopri_workq.plc_wq_want,
-	    &slm_db_lopri_workq.plc_lock);
+
+	for (i = 0; i < 2; i++) {
+		thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
+		    sizeof(struct slmdbwk_thread), "slmdblowkthr%d", i);
+		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_lopri_workq;
+		pscthr_setready(thr);
+	}
 
 	lc_reginit(&slm_db_hipri_workq, struct pfl_workrq, wkrq_lentry,
 	    "db-hipri-workq");
-	LIST_CACHE_LOCK(&slm_db_hipri_workq);
-	thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
-	    sizeof(struct slmdbwk_thread), "slmdbhiwkthr");
-	slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_hipri_workq;
-	pscthr_setready(thr);
-	psc_waitq_wait(&slm_db_hipri_workq.plc_wq_want,
-	    &slm_db_hipri_workq.plc_lock);
+
+	for (i = 0; i < 1; i++) {
+		thr = pscthr_init(SLMTHRT_DBWORKER, pfl_wkthr_main,
+		    sizeof(struct slmdbwk_thread), "slmdbhiwkthr%d", i);
+		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_hipri_workq;
+		pscthr_setready(thr);
+	}
 
 	pscthr_init(SLMTHRT_BKDB, slmbkdbthr_main, 0, "slmbkdbthr");
 

@@ -235,7 +235,6 @@ mds_bmap_read(struct bmap *b, int flags)
 
 	new = 0;
 	f = b->bcm_fcmh;
-	FCMH_BUSY_ENSURE(f);
 
 	if (flags & BMAPGETF_NODISKREAD) {
 		new = 1;
@@ -396,7 +395,7 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 		    struct slm_wkdata_wr_brepl);
 		wk->b = b;
 		bmap_op_start_type(b, BMAP_OPCNT_WORK);
-		pfl_workq_putitemq_head(&slm_db_hipri_workq, wk);
+		pfl_workq_putitem(wk);
 		OPSTAT_INCR("bmap-write-log");
 	}
 
