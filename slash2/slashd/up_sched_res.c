@@ -673,20 +673,119 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 	RPMI_ULOCK(rpmi);
 }
 
+int
+slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx)
+{
+	int off, pass, valid_exists = 0;
+	struct sl_resource *dst_res;
+	struct sl_resm *m;
+	struct fidc_membh *f;
+	struct bmap *b;
+	struct sl_mds_iosinfo *si;
+	struct slrpc_cservice *csvc;
+	struct sl_resource *src_res;
+	struct rnd_iterator src_res_i;
+	sl_ios_id_t iosid;
+
+	b = bmi_2_bmap(bmi);
+	f = b->bcm_fcmh;
+	off = SL_BITS_PER_REPLICA * dst_idx;
+
+	iosid = fcmh_2_repl(f, dst_idx);
+	dst_res = libsl_id2res(iosid);
+
+	/* look for a repl source */
+	for (pass = 0; pass < 2; pass++) {
+		FOREACH_RND(&src_res_i, fcmh_2_nrepls(f)) {
+			if (src_res_i.ri_rnd_idx == dst_idx)
+				continue;
+
+			src_res = libsl_id2res(
+			    fcmh_getrepl(f, src_res_i.ri_rnd_idx).bs_id);
+
+			/*
+			 * Skip ourself and old/inactive * replicas.
+			 */
+			if (src_res == NULL ||
+			    SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,
+			    SL_BITS_PER_REPLICA *
+			    src_res_i.ri_rnd_idx) != BREPLST_VALID)
+				continue;
+
+			valid_exists = 1;
+
+			si = res2iosinfo(src_res);
+
+			psclog_debug("attempt to "
+			    "arrange repl with %s -> %s? "
+			    "pass=%d siflg=%d",
+			    src_res->res_name,
+			    dst_res->res_name,
+			    pass, !!(si->si_flags &
+			    (SIF_DISABLE_LEASE |
+			     SIF_DISABLE_ADVLEASE)));
+
+			if (pass ^ (src_res->res_type == SLREST_ARCHIVAL_FS ||
+			     !!(si->si_flags & (SIF_DISABLE_LEASE |
+			      SIF_DISABLE_ADVLEASE))))
+				continue;
+
+			psclog_debug("trying to arrange " "repl with %s -> %s", 
+			    src_res->res_name, dst_res->res_name);
+
+			/*
+			 * Search source nodes for an idle, online connection.
+			 */
+			m = res_getmemb(src_res);
+			csvc = slm_geticsvc(m, NULL,
+			    CSVCF_NONBLOCK | CSVCF_NORECON, NULL);
+			if (csvc == NULL)
+				continue;
+			sl_csvc_decref(csvc);
+
+			if (slm_upsch_tryrepl(b, off, m, dst_res))
+				goto out;
+		}
+	}
+	if (!valid_exists) {
+		int tract[NBREPLST], retifset[NBREPLST];
+
+		DEBUG_BMAPOD(PLL_DIAG, b, "no source "
+		    "replicas exist; canceling "
+		    "impossible replication request; "
+		    "dst_ios=%s", dst_res->res_name);
+
+		OPSTAT_INCR("upsch-impossible");
+
+		brepls_init(tract, -1);
+		tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE;
+
+		brepls_init(retifset, 0);
+		retifset[BREPLST_REPL_QUEUED] = 1;
+
+		if (mds_repl_bmap_apply(b, tract, retifset, off)) {
+			mds_bmap_write_logrepls(b);
+			goto out;
+		}
+	}
+
+	return 0;
+ out:
+	return 1;
+
+}
+
 /*
  * Process a bmap for upsch work. Called by upd_proc().
  */
 void
 upd_proc_bmap(struct slm_update_data *upd)
 {
-	int rc, off, val, pass, valid_exists = 0;
-	struct rnd_iterator dst_res_i, src_res_i;
-	struct sl_resource *dst_res, *src_res;
-	struct slrpc_cservice *csvc;
-	struct sl_mds_iosinfo *si;
+	int rc, off, val;
+	struct rnd_iterator dst_res_i;
+	struct sl_resource *dst_res;
 	struct bmap_mds_info *bmi;
 	struct fidc_membh *f;
-	struct sl_resm *m;
 	struct bmap *b;
 	sl_ios_id_t iosid;
 
@@ -733,92 +832,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 			psclog_debug("trying to arrange repl dst=%s",
 			    dst_res->res_name);
 
-			/* look for a repl source */
-			for (pass = 0; pass < 2; pass++) {
-				FOREACH_RND(&src_res_i, fcmh_2_nrepls(f)) {
-					if (src_res_i.ri_rnd_idx ==
-					    dst_res_i.ri_rnd_idx)
-						continue;
-
-					src_res = libsl_id2res(
-					    fcmh_getrepl(f,
-					    src_res_i.ri_rnd_idx).bs_id);
-
-					/*
-					 * Skip ourself and old/inactive
-					 * replicas.
-					 */
-					if (src_res == NULL ||
-					    SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,
-					    SL_BITS_PER_REPLICA *
-					    src_res_i.ri_rnd_idx) != BREPLST_VALID)
-						continue;
-
-					valid_exists = 1;
-
-					si = res2iosinfo(src_res);
-
-					psclog_debug("attempt to "
-					    "arrange repl with %s -> %s? "
-					    "pass=%d siflg=%d",
-					    src_res->res_name,
-					    dst_res->res_name,
-					    pass, !!(si->si_flags &
-					    (SIF_DISABLE_LEASE |
-					     SIF_DISABLE_ADVLEASE)));
-
-					if (pass ^
-					    (src_res->res_type ==
-					     SLREST_ARCHIVAL_FS ||
-					     !!(si->si_flags &
-					     (SIF_DISABLE_LEASE |
-					      SIF_DISABLE_ADVLEASE))))
-						continue;
-
-					psclog_debug("trying to arrange "
-					    "repl with %s -> %s",
-					    src_res->res_name,
-					    dst_res->res_name);
-
-					/*
-					 * Search source nodes for an
-					 * idle, online connection.
-					 */
-					m = res_getmemb(src_res);
-					csvc = slm_geticsvc(m, NULL,
-					    CSVCF_NONBLOCK |
-					    CSVCF_NORECON,
-					    NULL);
-					if (csvc == NULL)
-						continue;
-					sl_csvc_decref(csvc);
-
-					if (slm_upsch_tryrepl(b, off, m,
-					    dst_res))
-						goto out;
-				}
-			}
-			if (!valid_exists) {
-				int tract[NBREPLST], retifset[NBREPLST];
-
-				DEBUG_BMAPOD(PLL_DIAG, b, "no source "
-				    "replicas exist; canceling "
-				    "impossible replication request; "
-				    "dst_ios=%s", dst_res->res_name);
-
-				brepls_init(tract, -1);
-				tract[BREPLST_REPL_QUEUED] =
-				    BREPLST_GARBAGE;
-
-				brepls_init(retifset, 0);
-				retifset[BREPLST_REPL_QUEUED] = 1;
-
-				if (mds_repl_bmap_apply(b, tract,
-				    retifset, off)) {
-					mds_bmap_write_logrepls(b);
-					goto out;
-				}
-			}
+			if (slm_upsch_sched_repl(bmi, dst_res_i.ri_rnd_idx))
+				goto out;
 			break;
 
 		case BREPLST_TRUNCPNDG:
@@ -830,6 +845,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 			if (rc > 0)
 				goto out;
 			break;
+#if 0
 		case BREPLST_VALID:
 	 		/* 
 			 * I guess it is possible that the state has 
@@ -844,6 +860,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 			 */ 
 			OPSTAT_INCR("upsch-already-valid");
 			break;
+#endif
 		}
 	}
  out:
@@ -856,92 +873,9 @@ upd_proc_bmap(struct slm_update_data *upd)
  * that needs done, such as replication, garbage reclamation, etc.
  */
 void
-upd_proc_pagein_unit(struct slm_update_data *upd)
+upd_proc_pagein_unit(__unusedx struct slm_update_data *upd)
 {
-	struct slm_update_generic *upg;
-	struct fidc_membh *f = NULL;
-	struct bmap *b = NULL;
-	int rc, sched = 0, retifset[NBREPLST];
 
-	struct resprof_mds_info *rpmi;
-	struct sl_mds_iosinfo *si;
-
-	upg = upd_getpriv(upd);
-	rc = slm_fcmh_get(&upg->upg_fg, &f);
-	if (rc)
-		goto out;
-
-	rc = bmap_get(f, upg->upg_bno, SL_WRITE, &b);
-	if (rc)
-		goto out;
-
-	BMAP_ULOCK(b);
-	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
-		mds_inox_ensure_loaded(fcmh_2_inoh(f));
-
-	/*
- 	 * XXX why do we care about SCHED here?  upd_proc_bmap()
- 	 * does not really care about them.  This seems fine
- 	 * today because we only page in requests in 'Q' state.
- 	 */
-	brepls_init(retifset, 0);
-	retifset[BREPLST_REPL_QUEUED] = 1;
-	retifset[BREPLST_REPL_SCHED] = 1;
-	retifset[BREPLST_TRUNCPNDG] = 1;
-	if (slm_preclaim_enabled) {
-		retifset[BREPLST_GARBAGE] = 1;
-		retifset[BREPLST_GARBAGE_SCHED] = 1;
-	}
-
-	BMAP_LOCK(b);
-	bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-
-	if (mds_repl_bmap_walk_all(b, NULL, retifset,
-	    REPL_WALKF_SCIRCUIT))
-		upsch_enqueue(bmap_2_upd(b));
-	else
-		rc = 1;
-
-	BMAP_ULOCK(b);
-
- out:
-	if (rc) {
-		/*
-		 * XXX Do we need to do any work if rc is an error code
-		 * instead 1 here?
-		 *
-		 * We only try once because an IOS might down. So it is
-		 * up to the user to requeue his request.
-		 */
-		struct slm_wkdata_upsch_purge *wk;
-
-		wk = pfl_workq_getitem(slm_wk_upsch_purge,
-		    struct slm_wkdata_upsch_purge);
-		wk->fid = upg->upg_fg.fg_fid;
-		if (b)
-			wk->bno = b->bcm_bmapno;
-		else
-			wk->bno = BMAPNO_ANY;
-		pfl_workq_putitem_head(wk);
-	}
-
-	rpmi = res2rpmi(upg->upg_resm->resm_res);
-	si = res2iosinfo(upg->upg_resm->resm_res);
-	RPMI_LOCK(rpmi);
-	si->si_paging--;
-	if (!si->si_paging) {
-		si->si_flags &= ~SIF_UPSCH_PAGING;
-		sched = 1;
-	}
-	RPMI_ULOCK(rpmi);
-	if (sched)
-		upschq_resm(upg->upg_resm, UPDT_PAGEIN);
-
-	if (b)
-		bmap_op_done(b);
-
-	if (f)
-		fcmh_op_done(f);
 }
 
 int
@@ -952,25 +886,6 @@ upd_pagein_wk(void *p)
 
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
-#if 0
-	struct slm_update_generic *upg;
-
-	upg = psc_pool_get(slm_upgen_pool);
-	memset(upg, 0, sizeof(*upg));
-	INIT_PSC_LISTENTRY(&upg->upg_lentry);
-
-	/* Schedule a call to upd_proc_pagein_unit() */
-	upd_init(&upg->upg_upd, UPDT_PAGEIN_UNIT); 
-
-	upg->upg_fg.fg_fid = wk->fg.fg_fid;
-	upg->upg_fg.fg_gen = FGEN_ANY;
-	upg->upg_bno = wk->bno;
-	upg->upg_resm = wk->resm;
-	upsch_enqueue(&upg->upg_upd);
-	
-	spinlock(&upg->upg_upd.upd_lock);
-	UPD_UNBUSY(&upg->upg_upd);
-#endif
 
 	struct fidc_membh *f = NULL;
 	struct bmap *b = NULL;
@@ -982,7 +897,6 @@ upd_pagein_wk(void *p)
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc)
 		goto out;
-
 	rc = bmap_get(f, wk->bno, SL_WRITE, &b);
 	if (rc)
 		goto out;
@@ -1065,6 +979,7 @@ upd_proc_pagein_cb(struct slm_sth *sth, void *p)
  	 */
 	OPSTAT_INCR("upsch-db-pagein");
 
+	/* pfl_workrq_pool */
 	wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
 	wk->fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
 	wk->bno = sqlite3_column_int(sth->sth_sth, 1);
@@ -1090,6 +1005,8 @@ upd_proc_pagein(struct slm_update_data *upd)
 	struct sl_resource *r;
 	struct psc_dynarray da = DYNARRAY_INIT;
 
+	while (lc_nitems(&slm_db_lopri_workq))
+		usleep(1000000/2);
 	/*
 	 * Page some work in.  We make a heuristic here to avoid a large
 	 * number of operations inside the database callback.
@@ -1110,6 +1027,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 
 	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
 
+	/* DESC means sorted by descending order */
 	dbdo(upd_proc_pagein_cb, &da,
 	    " SELECT	fid,"
 	    "		bno,"
