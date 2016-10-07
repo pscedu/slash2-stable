@@ -617,7 +617,7 @@ psc_ctlmsg_opstat_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("%-42s %13s %13s %13s %13s\n",
-	    "opstat", "rate10s", "max10s", "ratecur", "total");
+	    "opstat", "avg rate", "max rate", "cur rate", "total");
 	return(PSC_CTL_DISPLAY_WIDTH+18);
 }
 
