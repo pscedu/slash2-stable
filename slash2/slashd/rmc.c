@@ -67,6 +67,7 @@
 #include "lib/libsolkerncompat/include/errno_compat.h"
 #include "zfs-fuse/zfs_slashlib.h"
 
+int			slm_quiesce;
 int			slm_force_dio;
 int			slm_global_mount;
 int			slm_crc_check = 1;
@@ -1814,6 +1815,8 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
+	if (slm_quiesce)
+		return (-EAGAIN);
 
 	pfl_fault_here(NULL, RMC_HANDLE_FAULT);
 
