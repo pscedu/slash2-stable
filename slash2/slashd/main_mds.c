@@ -597,7 +597,6 @@ main(int argc, char *argv[])
 	psclog_max("SLASH2 utility slmctl is now ready at %s", ctime(&now));
 
 	sqlite3_enable_shared_cache(1);
-	//dbdo(NULL, NULL, "PRAGMA page_size=");
 	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
 	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
 
@@ -653,8 +652,6 @@ main(int argc, char *argv[])
 		    " GROUP BY uid");
 	}
 
-	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
-
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
 
 	lc_reginit(&slm_db_hipri_workq, struct pfl_workrq, wkrq_lentry,
@@ -704,8 +701,6 @@ main(int argc, char *argv[])
 		slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_lopri_workq;
 		pscthr_setready(thr);
 	}
-
-	pscthr_init(SLMTHRT_BKDB, slmbkdbthr_main, 0, "slmbkdbthr");
 
 	slmbmaptimeothr_spawn();
 	slmconnthr_spawn();
