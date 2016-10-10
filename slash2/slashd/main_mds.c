@@ -119,13 +119,13 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 void
 import_zpool(const char *zpoolname, const char *zfspoolcf)
 {
-	char cmdbuf[BUFSIZ], mountpoint[BUFSIZ];
+	char scratchbuf[BUFSIZ];
 	struct dirent *d;
 	int i, rc;
 	DIR *dir;
 
-	rc = snprintf(mountpoint, sizeof(mountpoint), "/%s", zpoolname);
-	psc_assert(rc < (int)sizeof(mountpoint) && rc >= 0);
+	rc = snprintf(scratchbuf, sizeof(scratchbuf), "/%s", zpoolname);
+	psc_assert(rc < (int)sizeof(scratchbuf) && rc >= 0);
 
 	/*
 	 * ZFS fuse can create the mount point automatically if it does
@@ -133,7 +133,7 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 	 * empty, it does not mount the default file system in the pool
 	 * for some reason.
 	 */
-	dir = opendir(mountpoint);
+	dir = opendir(scratchbuf);
 	if (dir) {
 		i = 0;
 		while ((d = readdir(dir)) != NULL) {
@@ -141,11 +141,12 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 				continue;
 			errno = ENOTEMPTY;
 			psc_fatal("Please clean up directory %s before mount",
-			    mountpoint);
+			    scratchbuf);
 		}
 		closedir(dir);
 	}
 
+#if 0
 	/*
  	 *  The following message during start up should be harmless:
  	 *
@@ -160,15 +161,18 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 	    zpoolname);
 	if (rc == -1)
 		psc_fatal("failed to execute command to import zpool "
-		    "%s: %s", zpoolname, cmdbuf);
+		    "%s: %s", zpoolname, scratchbuf);
+#endif
 
+#if 0
 	/* mount the default file system in the pool */
 	rc = pfl_systemf("zfs mount %s", zpoolname);
 	if (rc == -1)
 		psc_fatal("failed to execute command to mount %s",
 		    zpoolname);
+#endif
 
-#if 0
+#if 1
 	/* mount the other MDS file systems from the pool */
 	rc = system("zfs mount -a");
 	if (rc == -1)
