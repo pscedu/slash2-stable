@@ -960,12 +960,14 @@ upd_pagein_wk(void *p)
 	RPMI_LOCK(rpmi);
 	si->si_paging--;
 	if (!si->si_paging) {
-		si->si_flags &= ~SIF_UPSCH_PAGING;
+		si->si_flags &= ~SIF_UPSCH_PAGING; 
 		sched = 1;
 	}
 	RPMI_ULOCK(rpmi);
-	if (sched)
+	if (sched) {
+		OPSTAT_INCR("upsch-pagein-batch");
 		upschq_resm(wk->resm, UPDT_PAGEIN);
+	}
 
 	if (b)
 		bmap_op_done(b);
@@ -1004,7 +1006,7 @@ upd_proc_pagein_cb(struct slm_sth *sth, void *p)
 void
 upd_proc_pagein(struct slm_update_data *upd)
 {
-	int i, len;
+	int i, len, sched = 0;
 	struct slm_wkdata_upschq *wk;
 	struct slm_update_generic *upg;
 	struct resprof_mds_info *rpmi = NULL;
@@ -1024,42 +1026,15 @@ upd_proc_pagein(struct slm_update_data *upd)
 	 * will starve.
 	 */
 	upg = upd_getpriv(upd);
-	if (upg->upg_resm) {
-		r = upg->upg_resm->resm_res;
-		rpmi = res2rpmi(r);
-		si = res2iosinfo(r);
-	}
+	r = upg->upg_resm->resm_res;
+	rpmi = res2rpmi(r);
+	si = res2iosinfo(r);
 
 #define UPSCH_PAGEIN_BATCH	128
 
 	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
 
 	spinlock(&slm_upsch_lock);
-
-#if 0
-	/* DESC means sorted by descending order */
-	dbdo(upd_proc_pagein_cb, &da,
-	    " SELECT	fid,"
-	    "		bno,"
-	    "		nonce"
-	    " FROM	upsch u,"
-	    "		gsort gs,"
-	    "		usort us"
-	    " WHERE	resid = IFNULL(?, resid)"
-	    "   AND	status = 'Q'"
-	    "	AND	gs.gid = u.gid"
-	    "	AND	us.uid = u.uid"
-	    " ORDER BY	sys_prio DESC,"
-	    "		gs.rnd,"
-	    "		us.rnd,"
-	    "		usr_prio DESC,"
-	    "		RANDOM()"
-	    " LIMIT	?",
-	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
-	    upg->upg_resm ? r->res_id : 0,
-	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH);
-
-#else
 
 	dbdo(upd_proc_pagein_cb, &da,
 	    " SELECT    fid,"
@@ -1075,30 +1050,31 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    SQLITE_INTEGER, UPSCH_PAGEIN_BATCH,
 	    SQLITE_INTEGER, 
 	    upg->upg_resm ? r->res_offset : 0);
-#endif
+
 	freelock(&slm_upsch_lock);
 
-	if (rpmi)
-		RPMI_LOCK(rpmi);
-
+	RPMI_LOCK(rpmi);
 	len = psc_dynarray_len(&da);
 	if (!len) {
+		if (r->res_offset)
+			sched = 1;
 		r->res_offset = 0;
 		si->si_flags &= ~SIF_UPSCH_PAGING;
-		OPSTAT_INCR("upsch-empty");
 	} else {
 		r->res_offset += len;
 		OPSTAT_ADD("upsch-db-pagein", len);
 		DYNARRAY_FOREACH(wk, i, &da) {
-			if (rpmi)
-				si->si_paging++;
+			si->si_paging++;
 			wk->resm = upg->upg_resm;
 			pfl_workq_putitem(wk);
 		}
 	}
+	RPMI_ULOCK(rpmi);
 
-	if (rpmi)
-		RPMI_ULOCK(rpmi);
+	if (sched) {
+		OPSTAT_INCR("upsch-pagein-wrap");
+		upschq_resm(upg->upg_resm, UPDT_PAGEIN);
+	}
 	psc_dynarray_free(&da);
 }
 
