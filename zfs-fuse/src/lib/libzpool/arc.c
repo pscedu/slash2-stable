@@ -941,6 +941,20 @@ arc_cksum_verify(arc_buf_t *buf)
 		return;
 	}
 	fletcher_2_native(buf->b_data, buf->b_hdr->b_size, &zc);
+	/*
+ 	 * 10/12/2016: Hit the following with heavy replication
+ 	 * and unlink workload.  The stack is as follows:
+ 	 *
+ 	 * zfsslash2_lookup() --> fop_lookup() --> zfs_lookup() --> ...
+ 	 * arc_buf_alloc(type=ARC_BUFC_METADATA) --> arc_get_data_buf()
+ 	 * arc_evict() --> arc_buf_destroy() --> arc_cksum_verify().
+ 	 *
+ 	 * (gdb) p arc_stats.arcstat_c_max.value.ui64
+ 	 * $7 = 34359738368
+ 	 * (gdb) p arc_stats.arcstat_size.value.ui64
+ 	 * $8 = 11400516032
+ 	 *
+ 	 */
 	if (!ZIO_CHECKSUM_EQUAL(*buf->b_hdr->b_freeze_cksum, zc))
 		panic("buffer modified while frozen!");
 	mutex_exit(&buf->b_hdr->b_freeze_lock);
