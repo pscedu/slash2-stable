@@ -247,6 +247,10 @@ main(int argc, char *argv[])
  	 * If wokctl misbehave, or given wrong arugments, it is hard
  	 * to debug. So someday, this will be changed to a native
  	 * call.
+ 	 *
+ 	 * If the client does not come up, double/triple checkout 
+ 	 * the name of your slash2 shared library. I wish I can
+ 	 * add more verbose debugging information.
  	 */
 	DYNARRAY_FOREACH(cmd, i, &startup_cmds)
 		pfl_systemf("wokctl -S %s %s", ctlsockfn, cmd);
