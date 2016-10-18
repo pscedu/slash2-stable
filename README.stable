@@ -1,6 +1,8 @@
 10/18/2016
 ----------
 
+Rlease 1.16.
+
 At this change, replication seems to be stable and more efficient than before. Many bugs in
 batch RPC code have been fixed.  All my tests has passed except one possible regression:
 
