@@ -1,3 +1,20 @@
+10/18/2016
+----------
+
+At this change, replication seems to be stable and more efficient than before. Many bugs in
+batch RPC code have been fixed.  All my tests has passed except one possible regression:
+
+bash-4.2# msctl -sc
+resource                                      host type    flags stkvers txcr  #ref      uptime
+===============================================================================================
+PSC1
+  orange                            orange.psc.edu mds      -OW-   16346    8    10    0d19h55m
+  lemon                              lemon.psc.edu serial   ----   16346    8     1    --------
+  lime                                lime.psc.edu serial   -O--   16346    8     1    0d22h42m
+
+The refernce count should be one.  However, it is possible that I have never tested the case that
+produces the reference count leak.
+
 10/07/2016
 ----------
 
