@@ -34,9 +34,10 @@
 
 #include <sqlite3.h>
 
-#define	SLM_UPSCH_PAUSE			30
+#define UPSCH_PAGEIN_BATCH	128
 
-extern int slm_upsch_delay;
+extern int slm_upsch_repl_delay;
+extern int slm_upsch_preclaim_delay;
 
 extern psc_spinlock_t           slm_upsch_lock;
 extern struct psc_waitq		slm_upsch_waitq;
@@ -60,7 +61,6 @@ enum upd_type_enum {
 	UPDT_BMAP,			/* upd_proc_bmap() */
 	UPDT_HLDROP,			/* upd_proc_hldrop() */
 	UPDT_PAGEIN,			/* upd_proc_pagein() */
-	UPDT_PAGEIN_UNIT		/* upd_proc_pagein_unit() */
 };
 
 #define upd_2_bmi(upd)			((struct bmap_mds_info *)upd_getpriv(upd))

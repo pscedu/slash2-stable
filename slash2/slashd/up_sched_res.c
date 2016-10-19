@@ -84,8 +84,8 @@ struct psc_listcache     slm_upsch_queue;
 struct psc_poolmaster	 slm_upgen_poolmaster;
 struct psc_poolmgr	*slm_upgen_pool;
 
-int	upsch_total;
-int	slm_upsch_delay = 4;
+int	slm_upsch_repl_delay = 5;
+int	slm_upsch_preclaim_delay = 30;
 
 void (*upd_proctab[])(struct slm_update_data *);
 
@@ -306,7 +306,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	rc = slrpc_batch_req_add(dst_res,
 	    &slm_db_hipri_workq, csvc, SRMT_REPL_SCHEDWK,
 	    SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &q, sizeof(q), bsr,
-	    &slm_batch_rep_repl, slm_upsch_delay);
+	    &slm_batch_rep_repl, slm_upsch_repl_delay);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -604,7 +604,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	rc = slrpc_batch_req_add(r,
 	    &slm_db_hipri_workq, csvc, SRMT_PRECLAIM, SRMI_BULK_PORTAL,
 	    SRIM_BULK_PORTAL, &q, sizeof(q), bsp,
-	    &slm_batch_rep_preclaim, 30);
+	    &slm_batch_rep_preclaim, slm_upsch_preclaim_delay);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	rc = mds_bmap_write_logrepls(b);
@@ -874,16 +874,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 	BMAP_ULOCK(b);
 }
 
-/*
- * Page in one unit of work.  This examines a single bmap for any work
- * that needs done, such as replication, garbage reclamation, etc.
- */
-void
-upd_proc_pagein_unit(__unusedx struct slm_update_data *upd)
-{
-
-}
-
 int
 upd_pagein_wk(void *p)
 {
@@ -1030,8 +1020,6 @@ upd_proc_pagein(struct slm_update_data *upd)
 	rpmi = res2rpmi(r);
 	si = res2iosinfo(r);
 
-#define UPSCH_PAGEIN_BATCH	128
-
 	psc_dynarray_ensurelen(&da, UPSCH_PAGEIN_BATCH);
 
 	spinlock(&slm_upsch_lock);
@@ -1121,7 +1109,6 @@ upd_proc(struct slm_update_data *upd)
  	 * UPDT_BMAP: upd_proc_bmap()
  	 * UPDT_HLDROP: upd_proc_hldrop()
  	 * UPDT_PAGEIN: upd_proc_pagein()
- 	 * UPDT_PAGEIN_UNIT: upd_proc_pagein_unit()
  	 */
 	switch (upd->upd_type) {
 	case UPDT_BMAP:
@@ -1132,9 +1119,6 @@ upd_proc(struct slm_update_data *upd)
 		break;
 	case UPDT_PAGEIN:
 		OPSTAT_INCR("upsch-pagein");
-		break;
-	case UPDT_PAGEIN_UNIT:
-		OPSTAT_INCR("upsch-pagein-unit");
 		break;
 	default:
 		psc_fatalx("Unknown type %d", upd->upd_type);
@@ -1154,7 +1138,6 @@ upd_proc(struct slm_update_data *upd)
 		break;
 	case UPDT_HLDROP:
 	case UPDT_PAGEIN:
-	case UPDT_PAGEIN_UNIT:
 		upg = upd_getpriv(upd);
 		psc_pool_return(slm_upgen_pool, upg);
 		break;
@@ -1388,8 +1371,8 @@ upschq_resm(struct sl_resm *m, int type)
 void
 upd_init(struct slm_update_data *upd, int type)
 {
-	psc_assert(type == UPDT_BMAP   || type == UPDT_HLDROP || 
-		   type == UPDT_PAGEIN || type == UPDT_PAGEIN_UNIT);
+	psc_assert(type == UPDT_BMAP || type == UPDT_HLDROP || 
+		   type == UPDT_PAGEIN);
 
 	psc_assert(pfl_memchk(upd, 0, sizeof(*upd)) == 1);
 	INIT_PSC_LISTENTRY(&upd->upd_lentry);
@@ -1473,7 +1456,6 @@ upd_getpriv(struct slm_update_data *upd)
 		return (p - offsetof(struct bmap_mds_info, bmi_upd));
 	case UPDT_HLDROP:
 	case UPDT_PAGEIN:
-	case UPDT_PAGEIN_UNIT:
 		return (p - offsetof(struct slm_update_generic, upg_upd));
 	default:
 		psc_fatal("type");
@@ -1484,8 +1466,7 @@ upd_getpriv(struct slm_update_data *upd)
 void (*upd_proctab[])(struct slm_update_data *) = {
 	upd_proc_bmap,
 	upd_proc_hldrop,
-	upd_proc_pagein,
-	upd_proc_pagein_unit
+	upd_proc_pagein
 };
 
 struct slrpc_batch_rep_handler slm_batch_rep_repl = {

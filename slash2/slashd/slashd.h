@@ -160,7 +160,7 @@ slmthr_getdbh(void)
 	case SLMTHRT_DBWORKER:
 		return (&slmdbwkthr(thr)->smdw_dbh);
 	}
-	psc_fatalx("unknown thread type");
+	psc_fatalx("unknown thread type %d", thr->pscthr_type);
 }
 
 struct site_mds_info {
@@ -400,8 +400,8 @@ extern struct slash_creds	 rootcreds;
 extern struct pfl_odt		*slm_bia_odt;
 extern struct pfl_odt		*slm_ptrunc_odt;
 extern struct slm_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
-extern struct psc_listcache	 slm_db_lopri_workq;
 extern struct psc_listcache	 slm_db_hipri_workq;
+extern struct psc_listcache	 slm_db_lopri_workq;
 
 extern struct psc_thread	*slmconnthr;
 
