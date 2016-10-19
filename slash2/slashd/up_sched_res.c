@@ -787,7 +787,7 @@ slm_upsch_sched_repl(struct bmap_mds_info *bmi,  int dst_idx)
 void
 upd_proc_bmap(struct slm_update_data *upd)
 {
-	int rc, off, val;
+	int rc, off, val, valid = 0;
 	struct rnd_iterator dst_res_i;
 	struct sl_resource *dst_res;
 	struct bmap_mds_info *bmi;
@@ -822,6 +822,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 			    iosid, iosid);
 			continue;
 		}
+		valid = 1;
 		off = SL_BITS_PER_REPLICA * dst_res_i.ri_rnd_idx;
 		val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
 		switch (val) {
@@ -869,6 +870,10 @@ upd_proc_bmap(struct slm_update_data *upd)
 #endif
 		}
 	}
+
+	if (!valid)
+		DEBUG_FCMH(PLL_WARN, f, "No valid IOS for bmap %d", 
+		    b->bcm_bmapno);
  out:
 
 	BMAP_ULOCK(b);
@@ -877,7 +882,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 int
 upd_pagein_wk(void *p)
 {
-	int sched = 0;
+	uint32_t i;
+	int sched = 0, valid = 0;
 	struct slm_wkdata_upschq *wk = p;
 
 	struct resprof_mds_info *rpmi;
@@ -887,6 +893,8 @@ upd_pagein_wk(void *p)
 	struct bmap *b = NULL;
 	int rc, retifset[NBREPLST];
 	struct sl_fidgen fg;
+	sl_ios_id_t iosid;
+	struct sl_resource *res;
 
 	fg.fg_fid = wk->fg.fg_fid;
 	fg.fg_gen = FGEN_ANY;
@@ -916,7 +924,20 @@ upd_pagein_wk(void *p)
 	}
 
 	BMAP_LOCK(b);
-	if (mds_repl_bmap_walk_all(b, NULL, retifset,
+	for (i = 0; i < fcmh_2_nrepls(f); i++) {
+		iosid = fcmh_2_repl(f, i);
+		res = libsl_id2res(iosid);
+		if (res != NULL) {
+			valid = 1;
+			break;
+		}
+	}
+	if (!valid) {
+		DEBUG_FCMH(PLL_WARN, f, "No valid IOS for bmap %d", 
+		    b->bcm_bmapno);
+		OPSTAT_INCR("upsch-no-invalid");
+	}
+	if (valid && mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
 		upsch_enqueue(bmap_2_upd(b));
 	else {
