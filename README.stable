@@ -1,3 +1,18 @@
+10/26/2016
+----------
+
+zhihui@illusion2: /local/src/p$ slmctl -sop | egrep "rate|repl-s"
+opstat                                          avg rate      max rate      cur rate         total
+repl-sched                                       33.1M/s        4.6G/s       13.5M/s         75.1T
+repl-schedwk-err                                     0/s          17/s           0/s           736
+repl-schedwk-ok                                     18/s         167/s          20/s       4684949
+repl-success                                        18/s         167/s          20/s       4684949
+repl-success-aggr                                52.8M/s        3.8G/s       16.7M/s         75.0T
+zhihui@illusion2: /local/src/p$ slmctl -p sys | tail -2
+sys.uptime                                              5d21h44m
+sys.version                                             42659
+zhihui@illusion2: /local/src/p$ 
+
 10/18/2016
 ----------
 
