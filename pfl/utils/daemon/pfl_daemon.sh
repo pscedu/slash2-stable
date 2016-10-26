@@ -155,7 +155,7 @@ apply_host_prefs()
 			vprint "deployment $prof, host $host"
 			return
 		done
-		warn "no profile for this host; assuming defaults"
+		warn "no profile for host $host; assuming defaults"
 		[ ${#av[@]} -gt $narg ] && usage
 		return
 	done
