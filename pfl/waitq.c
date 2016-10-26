@@ -110,6 +110,8 @@ _psc_waitq_waitabs(struct psc_waitq *q, enum pfl_lockprim type,
 	if (abstime) {
 		rc = pthread_cond_timedwait(&q->wq_cond,
 		    &q->wq_mut.pm_mutex, abstime);
+
+		/* 10/26/2016: Hit rc = 1 with RPC thread */
 		if (rc && rc != ETIMEDOUT)
 			psc_fatalx("pthread_cond_timedwait: %s",
 			    strerror(rc));
