@@ -1542,7 +1542,6 @@ psc_ctlrep_param_simple(int fd, struct psc_ctlmsghdr *mh,
 	if (mh->mh_type == PCMT_SETPARAM) {
 		if (pcn->pcn_setf) {
 			if (pcn->pcn_setf(pcp->pcp_value))
- invalid:
 				return (psc_ctlsenderr(fd, mh, NULL,
 				    "%s: invalid value: %s",
 				    psc_ctlparam_fieldname(
@@ -1598,6 +1597,12 @@ psc_ctlrep_param_simple(int fd, struct psc_ctlmsghdr *mh,
 		}
 		return (psc_ctlsenderr(fd, mh, NULL, "%s: field is read-only",
 		    psc_ctlparam_fieldname(pcp->pcp_field, nlevels)));
+
+ invalid:
+		return (psc_ctlsenderr(fd, mh, NULL, "%s: invalid value: %s",
+		    psc_ctlparam_fieldname(pcp->pcp_field, nlevels), 
+			pcp->pcp_value));
+
 	}
 	switch (pcn->pcn_vtype) {
 	case PFLCTL_PARAMT_NONE:
