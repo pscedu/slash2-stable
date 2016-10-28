@@ -386,6 +386,34 @@ slmctlparam_nextfid_set(const char *val)
 	return (rc);
 }
 
+static char cmdbuf[PCP_VALUE_MAX] = "N/A";
+
+void
+slmctlparam_execute_get(char *val)
+{
+	snprintf(val, PCP_VALUE_MAX, "%s", cmdbuf);
+}
+
+int
+slmctlparam_execute_set(const char *val)
+{
+	int rc;
+	strlcpy(cmdbuf, val, PCP_VALUE_MAX);
+	rc = system(cmdbuf);
+	if (rc == -1)
+		rc = -errno;
+	else if (WIFEXITED(rc))
+		rc = WEXITSTATUS(rc);
+	psclog(PLL_WARN, "Executed command %s, rc = %d", cmdbuf, rc);
+	if (rc) {
+		cmdbuf[0] = 'N';
+		cmdbuf[1] = '/';
+		cmdbuf[2] = 'A';
+		cmdbuf[3] = '\0';
+	}
+	return (rc);
+}
+
 void
 slmctlparam_reboots_get(char *val)
 {
@@ -534,6 +562,9 @@ slmctlthr_spawn(const char *fn)
 	psc_ctlparam_register("rlim", psc_ctlparam_rlim);
 	psc_ctlparam_register("run", psc_ctlparam_run);
 	psc_ctlparam_register("rusage", psc_ctlparam_rusage);
+
+	psc_ctlparam_register_simple("sys.execute",
+	    slmctlparam_execute_get, slmctlparam_execute_set);
 
 	psc_ctlparam_register_var("sys.crc_check",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_crc_check);

@@ -1525,6 +1525,7 @@ psc_ctlrep_param_simple(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     struct psc_ctlparam_node *pcn)
 {
+	int rc;
 	char val[PCP_VALUE_MAX];
 
 	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
@@ -1541,13 +1542,12 @@ psc_ctlrep_param_simple(int fd, struct psc_ctlmsghdr *mh,
 
 	if (mh->mh_type == PCMT_SETPARAM) {
 		if (pcn->pcn_setf) {
-			if (pcn->pcn_setf(pcp->pcp_value))
- invalid:
+			rc = pcn->pcn_setf(pcp->pcp_value);
+			if (rc)
 				return (psc_ctlsenderr(fd, mh, NULL,
-				    "%s: invalid value: %s",
+				    "%s: set value failed with rc=%d",
 				    psc_ctlparam_fieldname(
-				      pcp->pcp_field, nlevels),
-				    pcp->pcp_value));
+				      pcp->pcp_field, nlevels), rc));
 			return (1);
 		}
 		if (pcn->pcn_flags & PFLCTL_PARAMF_RDWR) {
@@ -1598,6 +1598,12 @@ psc_ctlrep_param_simple(int fd, struct psc_ctlmsghdr *mh,
 		}
 		return (psc_ctlsenderr(fd, mh, NULL, "%s: field is read-only",
 		    psc_ctlparam_fieldname(pcp->pcp_field, nlevels)));
+
+ invalid:
+		return (psc_ctlsenderr(fd, mh, NULL, "%s: invalid value: %s",
+		    psc_ctlparam_fieldname(pcp->pcp_field, nlevels), 
+			pcp->pcp_value));
+
 	}
 	switch (pcn->pcn_vtype) {
 	case PFLCTL_PARAMT_NONE:
