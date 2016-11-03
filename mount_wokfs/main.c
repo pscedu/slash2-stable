@@ -244,9 +244,10 @@ main(int argc, char *argv[])
 	setenv("PATH", path_env, 1);
 
 	/*
- 	 * If wokctl misbehave, or given wrong arugments, it is hard
- 	 * to debug. So someday, this will be changed to a native
- 	 * call.
+ 	 * If wokctl (see file wokctl.c) misbehaves because it is given 
+ 	 * a wrong arugment, it is hard to debug from our end because 
+ 	 * we won't be receiving anything useful via the socket. This 
+ 	 * should be changed to a native call someday.
  	 *
  	 * If the client does not come up, double/triple checkout 
  	 * the name of your slash2 shared library. I wish I can
