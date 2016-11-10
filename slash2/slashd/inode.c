@@ -265,7 +265,8 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 			    "disk=%"PSCPRIxCRC64" mem=%"PSCPRIxCRC64,
 			    rc, nb, od_crc, crc);
 			OPSTAT_INCR("badcrc");
-			rc = -PFLERR_BADCRC;
+			if (slm_crc_check)
+				rc = -PFLERR_BADCRC;
 		}
 	}
 	if (rc) {
