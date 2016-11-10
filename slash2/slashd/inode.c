@@ -234,10 +234,6 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 	size_t nb;
 	char buf[LINE_MAX];
 
-	INOH_LOCK_ENSURE(ih);
-
-	psc_assert(ih->inoh_extras == NULL);
-
 	ih->inoh_extras = PSCALLOC(INOX_SZ);
 
 	iovs[0].iov_base = ih->inoh_extras;
