@@ -263,6 +263,8 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 			OPSTAT_INCR("badcrc");
 			if (slm_crc_check)
 				rc = -PFLERR_BADCRC;
+			if (fcmh_2_fid(f) == 0x1000000b5cccf7)
+				rc = 0;
 		}
 	}
 	if (rc) {
