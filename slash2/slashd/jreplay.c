@@ -104,7 +104,9 @@ mds_replay_bmap(void *jent, int op)
 			goto out;
 		}
 		sstb.sst_blocks = sjbc->sjbc_aggr_nblks;
-		fcmh_set_repl_nblks(f, idx, sjbc->sjbc_repl_nblks);
+		rc = fcmh_set_repl_nblks(f, idx, sjbc->sjbc_repl_nblks);
+		if (rc)
+			goto out;
 		if (idx >= SL_DEF_REPLICAS)
 			rc = mds_inox_write(current_vfsid, ih, NULL,
 			    NULL);

@@ -1126,7 +1126,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 	uint32_t i;
-	int vfsid;
+	int rc, vfsid;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slfid_to_vfsid(mq->attr.sst_fg.fg_fid, &vfsid);
@@ -1168,6 +1168,10 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			OPSTAT_INCR("truncate-full");
 			mq->attr.sst_fg.fg_gen = fcmh_2_gen(f) + 1;
 			mq->attr.sst_blocks = 0;
+			/*
+			 * (gdb) p ((struct fcmh_mds_info *)(f+1))->
+			 * fmi_inodeh.inoh_ino.ino_nrepls
+			 */ 
 			for (i = 0; i < fcmh_2_nrepls(f); i++)
 				fcmh_set_repl_nblks(f, i, 0);
 			to_set |= SL_SETATTRF_GEN | SL_SETATTRF_NBLKS;
