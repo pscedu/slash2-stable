@@ -60,6 +60,8 @@ tar: linux-git: file changed as we read it
 I use git to download a slash2 tree, replicate it to another IOS and try to build it there. The build fails
 with file .sconsign.dblite.  This must be tickled by replication.  See comments in file ino_compat.c.
 
+- FIXED -
+
 05/17/2016
 ----------
 
