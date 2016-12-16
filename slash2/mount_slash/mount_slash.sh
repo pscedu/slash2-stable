@@ -5,7 +5,7 @@ prog=mount_wokfs
 mod=slash2client.so
 ctl=msctl
 
-PATH=$(dirname $0):$PATH
+PATH=$(dirname $0):$PATH:/usr/sbin
 . pfl_daemon.sh
 
 usage()
@@ -41,6 +41,10 @@ umount -l -f $mp 2>/dev/null
 [ -d $mp ] || mkdir -p $mp
 
 # Initialization/configuration
+
+# Checkout sysctl fs.file-max and/or /etc/security/limits.conf 
+# if the following fails.
+
 ulimit -n 1000000
 ulimit -c $((1024 * 1024 * 1024 * 100))
 

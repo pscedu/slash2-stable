@@ -3267,6 +3267,8 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	/*
 	 * Removal of the control socket is the last thing for
 	 * observability reasons.
+	 *
+	 * XXX: crash because msl_ctlthr0->pscthr_private is NULL.
 	 */
 	pfl_ctl_destroy(psc_ctlthr(msl_ctlthr0)->pct_ctldata);
 
@@ -3501,50 +3503,23 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	PSCFREE(buf);
 }
 
-
-/*
- * XATTR_REPLACE is not supported.
- */
-void
-mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
-    const void *value, size_t size, pscfs_inum_t inum)
+int
+slc_setxattr(struct pscfs_req *pfr, const char *name,
+    const void *value, size_t size, struct fidc_membh *f)
 {
+	int rc;
+	struct iovec iov;
 	struct slrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_setxattr_rep *mp = NULL;
 	struct srm_setxattr_req *mq;
-	struct fidc_membh *f = NULL;
-	struct pscfs_creds pcr;
-	struct iovec iov;
-	int rc;
-
-	if (strlen(name) >= sizeof(mq->name))
-		PFL_GOTOERR(out, rc = EINVAL);
-
-	/*
-	 * This prevents a crash in the RPC layer downwards.  So disable
-	 * it for now.
-	 */
-	if (size == 0)
-		PFL_GOTOERR(out, rc = EINVAL);
-
-	rc = msl_load_fcmh(pfr, inum, &f);
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	slc_getfscreds(pfr, &pcr);
-
-	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 
  retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_SETXATTR, rq, mq, mp, rc);
 	if (rc)
 		goto retry2;
 
-	mq->fg.fg_fid = inum;
-	mq->fg.fg_gen = FGEN_ANY;
+	mq->fg = f->fcmh_fg;
 	mq->valuelen = size;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
@@ -3572,23 +3547,56 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 		f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
 		FCMH_ULOCK(f);
 	}
-
- out:
-	pscfs_reply_setxattr(pfr, rc);
-
-	psclogs_diag(SLCSS_FSOP, "SETXATTR: fid="SLPRI_FID" "
-	    "name='%s' rc=%d", inum, name, rc);
-
-	if (f)
-		fcmh_op_done(f);
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
+	return (rc);
 }
 
-ssize_t
-slc_getxattr(struct pscfs_req *pfr,
-    __unusedx const struct pscfs_creds *pcrp, const char *name, void *buf,
+/*
+ * XATTR_REPLACE is not supported.
+ */
+void
+mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
+    const void *value, size_t size, pscfs_inum_t inum)
+{
+	struct fidc_membh *f = NULL;
+	struct pscfs_creds pcr;
+	int rc;
+
+	if (strlen(name) >= SL_NAME_MAX)
+		PFL_GOTOERR(out, rc = EINVAL);
+
+	/*
+	 * This prevents a crash in the RPC layer downwards.  So disable
+	 * it for now.
+	 */
+	if (size == 0)
+		PFL_GOTOERR(out, rc = EINVAL);
+
+	rc = msl_load_fcmh(pfr, inum, &f);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	slc_getfscreds(pfr, &pcr);
+
+	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	rc = slc_setxattr(pfr, name, value, size, f);
+
+ out:
+	if (f)
+		fcmh_op_done(f);
+
+	pscfs_reply_setxattr(pfr, rc);
+	psclogs_diag(SLCSS_FSOP, "SETXATTR: fid="SLPRI_FID" "
+	    "name='%s' rc=%d", inum, name, rc);
+}
+
+int
+slc_getxattr(struct pscfs_req *pfr, const char *name, void *buf,
     size_t size, struct fidc_membh *f, size_t *retsz)
 {
 	int rc = 0, locked = 0;
@@ -3601,10 +3609,6 @@ slc_getxattr(struct pscfs_req *pfr,
 
 	if (strlen(name) >= sizeof(mq->name))
 		PFL_GOTOERR(out, rc = EINVAL);
-
-//	rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
-//	if (rc)
-//		PFL_GOTOERR(out, rc);
 
 	if (f->fcmh_flags & FCMH_CLI_XATTR_INFO) {
 		struct timeval now;
@@ -3690,47 +3694,36 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 
 	slc_getfscreds(pfr, &pcr);
 
-	rc = slc_getxattr(pfr, &pcr, name, buf, size, f, &retsz);
+	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	rc = slc_getxattr(pfr, name, buf, size, f, &retsz);
 
  out:
 	if (f)
 		fcmh_op_done(f);
 	pscfs_reply_getxattr(pfr, buf, retsz, rc);
 	PSCFREE(buf);
+	psclogs_diag(SLCSS_FSOP, "GETXATTR: fid="SLPRI_FID" "
+	    "name='%s' rc=%d", inum, name, rc);
 }
 
-void
-mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
-    pscfs_inum_t inum)
+int
+slc_removexattr(struct pscfs_req *pfr, const char *name, struct fidc_membh *f)
 {
+	int rc;
 	struct slrpc_cservice *csvc = NULL;
 	struct srm_removexattr_rep *mp = NULL;
 	struct srm_removexattr_req *mq;
 	struct pscrpc_request *rq = NULL;
-	struct fidc_membh *f = NULL;
-	struct pscfs_creds pcr;
-	int rc;
-
-	if (strlen(name) >= sizeof(mq->name))
-		PFL_GOTOERR(out, rc = EINVAL);
-
-	rc = msl_load_fcmh(pfr, inum, &f);
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	slc_getfscreds(pfr, &pcr);
-
-	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 
  retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_REMOVEXATTR, rq, mq, mp, rc);
 	if (rc)
 		goto retry2;
 
-	mq->fg.fg_fid = inum;
-	mq->fg.fg_gen = FGEN_ANY;
+	mq->fg = f->fcmh_fg;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -3741,18 +3734,40 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	rc = abs(rc);
 	if (rc == 0)
 		rc = -mp->rc;
+	pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
+	return (rc);
+}
+
+void
+mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
+    pscfs_inum_t inum)
+{
+	struct fidc_membh *f = NULL;
+	struct pscfs_creds pcr;
+	int rc;
+
+	if (strlen(name) >= SL_NAME_MAX)
+		PFL_GOTOERR(out, rc = EINVAL);
+
+	rc = msl_load_fcmh(pfr, inum, &f);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	slc_getfscreds(pfr, &pcr);
+	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	rc = slc_removexattr(pfr, name, f);
  out:
 	if (f)
 		fcmh_op_done(f);
 
 	pscfs_reply_removexattr(pfr, rc);
-
 	psclogs_diag(SLCSS_FSOP, "REMOVEXATTR: fid="SLPRI_FID" "
 	    "name='%s' rc=%d", inum, name, rc);
-
-	pscrpc_req_finished(rq);
-	if (csvc)
-		sl_csvc_decref(csvc);
 }
 
 /*

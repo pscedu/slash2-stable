@@ -211,7 +211,7 @@ struct srm_batch_req {
 	 int32_t		opc;
 	 int32_t		rc;		/* for BATCH_RP */
 	 int32_t		len;
-	 int32_t		_pad;
+	 int32_t		cnt;
 /* bulk data is array of user-defined entries */
 };
 
@@ -959,7 +959,7 @@ struct srm_rename_rep {
 
 struct srm_replrq_req {
 	struct sl_fidgen	fg;
-	sl_replica_t		repls[SL_MAX_REPLICAS];
+	sl_replica_t		repls[SL_MAX_REPLICAS];		/* target IOS(es) */
 	uint32_t		nrepls;
 	uint32_t		usr_prio;	/* priority */
 	uint32_t		sys_prio;

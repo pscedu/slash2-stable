@@ -37,6 +37,7 @@
 #include "mdslog.h"
 #include "pathnames.h"
 #include "repl_mds.h"
+#include "rpc_mds.h"
 #include "slashd.h"
 #include "slconfig.h"
 #include "slconn.h"
@@ -133,7 +134,7 @@ slmctl_resfieldi_batchno(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
-slmctl_resfieldi_disable_lease(int fd, struct psc_ctlmsghdr *mh,
+slmctl_resfieldi_disable_write(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
     struct sl_resource *r)
 {
@@ -208,24 +209,6 @@ slmctl_resfieldi_preclaim(int fd, struct psc_ctlmsghdr *mh,
 	    levels, nlevels, nbuf));
 }
 
-int
-slmctl_resfieldi_upschq(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
-    struct sl_resource *r)
-{
-	struct resprof_mds_info *rpmi;
-	char nbuf[16];
-
-	if (set)
-		return (psc_ctlsenderr(fd, mh, NULL,
-		    "upschq: field is read-only"));
-	rpmi = res2rpmi(r);
-	snprintf(nbuf, sizeof(nbuf), "%d",
-	    psc_dynarray_len(&rpmi->rpmi_upschq));
-	return (psc_ctlmsg_param_send(fd, mh, pcp,
-	    PCTHRNAME_EVERYONE, levels, nlevels, nbuf));
-}
-
 const struct slctl_res_field slctl_resmds_fields[] = {
 	{ "xid",		slmctl_resfieldm_xid },
 	{ NULL, NULL },
@@ -233,11 +216,9 @@ const struct slctl_res_field slctl_resmds_fields[] = {
 
 const struct slctl_res_field slctl_resios_fields[] = {
 	{ "batchno",		slmctl_resfieldi_batchno },
-	{ "disable_lease",	slmctl_resfieldi_disable_lease },
-	{ "disable_bia",	slmctl_resfieldi_disable_lease },
+	{ "disable_write",	slmctl_resfieldi_disable_write },
 	{ "disable_gc",		slmctl_resfieldi_disable_gc },
 	{ "preclaim",		slmctl_resfieldi_preclaim },
-	{ "upschq",		slmctl_resfieldi_upschq },
 	{ "xid",		slmctl_resfieldi_xid },
 	{ NULL, NULL },
 };
@@ -404,6 +385,10 @@ slmctlparam_execute_set(const char *val)
 		rc = -errno;
 	else if (WIFEXITED(rc))
 		rc = WEXITSTATUS(rc);
+	/*
+ 	 * rc = 127 means "command not found", which means possible 
+ 	 * problem with $PATH or a typo.
+ 	 */
 	psclog(PLL_WARN, "Executed command %s, rc = %d", cmdbuf, rc);
 	if (rc) {
 		cmdbuf[0] = 'N';
@@ -433,7 +418,7 @@ slmctlparam_reboots_get(char *val)
 }
 
 int
-slmctlparam_reboots_put(const char *val)
+slmctlparam_reboots_set(const char *val)
 {
 	int rc;
 	void *h;
@@ -562,8 +547,7 @@ slmctlthr_spawn(const char *fn)
 	psc_ctlparam_register("log.points", psc_ctlparam_log_points);
 	psc_ctlparam_register("opstats", psc_ctlparam_opstats);
 	psc_ctlparam_register("pause", psc_ctlparam_pause);
-	psc_ctlparam_register_var("pid", PFLCTL_PARAMT_INT, 0,
-	    &pfl_pid);
+
 	psc_ctlparam_register("pool", psc_ctlparam_pool);
 	psc_ctlparam_register("rlim", psc_ctlparam_rlim);
 	psc_ctlparam_register("run", psc_ctlparam_run);
@@ -613,7 +597,7 @@ slmctlthr_spawn(const char *fn)
 	    PFLCTL_PARAMT_UINT64, 0, &slm_reclaim_proc_batchno);
 
 	psc_ctlparam_register_simple("sys.reboots",
-	    slmctlparam_reboots_get, slmctlparam_reboots_put);
+	    slmctlparam_reboots_get, slmctlparam_reboots_set);
 
 	psc_ctlparam_register_var("sys.rpc_timeout",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &pfl_rpc_timeout);
@@ -630,11 +614,23 @@ slmctlthr_spawn(const char *fn)
 	psc_ctlparam_register_simple("sys.upsch",
 	    slmctlparam_upsch_get, NULL);
 
-	psc_ctlparam_register_var("sys.upsch_repl_delay",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_repl_delay);
+	psc_ctlparam_register_var("sys.upsch_batch_size",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_batch_size);
 
-	psc_ctlparam_register_var("sys.upsch_preclaim_delay",
-	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_preclaim_delay);
+	psc_ctlparam_register_simple("sys.upsch_batch_inflight",
+	    slrcp_batch_get_max_inflight, slrcp_batch_set_max_inflight);
+
+	psc_ctlparam_register_var("sys.upsch_page_interval",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_page_interval);
+
+	psc_ctlparam_register_var("sys.min_space_reserve",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_min_space_reserve_pct);
+
+	psc_ctlparam_register_var("sys.upsch_repl_expire",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_repl_expire);
+
+	psc_ctlparam_register_var("sys.upsch_preclaim_expire",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_preclaim_expire);
 
 	psc_ctlparam_register_var("sys.upsch_bandwidth",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slm_upsch_bandwidth);

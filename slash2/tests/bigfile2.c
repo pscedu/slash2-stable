@@ -16,7 +16,7 @@
 /*  ---------------------------------------------------------------------
 /*  %END_LICENSE%
 /*
- * 06/21/2016: bigfile2.c, read and write a file with different block sizes.
+ * 06/21/2016: bigfile2.c, read and write a file with an arbitrary block size.
  */
 #include <stdio.h>
 #include <fcntl.h>
@@ -31,12 +31,15 @@ main(int argc, char *argv[])
 	char *filename;
 	struct stat stbuf;
 	unsigned char *buf;
+	struct timeval t1, t2, t3;
 	int fd, error = 0, readonly = 0;
 	size_t i, j, c, seed, size, bsize, nblocks, remainder = 0;
 
 	bsize = 5678;
-	nblocks = 12345;
+	nblocks = 1234567;
 	seed = getpid();
+	gettimeofday(&t1, NULL);
+
 	while ((c = getopt(argc, argv, "b:s:n:r")) != -1) {
 		switch (c) {
 			case 'b':
@@ -145,4 +148,16 @@ main(int argc, char *argv[])
 	if (!error && !readonly)
 		printf("File has been created successfully.\007\n");
         close(fd);
+
+	gettimeofday(&t2, NULL);
+
+	if (t2.tv_usec < t1.tv_usec) {
+		t2.tv_usec += 1000000;
+		t2.tv_sec--;
+	}
+
+	t3.tv_sec = t2.tv_sec - t1.tv_sec;
+	t3.tv_usec = t2.tv_usec - t1.tv_usec;
+
+	printf("\nTotal elapsed time is %02d:%02d:%02d.\n", t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
 }

@@ -405,6 +405,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	size_t size;
 	char *path_env, *zpcachefn = NULL, *zpname, *estr;
 	const char *cfn, *sfn, *p;
 	int i, c, rc, vfsid, found;
@@ -568,7 +569,14 @@ main(int argc, char *argv[])
 
 	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
 	    rsw_lentry, "replstwkq");
-	pfl_workq_init(128);
+
+	size = sizeof(struct slm_wkdata_wr_brepl);
+	if (size < sizeof(struct slm_wkdata_upsch_purge))
+		size = sizeof(struct slm_wkdata_upsch_purge);
+	if (size < sizeof(struct slm_wkdata_upschq))
+		size = sizeof(struct slm_wkdata_upschq);
+	pfl_workq_init(size);
+
 	slm_upsch_init();
 
 	psc_poolmaster_init(&slm_bml_poolmaster,
@@ -632,6 +640,7 @@ main(int argc, char *argv[])
 		dbdo(NULL, NULL,
 		    "CREATE INDEX 'upsch_bno_idx'"
 		    " ON 'upsch' ('bno')");
+#if 0
 		dbdo(NULL, NULL,
 		    "CREATE INDEX 'upsch_uid_idx'"
 		    " ON 'upsch' ('uid')");
@@ -651,6 +660,7 @@ main(int argc, char *argv[])
 		    "		RANDOM() AS rnd"
 		    " FROM	upsch"
 		    " GROUP BY uid");
+#endif
 	}
 
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");

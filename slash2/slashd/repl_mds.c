@@ -70,8 +70,11 @@ struct sl_mds_iosinfo	 slm_null_iosinfo = {
 /*
  * Max number of allowable bandwidth units (BW_UNITSZ) in any sliod's
  * bwqueue.
+ *
+ * We have the ability to throttle at batch RPC layer. So disable this
+ * for now.
  */
-int slm_upsch_bandwidth = 1024;
+int slm_upsch_bandwidth = 0;		/* used to be 1024 */
 
 __static int
 iosidx_cmp(const void *a, const void *b)
@@ -322,10 +325,10 @@ mds_brepls_check(uint8_t *repls, int nr)
 		val = SL_REPL_GET_BMAP_IOS_STAT(repls, off);
 		switch (val) {
 		case BREPLST_VALID:
-		case BREPLST_GARBAGE:
+		case BREPLST_GARBAGE_QUEUED:
 		case BREPLST_GARBAGE_SCHED:
-		case BREPLST_TRUNCPNDG:
-		case BREPLST_TRUNCPNDG_SCHED:
+		case BREPLST_TRUNC_QUEUED:
+		case BREPLST_TRUNC_SCHED:
 			return;
 		}
 	}
@@ -354,11 +357,20 @@ _mds_repl_bmap_apply(struct bmap *b, const int *tract,
     brepl_walkcb_t cbf, void *cbarg)
 {
 	int val, rc = 0;
+	struct timeval tv1, tv2, tvd;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 	BMAP_LOCK_ENSURE(b);
 	if (tract) {
-		psc_assert((b->bcm_flags & BMAPF_REPLMODWR) == 0);
+		/*
+		 * The caller must set the flag if modifications are made.
+		 */
+		PFL_GETTIMEVAL(&tv1);
+		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
+		PFL_GETTIMEVAL(&tv2);
+		timersub(&tv2, &tv1, &tvd);
+		OPSTAT_ADD("bmap-wait-usecs", tvd.tv_sec * 1000000 + tvd.tv_usec);
+
 		memcpy(bmi->bmi_orepls, bmi->bmi_repls,
 		    sizeof(bmi->bmi_orepls));
 		psc_assert((flags & REPL_WALKF_SCIRCUIT) == 0);
@@ -507,7 +519,8 @@ mds_repl_inv_except(struct bmap *b, int iosidx)
 	/* Ensure replica on active IOS is marked valid. */
 	brepls_init(tract, -1);
 	tract[BREPLST_INVALID] = BREPLST_VALID;
-	tract[BREPLST_GARBAGE] = BREPLST_VALID;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_VALID;
+	tract[BREPLST_GARBAGE_QUEUED] = BREPLST_VALID;
 
 	/*
 	 * The old state for this bmap on the given IOS is
@@ -541,7 +554,7 @@ mds_repl_inv_except(struct bmap *b, int iosidx)
 	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_VALID] = policy == BRPOL_PERSIST ?
-	    BREPLST_REPL_QUEUED : BREPLST_GARBAGE;
+	    BREPLST_REPL_QUEUED : BREPLST_GARBAGE_QUEUED;
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 
 	brepls_init(retifset, 0);
@@ -570,6 +583,7 @@ mds_repl_inv_except(struct bmap *b, int iosidx)
 	return (rc);
 }
 
+/* b is for debug only */
 #define PUSH_IOS(b, a, id, st)						\
 	do {								\
 		(a)->stat[(a)->nios] = (st);				\
@@ -607,6 +621,10 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	chg.nios = 0;
 	nrepls = fcmh_2_nrepls(f);
 	for (n = 0, off = 0; n < nrepls; n++, off += SL_BITS_PER_REPLICA) {
+
+		if (n == SL_DEF_REPLICAS)
+			mds_inox_ensure_loaded(fcmh_2_inoh(f));
+
 		resid = fcmh_2_repl(f, n);
 		vold = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_orepls, off);
 		vnew = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
@@ -619,40 +637,44 @@ slm_repl_upd_write(struct bmap *b, int rel)
 
 		/* Work was added. */
 		else if ((vold != BREPLST_REPL_SCHED &&
-		    vold != BREPLST_GARBAGE &&
+		    vold != BREPLST_GARBAGE_QUEUED &&
 		    vold != BREPLST_GARBAGE_SCHED &&
 		    vnew == BREPLST_REPL_QUEUED) ||
 		    (vold != BREPLST_GARBAGE_SCHED &&
-		     vnew == BREPLST_GARBAGE &&
-		     (si->si_flags & SIF_PRECLAIM_NOTSUP) == 0))
+		     vnew == BREPLST_GARBAGE_QUEUED &&
+		     (si->si_flags & SIF_PRECLAIM_NOTSUP) == 0)) {
+			OPSTAT_INCR("repl-work-add");
 			PUSH_IOS(b, &add, resid, NULL);
+		}
 
 		/* Work has finished. */
 		else if ((vold == BREPLST_REPL_QUEUED ||
 		     vold == BREPLST_REPL_SCHED ||
-		     vold == BREPLST_TRUNCPNDG_SCHED ||
-		     vold == BREPLST_TRUNCPNDG ||
+		     vold == BREPLST_TRUNC_SCHED ||
+		     vold == BREPLST_TRUNC_QUEUED ||
 		     vold == BREPLST_GARBAGE_SCHED ||
 		     vold == BREPLST_VALID) &&
 		    (((si->si_flags & SIF_PRECLAIM_NOTSUP) &&
-		      vnew == BREPLST_GARBAGE) ||
+		      vnew == BREPLST_GARBAGE_QUEUED) ||
 		     vnew == BREPLST_VALID ||
-		     vnew == BREPLST_INVALID))
+		     vnew == BREPLST_INVALID)) {
+			OPSTAT_INCR("repl-work-del");
 			PUSH_IOS(b, &del, resid, NULL);
+		}
 
 		/*
-		 * Work that was previously scheduled failed so requeue
-		 * it.
+		 * Work that was previously scheduled failed so 
+		 * requeue it.
 		 */
 		else if (vold == BREPLST_REPL_SCHED ||
 		    vold == BREPLST_GARBAGE_SCHED ||
-		    vold == BREPLST_TRUNCPNDG_SCHED)
+		    vold == BREPLST_TRUNC_SCHED)
 			PUSH_IOS(b, &chg, resid, "Q");
 
 		/* Work was scheduled. */
 		else if (vnew == BREPLST_REPL_SCHED ||
 		    vnew == BREPLST_GARBAGE_SCHED ||
-		    vnew == BREPLST_TRUNCPNDG_SCHED)
+		    vnew == BREPLST_TRUNC_SCHED)
 			PUSH_IOS(b, &chg, resid, "S");
 
 		/* Work was reprioritized. */
@@ -738,7 +760,7 @@ slm_repl_addrq_cb(__unusedx struct bmap *b, __unusedx int iosidx,
 	case BREPLST_VALID:
 		break;
 
-	case BREPLST_GARBAGE:
+	case BREPLST_GARBAGE_QUEUED:
 	case BREPLST_GARBAGE_SCHED:
 	case BREPLST_INVALID:
 		 *flags |= FLAG_DIRTY;
@@ -802,12 +824,8 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_INVALID] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_GARBAGE] = BREPLST_REPL_QUEUED;
-	/*
-	 * Is this Okay because we have not sent an RPC out?
-	 */
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+	tract[BREPLST_GARBAGE_QUEUED] = BREPLST_REPL_QUEUED;
 
 	/* Wildcards shouldn't result in errors on zero-length files. */
 	if (*nbmaps != (sl_bmapno_t)-1)
@@ -822,17 +840,13 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		}
 
 		rc = -bmap_get(f, bmapno, SL_WRITE, &b);
-		if (rc) {
-			if (rc == -SLERR_BMAP_ZERO)
-				rc = 0;
+		if (rc)
 			PFL_GOTOERR(out, rc);
-		}
 
 		/*
 		 * If no VALID replicas exist, the bmap must be
 		 * uninitialized/all zeroes; skip it.
 		 */
-		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
 		if (mds_repl_bmap_walk_all(b, NULL, ret_hasvalid,
 		    REPL_WALKF_SCIRCUIT) == 0) {
 			bmap_op_done(b);
@@ -851,28 +865,9 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		/* both default to -1 in parse_replrq() */
 		bmap_2_bmi(b)->bmi_sys_prio = sys_prio;
 		bmap_2_bmi(b)->bmi_usr_prio = usr_prio;
-		if (flags & FLAG_DIRTY) {
-			struct slm_update_data *upd;
-
-			upd = &bmap_2_bmi(b)->bmi_upd;
-			if (pfl_memchk(upd, 0, sizeof(*upd)) == 1) {
-				/*
- 				 * This should not happen, because
- 				 * we init it when the bmap was read
- 				 * for the first time.
- 				 */
-				upd_init(upd, UPDT_BMAP);
-			} else {
-				spinlock(&upd->upd_lock);
-				upd->upd_flags |= UPDF_BUSY;
-				upd->upd_owner = pthread_self();
-				psc_waitq_wakeall(&upd->upd_waitq);
-				freelock(&upd->upd_lock);
-			}
+		if (flags & FLAG_DIRTY)
 			mds_bmap_write_logrepls(b);
-			spinlock(&upd->upd_lock);
-			UPD_UNBUSY(upd);
-		} else if (sys_prio != -1 || usr_prio != -1)
+		else if (sys_prio != -1 || usr_prio != -1)
 			slm_repl_upd_write(b, 0);
 
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
@@ -972,9 +967,9 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 	replv.idx = iosidx;
 
 	brepls_init(tract, -1);
-	tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE;
-	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
-	tract[BREPLST_VALID] = BREPLST_GARBAGE;
+	tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE_QUEUED;
+	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE_QUEUED;
+	tract[BREPLST_VALID] = BREPLST_GARBAGE_QUEUED;
 
 	/* Wildcards shouldn't result in errors on zero-length files. */
 	if (*nbmaps != (sl_bmapno_t)-1)
@@ -991,13 +986,8 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 			PFL_GOTOERR(out, rc = -PFLERR_WOULDBLOCK);
 
 		rc = -bmap_get(f, bmapno, SL_WRITE, &b);
-		if (rc) {
-			if (rc == -SLERR_BMAP_ZERO)
-				rc = 0;
+		if (rc)
 			PFL_GOTOERR(out, rc);
-		}
-		bmap_wait_locked(b, b->bcm_flags & BMAPF_REPLMODWR);
-
 		/*
 		 * Before blindly doing the transition, we have to check
 		 * to ensure this operation would retain at least one
@@ -1013,8 +1003,9 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		else {
 			rc = _mds_repl_bmap_walk(b, tract, NULL, 0, iosidx,
 			    nios, slm_repl_delrq_cb, &flags);
+			psc_assert(!rc);
 			if (flags & FLAG_DIRTY)
-				mds_bmap_write_logrepls(b);
+				rc = mds_bmap_write_logrepls(b);
 		}
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 		if (rc)
@@ -1070,15 +1061,16 @@ resmpair_bw_adj(struct sl_resm *src, struct sl_resm *dst,
 
 	/* reserve */
 	if (amt > 0) {
-		src_total = is->si_repl_ingress_pending + 
-		    is->si_repl_egress_pending + amt;
-		dst_total = is->si_repl_ingress_pending + 
-		    is->si_repl_egress_pending + amt;
-
-		if ((src_total > cap * BW_UNITSZ) || 
-		     dst_total > cap * BW_UNITSZ) { 
-			ret = 0;
-			goto out;
+		if (cap) {
+			src_total = is->si_repl_ingress_pending + 
+			    is->si_repl_egress_pending + amt;
+			dst_total = is->si_repl_ingress_pending + 
+			    is->si_repl_egress_pending + amt;
+			if ((src_total > cap * BW_UNITSZ) || 
+			     dst_total > cap * BW_UNITSZ) { 
+				ret = 0;
+				goto out;
+			}
 		}
 		is->si_repl_egress_pending += amt;
 		id->si_repl_ingress_pending += amt;
