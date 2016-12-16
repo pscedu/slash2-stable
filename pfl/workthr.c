@@ -95,12 +95,12 @@ pfl_wkthr_main(struct psc_thread *thr)
 }
 
 void
-pfl_workq_init(size_t bufsiz)
+pfl_workq_init(size_t bufsiz, int total, int min)
 {
 	_psc_poolmaster_init(&pfl_workrq_poolmaster,
 	    sizeof(struct pfl_workrq) + bufsiz,
-	    offsetof(struct pfl_workrq, wkrq_lentry), PPMF_AUTO, 1024,
-	    1024, 0, NULL, NULL, "workrq");
+	    offsetof(struct pfl_workrq, wkrq_lentry), PPMF_AUTO, total,
+	    min, 0, NULL, NULL, "workrq");
 	pfl_workrq_pool = psc_poolmaster_getmgr(&pfl_workrq_poolmaster);
 	lc_reginit(&pfl_workq, struct pfl_workrq, wkrq_lentry, "workq");
 }
