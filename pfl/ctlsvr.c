@@ -1934,6 +1934,7 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 					    levels[1], pcp->pcp_value);
 					goto out;
 				}
+				opst->opst_last = val;
 				psc_atomic64_set(&opst->opst_lifetime, val);
 			} else {
 				levels[1] = (char *)opst->opst_name;
