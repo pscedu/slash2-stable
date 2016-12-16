@@ -223,7 +223,7 @@ main(int argc, char *argv[])
 	ctlthr_spawn();
 
 	pfl_opstimerthr_spawn(PFL_THRT_OPSTIMER, "opstimerthr");
-	pfl_workq_init(128);
+	pfl_workq_init(128, 1024, 1024);
 	pfl_wkthr_spawn(PFL_THRT_WORKER, 4, 0, "wkthr%d");
 
 	pscfs_entry_timeout = 8.;
