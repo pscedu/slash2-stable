@@ -2,3 +2,19 @@
 ----------
 
 This file is used to record test results of slash2 stable tree.
+
+12/16/2016
+----------
+
+After I rework the throttling mechanism, I use bigfile3.c to create a test file and replicate it:
+
+zhihui@orange: ~/projects-orange/slash2/slmctl$ slmctl -sop | egrep "rate|repl-s"
+opstat                                          avg rate      max rate      cur rate         total
+repl-sched                                          0B/s       17.8G/s          0B/s         81.4G
+repl-schedwk-ok                                      0/s          32/s           0/s           652
+repl-success                                         0/s          32/s           0/s           652
+repl-success-aggr                                   0B/s        4.0G/s          0B/s         81.4G
+
+It is done in less than 15 minutes. So I have 80*1024/(15*60) = 91 MB/s
+
+This is on 10 year old hardware. Ethtool says the network speed is 1000Mb/s.
