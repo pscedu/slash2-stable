@@ -95,7 +95,7 @@ pfl_wkthr_main(struct psc_thread *thr)
 }
 
 void
-pfl_workq_init(size_t bufsiz, int total, int min)
+pfl_workq_init(size_t bufsiz, int min, int total)
 {
 	_psc_poolmaster_init(&pfl_workrq_poolmaster,
 	    sizeof(struct pfl_workrq) + bufsiz,
