@@ -18,3 +18,22 @@ repl-success-aggr                                   0B/s        4.0G/s          
 It is done in less than 15 minutes. So I have 80*1024/(15*60) = 91 MB/s
 
 This is on 10 year old hardware. Ethtool says the network speed is 1000Mb/s.
+
+01/05/2017
+----------
+
+zhihui@zebes: /zzh-slash2/zhihui$ time tar xf ~/gcc-6.3.0.tar.bz2 
+
+real	10m8.012s
+user	0m24.106s
+sys	0m17.363s
+
+zhihui@zebes: /zzh-slash2/zhihui$ cd gcc-6.3.0/
+zhihui@zebes: /zzh-slash2/zhihui/gcc-6.3.0$ ./configure --disable-multilib
+zhihui@zebes: /zzh-slash2/zhihui/gcc-6.3.0$ time make >& make.result
+
+real	70m38.089s
+user	149m42.010s
+sys	11m58.926s
+
+
