@@ -134,6 +134,7 @@ int main(int argc, char *argv[])
 	filename = argv[optind];
 	printf("seed = %d, # of threads = %d, block size = %d, nblocks = %d, file size = %ld.\n\n", 
 		seed, nthreads, bsize, nblocks, (long)nthreads * (long)nblocks * bsize);
+	fflush(stdout);
 
 	if (readonly)
 		goto verify;
@@ -166,6 +167,7 @@ int main(int argc, char *argv[])
 		printf("Thread %3d is done with errno = %d, fd = %3d\n", 
 			i, args[i].ret, args[i].fd);
 		close(args[i].fd);
+		fflush(stdout);
 	}
         close(fd);
 
@@ -175,6 +177,7 @@ int main(int argc, char *argv[])
 	memset(rand_statebuf, 0, sizeof(rand_statebuf));
 	memset(&rand_state, 0, sizeof(rand_state));
 	initstate_r(seed, rand_statebuf, sizeof(rand_statebuf), &rand_state);
+	fflush(stdout);
 
        	fd = open(filename, O_RDONLY);
 	for (i = 0; i < nblocks; i++) {
@@ -188,6 +191,7 @@ int main(int argc, char *argv[])
 			if (buf[j] != (unsigned char)result & 0xff) {
 				error++;
 				printf("%d: File corrupted (%d:%d): %2x vs %2x\n", error, i, j, buf[j], result & 0xff);
+				fflush(stdout);
 			}
 		}
 	}

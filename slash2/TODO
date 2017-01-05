@@ -5447,7 +5447,23 @@ refer to the folder named tcga, not the UNIX group).
 
 Phil
 
+Also, cp -p should copy ACL as well.
+
 12/15/2016
 ----------
 
-Make bigfile3.c work! race with read-ahead mechanism?
+Make bigfile3.c work! race with read-ahead mechanism?  Our flush before read logic works on per bmap basis.
+This might be have an issue with read-ahead code that can move into a different bmap.
+
+A possible scenario to check: a write request wait for a read-ahead to finish, when the read ahead is done,
+it clears the FAULTING bit, and then the write request continue to copy user data into buffer without the
+protection of the FAULTING bit.   This only applies when msl_bmpce_complete_biorq() comes into play.
+
+Perhaps try per-page synchronizing, all pages, regardless of whether it is being read or write, regardless
+of whether it is valid or not, are marked FAULTING.
+
+01/04/2017
+----------
+
+Test bigfile3.c fails when working on the same file successively. Looks like that the full truncation does 
+not fully clear the local cache before proceeding.

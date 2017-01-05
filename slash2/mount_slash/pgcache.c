@@ -150,7 +150,7 @@ msl_pgcache_reap(void)
 	if (curr <= msl_bmpces_min)
 		return;
 
-	nfree = (curr - msl_bmpces_min)/2;
+	nfree = (curr - msl_bmpces_min) / 2;
 	if (!nfree)
 		nfree = 1;
 	for (i = 0; i < nfree; i++) {
@@ -497,7 +497,7 @@ bmpc_freeall(struct bmap *b)
 	/*
 	 * Remove any LRU pages still associated with the bmap.
 	 * Only readahead pages can be encountered here. If we
-	 * don't treat readahead pages specially, this code ca
+	 * don't treat readahead pages specially, this code can
 	 * go away some day.
 	 */
 	pfl_rwlock_wrlock(&bci->bci_rwlock);
@@ -600,6 +600,11 @@ bmpce_reap_list(struct psc_dynarray *a, struct psc_listcache *lc,
 		 */
 		if (!BMPCE_TRYLOCK(e))
 			continue;
+		/*
+ 		 * XXX Checking flags here is bogus, we should assert that
+ 		 * the flag is set because it is on the list.  In addition,
+ 		 * we should check reference count here.
+ 		 */ 
 		if ((e->bmpce_flags & (flag |
 		    BMPCEF_REAPED)) == flag) {
 			e->bmpce_flags &= ~flag;
@@ -632,6 +637,10 @@ bmpce_reap(struct psc_poolmgr *m)
 	struct bmap_pagecache_entry *e;
 	int nfreed, i;
 
+	/* 
+	 * XXX A readahead page is not necessarily more valuable
+	 * until it is proven so.
+	 */
 	if (m->ppm_flags & PPMF_DESPERATE)
 		bmpce_reap_list(&a, &msl_readahead_pages,
 		    BMPCEF_READALC, m);
