@@ -19,12 +19,16 @@ cc -o bigfile1 bigfile1.c
 cc -o bigfile2 bigfile2.c
 cc -o bigfile3 bigfile3.c -lpthread
 
-./bigfile1    $mypath/$myhost.bigfile1.dat | tee $myhost.bigfile1.log
+./bigfile1    $mypath/$myhost.bigfile1.dat   | tee $myhost.bigfile1.log
 
-./bigfile2    $mypath/$myhost.bigfile2.dat | tee $myhost.bigfile2.log
-./bigfile2 -r $mypath/$myhost.bigfile2.dat | tee $myhost.bigfile2.log
+./bigfile2    $mypath/$myhost.bigfile2-1.dat | tee $myhost.bigfile2-1.log
+./bigfile2 -r $mypath/$myhost.bigfile2-1.dat | tee $myhost.bigfile2-1.log
 
-./bigfile3                                   $mypath/$myhost.bigfile3-1.dat | tee $myhost.bigfile3-1.log
+./bigfile2    -s 4499 -b 12348 -n 3993777   $mypath/$myhost.bigfile2-2.dat | tee $myhost.bigfile2-2.log
+./bigfile2 -r -s 4499 -b 12348 -n 3993777   $mypath/$myhost.bigfile2-2.dat | tee $myhost.bigfile2-2.log
+
+
+./bigfile3                                     $mypath/$myhost.bigfile3-1.dat | tee $myhost.bigfile3-1.log
 
 ./bigfile3 -s  7738 -t  6 -b  71785  -n 243656 $mypath/$myhost.bigfile3-2.dat | tee $myhost.bigfile3-2.log
 
@@ -39,6 +43,8 @@ cc -o bigfile3 bigfile3.c -lpthread
 ./bigfile3 -s  1234 -t 11 -b  21029  -n 110052 $mypath/$myhost.bigfile3-7.dat | tee $myhost-bigfile3-7.log
 
 ./bigfile3 -s 91234 -t 13 -b  51029  -n 210052 $mypath/$myhost.bigfile3-8.dat | tee $myhost-bigfile3-8.log
+
+./bigfile3 -s 55578 -t 23 -b  31029  -n 187750 $mypath/$myhost.bigfile3-9.dat | tee $myhost-bigfile3-9.log
 
 END=`date +%s%N`
 ELAPSED=`echo "scale=8; ($END - $START) / 1000000000" | bc`
