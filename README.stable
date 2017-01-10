@@ -1,3 +1,8 @@
+01/10/2017
+----------
+
+Release 1.17: new replication engine mostly in place and a subtle data corruption fix (NULL bytes).
+
 10/26/2016
 ----------
 
