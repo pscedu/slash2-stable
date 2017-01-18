@@ -173,7 +173,7 @@ die()
 	exit 1
 }
 
-# Launch gdb with some custom settings.
+# Launch my gdb with some custom settings.
 mygdb()
 {
 	shift
@@ -204,6 +204,9 @@ postproc()
 
 	cf=c/$prog.$id.core
 	mv -f *core* $cf 2>/dev/null
+
+	# If the core file exists and the mail address is set, send an email.
+	# The mail address is set in the so-called daemon configuration file.
 
 	if [ -e "$cf" -a -n "$mail_to" ]; then
 		chmod og+r $cf
