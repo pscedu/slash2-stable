@@ -293,34 +293,40 @@ vsleep()
 {
 	local amt=0
 
-	#
-	# We have seen illusion2 restart in a loop with this script.
-	# The SECONDS is the number of seconds since the script started.
-	# So it short-cuts the back off logical below after we are up
-	# for 60+ seconds.
-	# 
-	# So, instead of being smart, let us be dumb and just wait for
-	# 30 seconds. Also, let us keep the old logic for reference.
-	#
+	# If this is not the first time of execution, we will use the
+	# current value exported to us.  Otherwise, we avoid using the 
+	# wildcard match in the following case statement.
 
-	echo restarting after 30 seconds...
-	sleep 30
-	return
- 
-	[ $SECONDS -gt 60 ] && return
+	if [ ! -v ATTEMPT ]
+	then
+		ATTEMPT=1
+	fi
+
+	# If we have been running for 60+ seconds, we assume a successful
+	# restart and reset the ATTEMPT variable.
+	#
+	# Note that the value of SECONDS is reset after each exec call.
+
+	if [ $SECONDS -gt 60 ]
+	then
+		ATTEMPT=1
+		return
+	fi
+
+	# Cap the maximum delay between retry at 1920 seconds (or 32 minutes)
 
 	case $ATTEMPT in
-	1)	let amt=10	ATTEMPT++	;;
-	2)	let amt=30	ATTEMPT++	;;
-	3)	let amt=60	ATTEMPT++	;;
-	4)	let amt=600	ATTEMPT++	;;
-	5)	let amt=1800	ATTEMPT++	;;
-	6)	let amt=3600			;;
-	*)	ATTEMPT=1;
+	1)	let amt=30	ATTEMPT++	;;
+	2)	let amt=60	ATTEMPT++	;;
+	3)	let amt=120	ATTEMPT++	;;
+	4)	let amt=240	ATTEMPT++	;;
+	5)	let amt=480	ATTEMPT++	;;
+	6)	let amt=960	ATTEMPT++	;;
+	*)	let amt=1920	ATTEMPT++
 	esac
 	export ATTEMPT
 
-	echo restarting after $amt seconds...
+	echo attempt $ATTEMPT: restarting after $amt seconds...
 	sleep $amt
 }
 
