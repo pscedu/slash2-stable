@@ -215,7 +215,7 @@ main(int argc, char *argv[])
 
 	/* canonicalize mount path */
 	if (realpath(noncanon_mp, mountpoint) == NULL)
-		psc_fatal("realpath %s", noncanon_mp);
+		psc_fatal("mount point %s", noncanon_mp);
 
 	pscfs_mount(mountpoint, &args);
 	pscfs_freeargs(&args);
