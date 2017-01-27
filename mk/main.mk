@@ -446,7 +446,10 @@ endif
 ifdef SHLIB
   CFLAGS+=	-fPIC
   ${_TSHLIB}: ${OBJS}
-	${CC} -shared -o $@ ${LDFLAGS} $(sort ${OBJS})
+
+	# Put libraries at the end to deal with --as-needed.
+	 
+	${CC} -shared -o $@ $(sort ${OBJS}) ${LDFLAGS} 
 	@printf "%s" "${_TSHLIB}:" > ${DEPEND_FILE}
 	@${LIBDEP} ${LDFLAGS} ${LIBDEP_ADD} >> ${DEPEND_FILE}
 endif
