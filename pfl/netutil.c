@@ -301,7 +301,7 @@ pflnet_rtexists_rtnetlink(const struct sockaddr *sa)
 	return (rv);
 }
 
-__static void
+__static int 
 pflnet_getifnfordst_rtnetlink(const struct sockaddr *sa,
     char ifn[IFNAMSIZ])
 {
@@ -359,10 +359,11 @@ pflnet_getifnfordst_rtnetlink(const struct sockaddr *sa,
 		struct nlmsgerr *nlerr;
 
 		nlerr = NLMSG_DATA(&rq.nmh);
-		psc_fatalx("netlink: %s", strerror(nlerr->error));
+		psclog_warnx("netlink: %s", strerror(nlerr->error));
+		break;
 	    }
 	case NLMSG_DONE:
-		psc_fatalx("netlink: unexpected EOF");
+		psclog_warnx("netlink: unexpected EOF");
 	}
 
 	nmh = &rq.nmh;
@@ -382,11 +383,12 @@ pflnet_getifnfordst_rtnetlink(const struct sockaddr *sa,
 				memcpy(&ifidx, RTA_DATA(rta),
 				    sizeof(ifidx));
 				pflnet_getifname(ifidx, ifn);
-				return;
+				return (0);
 			}
 		}
 	}
-	psc_fatalx("no route for addr");
+	psclog_warnx("no route for addr %s", inet_ntoa(sin->sin_addr));
+	return (1);
 }
 #endif
 
@@ -440,7 +442,7 @@ pflnet_rtexists_sysctl(const struct sockaddr *sa)
 #endif
 
 #ifdef RTM_GET
-__static void
+__static int
 pflnet_getifnfordst_rtsock(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 {
 	struct {
@@ -529,13 +531,14 @@ pflnet_getifnfordst_rtsock(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 			    psap->sdl.sdl_nlen) {
 				strncpy(ifn, psap->sdl.sdl_data, IFNAMSIZ - 1);
 				ifn[IFNAMSIZ - 1] = '\0';
-				return;
+				return (0);
 			}
 			break;
 		}
 	}
 
-	psc_fatalx("interface message not received");
+	psc_warnx("interface message not received");
+	return (1);
 }
 #endif
 
@@ -563,10 +566,11 @@ pflnet_rtexists(const struct sockaddr *sa)
  * @sa: destination address.
  * @ifn: value-result interface name to fill in.
  */
-void
+int
 pflnet_getifnfordst(const struct ifaddrs *ifa0,
     const struct sockaddr *sa, char ifn[IFNAMSIZ])
 {
+	int rc;
 	const struct sockaddr_in *sin;
 	const struct ifaddrs *ifa;
 
@@ -583,17 +587,18 @@ pflnet_getifnfordst(const struct ifaddrs *ifa0,
 		    &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr,
 		    sizeof(sin->sin_addr)) == 0) {
 			strlcpy(ifn, ifa->ifa_name, IFNAMSIZ);
-			return;
+			return (0);
 		}
 
 #ifdef HAVE_RTNETLINK
-	pflnet_getifnfordst_rtnetlink(sa, ifn);
+	rc = pflnet_getifnfordst_rtnetlink(sa, ifn);
 #elif defined(RTM_GET)
-	pflnet_getifnfordst_rtsock(sa, ifn);
+	rc = pflnet_getifnfordst_rtsock(sa, ifn);
 #else
-	errno = ENOTSUP;
-	psc_fatal("getifnfordst");
+	rc = ENOTSUP;
+	psc_warnx("getifnfordst not supported");
 #endif
+	return (rc);
 }
 
 int
