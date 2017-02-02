@@ -31,6 +31,11 @@
 host=$(hostname -s)
 nodaemonize=0
 name=$prog
+ 
+# This is the default source code directory for the slash2 software. 
+# It can be overridden by the daemon config file (i.e., $prof.dcfg) 
+# if necessary.
+ 
 srcdir=/local/src/p
 uname=$(uname)
 filter=
