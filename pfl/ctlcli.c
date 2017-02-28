@@ -1253,7 +1253,7 @@ psc_ctlmsg_print(struct psc_ctlmsghdr *mh, const void *m)
 			printf("\n");
 
 		len = prf->prf_prhdr(mh, m);
-		psc_assert(len >= PSC_CTL_DISPLAY_WIDTH);
+		// psc_assert(len >= PSC_CTL_DISPLAY_WIDTH);
 
 		for (i = 0; i < len; i++)
 			putchar('=');
