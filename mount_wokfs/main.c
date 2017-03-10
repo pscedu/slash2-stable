@@ -49,6 +49,10 @@
 const char			*ctlsockfn = PATH_CTLSOCK;
 char				 mountpoint[PATH_MAX];
 
+/*
+ * Killing the FUSE userland process leaves the mount point open.
+ * So we have to do an explicit unmount here.
+ */
 void
 unmount(const char *mp)
 {
