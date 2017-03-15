@@ -1429,6 +1429,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 
 	psc_ctl_sockfn = osockfn;
 
+	/* will be overwritten shortly if -S is used */
 	p = getenv("CTL_SOCK_FILE");
 	if (p)
 		psc_ctl_sockfn = p;
