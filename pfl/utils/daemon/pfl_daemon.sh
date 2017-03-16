@@ -413,14 +413,31 @@ mksliods()
 # the SLASH2 client service.
 mkclients()
 {
+	# The underscore (_) assigns/localizes the $_, which is the last 
+	# argument of the previous command. 
+
 	local opts=$1 i _ start=0
 	shift
 
 	[ -n "$opts" ] && opts=%$opts
 
+	# Execute once for each positional parameter (e.g., $1, $2) that 
+	# is set.
+	#
+	# This loop parse client specifications in a slash2 daemon 
+	# configuration file such as dxcgpu%02d:1-3, dxclsm%02d:3, etc.
+
 	for hspec; do
+
+		# Remove shortest suffix matching ":*"
 		local hclass=${hspec%:*}
+
+		# Remove shortest prefix matching "*:"
 		local range=${hspec#*:}
+
+		# If the host class matches the host specification, then
+		# there is only one host in the class.
+
 		if [ x"$hclass" = x"$hspec" ]; then
 			start=1
 			end=1
