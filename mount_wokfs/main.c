@@ -179,6 +179,7 @@ main(int argc, char *argv[])
 	pscfs_addarg(&args, "-o");
 	pscfs_addarg(&args, STD_MOUNT_OPTIONS);
 
+	/* get default ctlsockfn value from environment */
 	p = getenv("CTL_SOCK_FILE");
 	if (p)
 		ctlsockfn = p;
