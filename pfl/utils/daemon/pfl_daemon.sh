@@ -424,7 +424,7 @@ mkclients()
 	# Execute once for each positional parameter (e.g., $1, $2) that 
 	# is set.
 	#
-	# This loop parse client specifications in a slash2 daemon 
+	# This loop parses client specifications in a slash2 daemon 
 	# configuration file such as dxcgpu%02d:1-3, dxclsm%02d:3, etc.
 
 	for hspec; do
