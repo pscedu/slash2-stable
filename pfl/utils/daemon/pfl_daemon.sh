@@ -108,6 +108,7 @@ loadprof()
 		args=*)	
 			# xargs is a comma separated list of arguments.
 			# Some of them can have values.
+
 			xargs+=("${fl#args=}")
 			ctlsock=$(echo $xargs | extract_value ctlsock)
 			[ -n "$ctlsock" ] && export CTL_SOCK_FILE=$ctlsock
@@ -116,6 +117,9 @@ loadprof()
 		share)	;;
 		tag=*)	[ x"$1" = x"${fl#tag=}" ] || return 1 ;;
 		[A-Z][A-Z_]*=*)
+
+			# Handle environment variables
+
 			export "$fl";;
 		*)	warn "unknown setting $fl";;
 		esac
