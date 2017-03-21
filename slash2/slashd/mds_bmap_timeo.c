@@ -76,14 +76,10 @@ mds_bmap_setcurseq(uint64_t maxseq, uint64_t minseq)
 void
 mds_bmap_getcurseq(uint64_t *maxseq, uint64_t *minseq)
 {
-	spinlock(&slm_bmap_leases.btt_lock);
-
 	if (minseq)
 		*minseq = slm_bmap_leases.btt_minseq;
 	if (maxseq)
 		*maxseq = slm_bmap_leases.btt_maxseq;
-
-	freelock(&slm_bmap_leases.btt_lock);
 
 	psclog_debug("retrieve: low watermark = %"PRIu64", "
 	    "high watermark = %"PRIu64, 
