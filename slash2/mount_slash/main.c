@@ -2866,8 +2866,10 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		to_set &= ~PSCFS_SETATTRF_UID;
 	if ((to_set & PSCFS_SETATTRF_GID) && stb->st_gid == (gid_t)-1)
 		to_set &= ~PSCFS_SETATTRF_GID;
-	if (to_set == 0)
+	if (to_set == 0) {
+		FCMH_ULOCK(c);
 		goto out;
+	}
 
 	slc_getfscreds(pfr, &pcr);
 
