@@ -2545,4 +2545,5 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	pcd->pcd_refcnt++;
 	psc_waitq_wakeall(&pcd->pcd_waitq);
 	freelock(&pcd->pcd_lock);
+	psc_ctlthr_mainloop(me);
 }
