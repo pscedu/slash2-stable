@@ -2545,5 +2545,9 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	pcd->pcd_refcnt++;
 	psc_waitq_wakeall(&pcd->pcd_waitq);
 	freelock(&pcd->pcd_lock);
+	/*
+	 * XXX If we do not enter this loop, the thread structure will be
+	 * overwritten somehow.
+	 */
 	psc_ctlthr_mainloop(me);
 }
