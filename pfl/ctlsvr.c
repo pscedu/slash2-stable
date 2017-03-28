@@ -2545,10 +2545,4 @@ psc_ctlthr_main(const char *ofn, const struct psc_ctlop *ct, int nops,
 	pcd->pcd_refcnt++;
 	psc_waitq_wakeall(&pcd->pcd_waitq);
 	freelock(&pcd->pcd_lock);
-	/*
-	 * If we did not enter this loop, the thread will die.  As part of
-	 * its destruction, _pscthr_destroy() will be called to free the
-	 * thread structure.
-	 */
-	psc_ctlthr_mainloop(me);
 }
