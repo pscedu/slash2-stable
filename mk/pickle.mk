@@ -325,7 +325,6 @@ ifeq ($(filter $(realpath ${ROOTDIR})/compat/%,${CURDIR}),)
  ifdef PICKLE_HAVE_SYS_ACL_H
   DEFINES+=						-DHAVE_SYS_ACL_H
   ACL_SRCS+=						${PFL_BASE}/acl.c
-  ACL_LIBS+=						-lacl
  endif
 
  ifdef PICKLE_HAVE_ENDIAN_H

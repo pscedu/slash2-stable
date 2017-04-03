@@ -250,7 +250,7 @@ ifneq ($(filter pthread,${MODULES}),)
 endif
 
 ifneq ($(filter acl,${MODULES}),)
-  LDFLAGS+=	${ACL_LIBS}
+  LDFLAGS+=	${LIBACL}
 endif
 
 ifneq ($(filter m,${MODULES}),)
