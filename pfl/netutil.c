@@ -537,7 +537,7 @@ pflnet_getifnfordst_rtsock(const struct sockaddr *sa, char ifn[IFNAMSIZ])
 		}
 	}
 
-	psc_warnx("interface message not received");
+	psclog_warnx("interface message not received");
 	return (1);
 }
 #endif
