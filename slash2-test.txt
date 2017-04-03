@@ -49,8 +49,7 @@ Unit tests
 6. After all tests are done, run slmctl -sc and check the reference count of resources to
    make sure there are no leaks.
   
-   We might have some leaks after DIO, but that is a minor issue because we don't really
-   allocate csvc structure on the fly.  So it is a reference leak, but not a memory leak.
+   Only csvc structure for a client is allocated on the fly.
 
 7. Set up a logical I/O server, and make sure that I/O does spread across multiple I/O servers.
 
@@ -58,3 +57,5 @@ Unit tests
    waiting for leases and caches have expired.
 
 9. Run bigfile.sh.
+
+10. Test map file on a remote client.
