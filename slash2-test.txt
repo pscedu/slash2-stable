@@ -15,7 +15,8 @@ Ideally, the process should continue for 24 hours.
 Unit tests
 ----------
 
-1. Build sliod, wokfs, and mount_slash on FreeBSD 9.0 with gmake.
+1. Build sliod, wokfs, and mount_slash on FreeBSD 9.0 with gmake (zfs-fuse is too Linux 
+   specific to build on FreeBSD).
 
 2. If zfs-fuse is changed, try to create a new ZFS pool.
 
@@ -47,6 +48,9 @@ Unit tests
 
 6. After all tests are done, run slmctl -sc and check the reference count of resources to
    make sure there are no leaks.
+  
+   We might have some leaks after DIO, but that is a minor issue because we don't really
+   allocate csvc structure on the fly.  So it is a reference leak, but not a memory leak.
 
 7. Set up a logical I/O server, and make sure that I/O does spread across multiple I/O servers.
 
