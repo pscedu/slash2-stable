@@ -15,7 +15,7 @@ Ideally, the process should continue for 24 hours.
 Unit tests
 ----------
 
-1. Build sliod on FreeBSD 9.0.
+1. Build sliod on FreeBSD 9.0 with gmake.
 
 2. If zfs-fuse is changed, try to create a new ZFS pool.
 
@@ -43,7 +43,7 @@ Unit tests
 	sys	1m35.727s
 
    Also make sure that this test finishes within 4 minutes to detect possible performance
-   regression.
+   regression. Note that DIO is slower than the non DIO case.
 
 6. After all tests are done, run slmctl -sc and check the reference count of resources to
    make sure there are no leaks.
