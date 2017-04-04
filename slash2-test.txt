@@ -15,21 +15,23 @@ Ideally, the process should continue for 24 hours.
 Unit tests
 ----------
 
-1. Build sliod, wokfs, and mount_slash on FreeBSD 9.0 with gmake (zfs-fuse is too Linux 
+1. Build everything on Ubuntu and CentOS.
+
+2. Build sliod, wokfs, and mount_slash on FreeBSD 9.0 with gmake (zfs-fuse is too Linux 
    specific to build on FreeBSD).
 
-2. If zfs-fuse is changed, try to create a new ZFS pool.
+3. If zfs-fuse is changed, try to create a new ZFS pool.
 
-3. Check out two slash2 source trees, one in slash2, the other in a different file system.
+4. Check out two slash2 source trees, one in slash2, the other in a different file system.
    Then do a recursive diff -dur -x .git comparison.  This can catch readlink regressions.
 
-4. Check out a slash2 source tree on one IOS, replicate it to another IOS. Then take the
+5. Check out a slash2 source tree on one IOS, replicate it to another IOS. Then take the
    first IOS offline and build the source tree. This makes sure that msctl functionality
    and basic replication work.
 
    It also makes sure that the client can skip the down IOS quickly.
 
-5. Force MDS to always return DIO bmap lease (sys.force_dio=1) and do a self build.
+6. Force MDS to always return DIO bmap lease (sys.force_dio=1) and do a self build.
 
    self-build non DIO mode:
 
@@ -46,16 +48,16 @@ Unit tests
    Also make sure that this test finishes within 4 minutes to detect possible performance
    regression. Note that DIO is slower than the non DIO case.
 
-6. After all tests are done, run slmctl -sc and check the reference count of resources to
+7. After all tests are done, run slmctl -sc and check the reference count of resources to
    make sure there are no leaks.
   
    Only csvc structure for a client is allocated on the fly.
 
-7. Set up a logical I/O server, and make sure that I/O does spread across multiple I/O servers.
+8. Set up a logical I/O server, and make sure that I/O does spread across multiple I/O servers.
 
-8. Create a file on one I/O server, disable write on it, and try to overwrite the file after
+9. Create a file on one I/O server, disable write on it, and try to overwrite the file after
    waiting for leases and caches have expired.
 
-9. Run bigfile.sh.
+10. Run bigfile.sh.
 
-10. Test map file on a remote client.
+11. Test map file on a remote client.
