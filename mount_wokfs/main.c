@@ -101,7 +101,7 @@ mod_load(const char *path, const char *opts, char *errbuf,
 	h = dlopen(path, RTLD_NOW);
 	if (h == NULL) {
 		snprintf(errbuf, LINE_MAX, "%s\n", dlerror()); 
-		fprintf(stderr, errbuf);
+		fprintf(stderr, "%s\n", dlerror());
 		return (NULL);
 	}
 
@@ -110,7 +110,8 @@ mod_load(const char *path, const char *opts, char *errbuf,
 		dlclose(h);
 		snprintf(errbuf, LINE_MAX,
 		    "symbol pscfs_module_load undefined.\n");
-		fprintf(stderr, errbuf);
+		fprintf(stderr, "%s",
+		    "symbol pscfs_module_load undefined.\n");
 		return (NULL);
 	}
 
