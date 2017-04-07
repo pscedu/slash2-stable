@@ -37,6 +37,9 @@ struct wokctlmsg_modctl {
 
 #define PATH_CTLSOCK		"/var/run/mount_wokfs.%h.sock"
 
+/*
+ * The order of this list must match ctlops[] in ctl.c.
+ */
 #define WOKCMT_INSERT		NPCMT
 #define WOKCMT_LIST		(NPCMT + 1)
 #define WOKCMT_RELOAD		(NPCMT + 2)

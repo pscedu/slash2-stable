@@ -249,10 +249,10 @@ wokctlcmd_remove(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 
 struct psc_ctlop ctlops[] = {
 	PSC_CTLDEFOPS,
-	{ wokctlcmd_insert,		sizeof(struct wokctlmsg_modspec) },
-	{ wokctlcmd_list,		sizeof(struct wokctlmsg_modspec) },
-	{ wokctlcmd_reload,		sizeof(struct wokctlmsg_modctl) },
-	{ wokctlcmd_remove,		sizeof(struct wokctlmsg_modctl) },
+	{ wokctlcmd_insert,	sizeof(struct wokctlmsg_modspec) }, /* WOKCMT_INSERT */
+	{ wokctlcmd_list,	sizeof(struct wokctlmsg_modspec) }, /* WOKCMT_LIST */
+	{ wokctlcmd_reload,	sizeof(struct wokctlmsg_modctl) },  /* WOKCMT_RELOAD */
+	{ wokctlcmd_remove,	sizeof(struct wokctlmsg_modctl) },  /* WOKCMT_REMOVE */
 };
 
 void

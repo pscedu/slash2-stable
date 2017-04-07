@@ -49,6 +49,10 @@
 const char			*ctlsockfn = PATH_CTLSOCK;
 char				 mountpoint[PATH_MAX];
 
+/*
+ * Killing the FUSE userland process leaves the mount point open.
+ * So we have to do an explicit unmount here.
+ */
 void
 unmount(const char *mp)
 {
@@ -97,7 +101,7 @@ mod_load(const char *path, const char *opts, char *errbuf,
 	h = dlopen(path, RTLD_NOW);
 	if (h == NULL) {
 		snprintf(errbuf, LINE_MAX, "%s\n", dlerror()); 
-		fprintf(stderr, errbuf);
+		fprintf(stderr, "%s\n", dlerror());
 		return (NULL);
 	}
 
@@ -106,7 +110,8 @@ mod_load(const char *path, const char *opts, char *errbuf,
 		dlclose(h);
 		snprintf(errbuf, LINE_MAX,
 		    "symbol pscfs_module_load undefined.\n");
-		fprintf(stderr, errbuf);
+		fprintf(stderr, "%s",
+		    "symbol pscfs_module_load undefined.\n");
 		return (NULL);
 	}
 
@@ -175,6 +180,7 @@ main(int argc, char *argv[])
 	pscfs_addarg(&args, "-o");
 	pscfs_addarg(&args, STD_MOUNT_OPTIONS);
 
+	/* get default ctlsockfn value from environment */
 	p = getenv("CTL_SOCK_FILE");
 	if (p)
 		ctlsockfn = p;
@@ -215,7 +221,7 @@ main(int argc, char *argv[])
 
 	/* canonicalize mount path */
 	if (realpath(noncanon_mp, mountpoint) == NULL)
-		psc_fatal("realpath %s", noncanon_mp);
+		psc_fatal("mount point %s", noncanon_mp);
 
 	pscfs_mount(mountpoint, &args);
 	pscfs_freeargs(&args);
