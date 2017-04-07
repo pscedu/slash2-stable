@@ -150,6 +150,13 @@ pscrpc_drop_conns(lnet_process_id_t *peer)
 	struct psc_hashbkt *b;
 
 	PSC_HASHTBL_FOREACH_BUCKET(b, &pscrpc_conn_hashtbl) {
+		/*
+ 		 * 02/07/2017: Hit b = NULL crash. usocklnd_poll_thread() -->
+ 		 * usocklnd_process_stale_list() --> usocklnd_tear_peer_conn -->
+ 		 * usocklnd_check_peer_stale() --> usocklnd_destroy_peer() -->
+ 		 * lnet_enq_event_locked() --> pscrpc_master_callback() -->
+ 		 * pscrpc_drop_callback().
+ 		 */
 		psc_hashbkt_lock(b);
 		PSC_HASHBKT_FOREACH_ENTRY(&pscrpc_conn_hashtbl, c, b)
 			if ((c->c_peer.nid == peer->nid &&

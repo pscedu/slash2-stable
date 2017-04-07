@@ -470,7 +470,9 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 	if (rc < 0)
 		pfl_abort();
 		
-	if (fflush(stderr))
+	
+	rc = fflush(stderr);
+	if (rc)
 		pfl_abort();
 
 	if (pfl_syslog && pfl_syslog[pci->pci_subsys] &&

@@ -250,7 +250,7 @@ ifneq ($(filter pthread,${MODULES}),)
 endif
 
 ifneq ($(filter acl,${MODULES}),)
-  LDFLAGS+=	${ACL_LIBS}
+  LDFLAGS+=	${LIBACL}
 endif
 
 ifneq ($(filter m,${MODULES}),)
@@ -446,7 +446,10 @@ endif
 ifdef SHLIB
   CFLAGS+=	-fPIC
   ${_TSHLIB}: ${OBJS}
-	${CC} -shared -o $@ ${LDFLAGS} $(sort ${OBJS})
+
+	# Put libraries at the end to deal with --as-needed.
+	 
+	${CC} -shared -o $@ $(sort ${OBJS}) ${LDFLAGS} 
 	@printf "%s" "${_TSHLIB}:" > ${DEPEND_FILE}
 	@${LIBDEP} ${LDFLAGS} ${LIBDEP_ADD} >> ${DEPEND_FILE}
 endif

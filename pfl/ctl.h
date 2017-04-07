@@ -271,7 +271,7 @@ struct pfl_ctlmsg_workrq {
 	char			 pcw_type[32];
 };
 
-/* Control message types. */
+/* Control message types. The folowing must match PSC_CTLDEFOPS */
 enum {
 	PCMT_ERROR = 0,
 	PCMT_GETFAULT,

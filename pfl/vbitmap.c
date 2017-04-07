@@ -66,6 +66,10 @@ psc_vbitmap_newf(size_t nelems, int flags)
 	vb->vb_flags = flags;
 
 	bytes = howmany(nelems, NBBY);
+	/*
+ 	 * Note that if bytes is zero, vb_start can still return
+ 	 * a non-NULL value, which should be used to call free().
+ 	 */
 	vb->vb_start = PSCALLOC(bytes);
 	vb->vb_pos = vb->vb_start;
 	if (bytes)
