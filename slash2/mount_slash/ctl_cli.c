@@ -52,6 +52,7 @@
 #include "slashd/inode.h"
 
 struct psc_thread	*msl_ctlthr0;
+void			*msl_ctlthr0_private;
 
 psc_atomic32_t		 msctl_id = PSC_ATOMIC32_INIT(0);
 struct psc_lockedlist	 msctl_replsts = PLL_INIT(&msctl_replsts,
@@ -68,7 +69,6 @@ msctl_getcreds(int s, struct pscfs_creds *pcrp)
 	pcrp->pcr_uid = uid;
 	pcrp->pcr_gid = gid;
 	pcrp->pcr_ngid = 1;
-	gidmap_int_cred(pcrp);
 	return (rc);
 }
 
@@ -109,6 +109,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct fidc_membh *f;
 	struct sl_fidgen fg;
 	uint32_t n, nrepls = 0;
+	char *res_name;
 	int rc;
 
 	rc = msctl_getcreds(fd, &pcr);
@@ -158,14 +159,22 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, NULL, SLPRI_FID": %s",
 		    mrq->mrq_fid, strerror(rc)));
 
-	/* parse I/O systems specified */
-	for (n = 0; n < mrq->mrq_nios; n++, nrepls++)
-		if ((repls[n].bs_id =
-		    libsl_str2id(mrq->mrq_iosv[n])) == IOS_ID_ANY) {
+	/* 
+	 * Parse I/O systems specified. We could allow an unknown I/O server
+	 * to be passed to the MDS.  If so, remember the IOS ID also encodes
+	 * the site ID and the MDS must take corresponding steps as well.
+	 *
+	 * It is rare, but an I/O server do retire and its ID is taken out of 
+	 * the config file. However, its ID should never be reused.
+	 */ 
+	for (n = 0; n < mrq->mrq_nios; n++, nrepls++) {
+		res_name = mrq->mrq_iosv[n];
+		if ((repls[n].bs_id = libsl_str2id(res_name)) == IOS_ID_ANY) {
 			rc = psc_ctlsenderr(fd, mh, NULL,
 			    "%s: unknown I/O system", mrq->mrq_iosv[n]);
 			goto out;
 		}
+	}
 
  again: 
 	if (mh->mh_type == MSCMT_ADDREPLRQ)
@@ -895,11 +904,14 @@ struct psc_ctlop msctlops[] = {
 };
 
 void
-msctlthr_main(struct psc_thread *thr)
+msctlthr_main(__unusedx struct psc_thread *thr)
 {
 	char expandbuf[PATH_MAX];
 	char *s, *fn = (void *)msl_ctlsockfn;
 	int rc;
+	struct psc_thread *me;
+
+	me = pscthr_get();
 
 	for (;;) {
 		/*
@@ -916,9 +928,13 @@ msctlthr_main(struct psc_thread *thr)
 		fn = expandbuf;
 	}
 
-	/* stash thread so mslfsop_destroy() can kill ctlthr */
-	msl_ctlthr0 = thr;
 	psc_ctlthr_main(fn, msctlops, nitems(msctlops), 0, MSTHRT_CTLAC);
+	/*
+	 * If we did not enter this loop, the thread will die.  As part of
+	 * its destruction, _pscthr_destroy() will be called to free the
+	 * thread structure.
+	 */
+	psc_ctlthr_mainloop(me);
 }
 
 void
@@ -956,6 +972,10 @@ msctlthr_spawn(void)
 
 	psc_ctlparam_register_var("sys.bmap_max_cache",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &slc_bmap_max_cache);
+
+	psc_ctlparam_register_var("sys.bmap_reassign",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_bmap_reassign);
+
 	/* XXX: add max_fs_iosz */
 	psc_ctlparam_register_var("sys.datadir", PFLCTL_PARAMT_STR, 0,
 	    (char *)sl_datadir);
@@ -973,6 +993,8 @@ msctlthr_spawn(void)
 
 	psc_ctlparam_register_var("sys.force_dio",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_force_dio);
+	psc_ctlparam_register_var("sys.map_enable",
+	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR, &msl_map_enable);
 
 	psc_ctlparam_register_var("sys.max_retries", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_max_retries);
@@ -1016,5 +1038,8 @@ msctlthr_spawn(void)
 
 	thr = pscthr_init(MSTHRT_CTL, msctlthr_main,
 	    sizeof(struct psc_ctlthr), "msctlthr0");
+	/* stash thread so mslfsop_destroy() can kill ctlthr */
+	msl_ctlthr0 = thr;
+	msl_ctlthr0_private = thr->pscthr_private;
 	pscthr_setready(thr);
 }

@@ -108,36 +108,45 @@ sli_has_enough_space(struct fidc_membh *f, uint32_t bmapno,
 	int fd, percentage;
 	off_t rc = -1, f_off;
 
-	/*
- 	 * First off, overwrite is always allowed.
- 	 */
-	fd = fcmh_2_fd(f);
-	f_off = (off_t)bmapno * SLASH_BMAP_SIZE + b_off;
+	if (f) {
+		/*
+ 		 * First off, overwrite is always allowed.
+ 		 */
+		fd = fcmh_2_fd(f);
+		f_off = (off_t)bmapno * SLASH_BMAP_SIZE + b_off;
 
 #ifdef SEEK_HOLE
-	rc = lseek(fd, f_off, SEEK_HOLE);
+		rc = lseek(fd, f_off, SEEK_HOLE);
 #endif
-	/*
-	 * rc = -1 is possible if the backend file system does not
-	 * support it (e.g. ZFS on FreeBSD 9.0) or the offset is beyond
-	 * EOF.
-	 */
-	if (rc != -1 && f_off + size <= rc)
-		return (1);
+		/*
+		 * rc = -1 is possible if the backend file system 
+		 * does not support it (e.g. ZFS on FreeBSD 9.0) 
+		 * or the offset is beyond EOF.
+		 */
+		if (rc != -1 && f_off + size <= rc) {
+			OPSTAT_INCR("space-overwrite");
+			return (1);
+		}
+	}
 	/*
  	 * Set sli_min_space_reserve_pct/gb to zero to disable
  	 * the reserve. We check percentage first because file
  	 * system does not do well when near full.
  	 */
-	percentage = sli_statvfs_buf.f_bavail * 100 /
+	percentage = sli_statvfs_buf.f_bfree * 100 /
 	    sli_statvfs_buf.f_blocks;
 
-	if (percentage < sli_min_space_reserve_pct)
+	if (percentage < sli_min_space_reserve_pct) {
+		OPSTAT_INCR("space-reserve-pct");
 		return (0);
+	}
 
-	if (sli_statvfs_buf.f_bavail * sli_statvfs_buf.f_bsize
-	    < (unsigned long) sli_min_space_reserve_gb * 1024 * 1024 * 1024)
+	if (sli_statvfs_buf.f_bfree * sli_statvfs_buf.f_bsize
+	    < (unsigned long) sli_min_space_reserve_gb * 
+	       1024 * 1024 * 1024) {
+		OPSTAT_INCR("space-reserve-abs");
 		return (0);
+	}
 
 	return (1);
 }
@@ -198,20 +207,21 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	/*
 	 * Ensure that this request fits into the bmap's address range.
 	 *
-	 * XXX this check assumes that mq->offset has not been made
-	 *     bmap relative (i.e. it's filewise).
+	 * Our client should already make sure that mq->offset is relative
+	 * to the start of a bmap (i.e., it's NOT filewise).
 	 */
 	if (mq->offset + mq->size > SLASH_BMAP_SIZE) {
 		psclog_errorx("req offset/size outside of the bmap's "
 		    "address range off=%u len=%u",
 		    mq->offset, mq->size);
 		mp->rc = -ERANGE;
+		OPSTAT_INCR("io-erange");
 		return (mp->rc);
 	}
 
 	/*
 	 * A RBW (read-before-write) request from the client may have a
-	 * write enabled bmapdesc which he uses to fault in his page.
+	 * write enabled bmapdesc which he/she uses to fault in his page.
 	 */
 	mp->rc = bmapdesc_access_check(&mq->sbd, rw,
 	    nodeResm->resm_res_id);
@@ -281,8 +291,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 
 	if (rw == SL_WRITE) {
-		if (!sli_has_enough_space(f, bmapno, mq->offset,
-		    mq->size)) {
+		if (!sli_has_enough_space(f, bmapno, mq->offset, mq->size)) {
 			FCMH_ULOCK(f);
 			OPSTAT_INCR("write-out-of-space");
 			PFL_GOTOERR(out1, rc = mp->rc = -ENOSPC);
@@ -302,7 +311,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		}
 	}
 	FCMH_ULOCK(f);
-
 
 	rc = bmap_get(f, bmapno, rw, &bmap);
 	if (rc) {

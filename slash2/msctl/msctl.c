@@ -544,6 +544,10 @@ cmd_replrq_one(FTSENT *f, void *arg)
 	for (n = 0; n < ra->nios; n++)
 		strlcpy(mrq->mrq_iosv[n], ra->iosv[n],
 		    sizeof(mrq->mrq_iosv[0]));
+	/*
+ 	 * If the path points to a different slash2 installation
+ 	 * on the same machine, we could be rejected with ESTALE.
+ 	 */
 	mrq->mrq_fid = fn2fid(f->fts_path);
 	return (0);
 }
@@ -828,7 +832,7 @@ ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct msctlmsg_biorq *msr = m;
 
-	printf("%016"SLPRIxFID" %5d %3d %10d %10d "
+	printf("%016"SLPRIxFID" %5d %3d %10d %10d  "
 	    "%c%c%c%c%c%c%c%c%c%c%c "
 	    "%3d %16s %10"PRId64" %4d %lx\n",
 	    msr->msr_fid, msr->msr_bno, msr->msr_ref, msr->msr_off,

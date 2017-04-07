@@ -116,7 +116,7 @@ mds_inode_read(struct slash_inode_handle *ih)
 			rc = mds_inode_update(vfsid, ih, vers);
 		else {
 			DEBUG_INOH(PLL_WARN, ih, buf, 
-			    "CRC failed: "
+			    "CRC checksum failed: "
 			    "want=%"PSCPRIxCRC64", got=%"PSCPRIxCRC64,
 			    od_crc, crc);
 			rc = EIO;
@@ -284,6 +284,7 @@ mds_inox_ensure_loaded(struct slash_inode_handle *ih)
 	if (ih->inoh_extras == NULL)
 		rc = mds_inox_load_locked(ih);
 	INOH_URLOCK(ih, locked);
+	psc_assert(rc <= 0);
 	return (rc);
 }
 
@@ -301,18 +302,18 @@ mds_inodes_odsync(int vfsid, struct fidc_membh *f,
 		 * possible our caller didn't require them (BZ #258).
 		 */
 		rc = mds_inox_ensure_loaded(ih);
-		if (rc) {
-			INOH_URLOCK(ih, locked);
-			return (rc);
-		}
+		if (rc)
+			goto out;
 	}
 
 	rc = mds_inode_write(vfsid, ih, logf, f);
 	if (rc == 0 && ih->inoh_ino.ino_nrepls > SL_DEF_REPLICAS)
 		rc = mds_inox_write(vfsid, ih, NULL, NULL);
 
-	DEBUG_FCMH(PLL_DEBUG, f, "updated inode logf=%p", logf);
+ out:
+	DEBUG_FCMH(PLL_DEBUG, f, "updated inode logf=%p, rc = %d", logf, rc);
 	INOH_URLOCK(ih, locked);
+	psc_assert(rc <= 0);
 	return (rc);
 }
 

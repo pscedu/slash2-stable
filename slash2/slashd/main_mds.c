@@ -51,6 +51,7 @@
 #include "ctl_mds.h"
 #include "fidcache.h"
 #include "mdsio.h"
+#include "mkfn.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
@@ -66,6 +67,8 @@
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 extern const char *__progname;
+
+sqlite3                 *db_handle;
 
 int			 current_vfsid;
 
@@ -408,10 +411,11 @@ main(int argc, char *argv[])
 	size_t size;
 	char *path_env, *zpcachefn = NULL, *zpname, *estr;
 	const char *cfn, *sfn, *p;
-	int i, c, rc, vfsid, found;
+	int i, c, rc, vfsid, found, total;
 	struct psc_thread *thr;
 	time_t now;
 	struct psc_thread *me;
+	char dbfn[PATH_MAX];
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -466,8 +470,7 @@ main(int argc, char *argv[])
 		usage();
 
 	pscthr_init(SLMTHRT_CTL, NULL, 
-	    sizeof(struct psc_ctlthr) +
-	    sizeof(struct slmctl_thread), "slmctlthr0");
+	    sizeof(struct psc_ctlthr), "slmctlthr0");
 
 	sl_sys_upnonce = psc_random32();
 
@@ -502,7 +505,7 @@ main(int argc, char *argv[])
 	rc = mdsio_init();
 	if (rc) {
 		/* 08/03/2016: saw this today and the mds is still up */
-		psc_fatal("failed to initialize ZFS, rc= %d", rc);
+		psc_fatalx("failed to initialize ZFS, rc= %d", rc);
 	}
 	import_zpool(zpname, zpcachefn);
 
@@ -600,22 +603,35 @@ main(int argc, char *argv[])
 	slrpc_initcli();
 	mds_update_boot_file();
 
-	slmctlthr_spawn(sfn);
-	pfl_opstimerthr_spawn(SLMTHRT_OPSTIMER, "slmopstimerthr");
-	time(&now);
-	psclog_max("SLASH2 utility slmctl is now ready at %s", ctime(&now));
+	rc = sqlite3_threadsafe();
+	if (rc == SQLITE_CONFIG_SINGLETHREAD)
+		psclog_warnx("SQLite is configured in single-threaded mode.");
 
 	sqlite3_enable_shared_cache(1);
+
+	xmkfn(dbfn, "%s/%s", SL_PATH_DEV_SHM, SL_FN_UPSCHDB);
+	rc = sqlite3_open_v2(dbfn, &db_handle, 
+		SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+
+	if (rc != SQLITE_OK)
+		psc_fatalx("Fail to open/create SQLite data base %s", dbfn);
+
+	rc = sqlite3_exec(db_handle,
+		"PRAGMA integrity_check", NULL, NULL, &estr);
+	if (rc != SQLITE_OK)
+		psc_fatalx("SQLite data base %s is corrupted", dbfn);
+
 	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
 	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
 
-	/* no-op to test integrity */
-	rc = sqlite3_exec(slmctlthr_getpri(pscthr_get())->smct_dbh.dbh,
-	    " UPDATE	upsch"
-	    "	SET	id=0"
-	    " WHERE	id=0", NULL,
-	    NULL, &estr);
-	if (rc == SQLITE_ERROR) {
+	total = 0;
+	dbdo(slm_upsch_tally_cb, &total,
+		"SELECT count(*) "
+		"FROM sqlite_master WHERE type = 'table'");
+
+	if (!total) {
+		psclog_warnx("Creating a new upsch table for replication.");
+
 		dbdo(NULL, NULL,
 		    "CREATE TABLE upsch ("
 		    "	id		INT PRIMARY KEY,"
@@ -661,6 +677,20 @@ main(int argc, char *argv[])
 		    " FROM	upsch"
 		    " GROUP BY uid");
 #endif
+	} else {
+		total = 0;
+		dbdo(slm_upsch_tally_cb, &total,
+		    "SELECT count(*) "
+		    "FROM sqlite_master "
+		    "WHERE type = 'table' AND name = 'upsch'");
+		if (total != 1)
+			psc_fatalx("SQLite data base %s is problematic", dbfn);
+		total = 0;
+		dbdo(slm_upsch_tally_cb, &total,
+		    "SELECT count (*)"
+	    	    "FROM upsch");
+		psclog_warnx("Reusing existing table (%d rows) for replication.", 
+		    total);
 	}
 
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
@@ -684,6 +714,12 @@ main(int argc, char *argv[])
 	    " SET	status = 'Q'"
 	    " WHERE	status = 'S'");
 
+	slmctlthr_spawn(sfn);
+	pfl_opstimerthr_spawn(SLMTHRT_OPSTIMER, "slmopstimerthr");
+	time(&now);
+	psclog_max("SLASH2 utility slmctl is now ready at %s", ctime(&now));
+
+
 	pfl_odt_check(slm_bia_odt, mds_bia_odtable_startup_cb, NULL);
 	pfl_odt_check(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);
 
@@ -696,8 +732,7 @@ main(int argc, char *argv[])
 	slm_opstate = SLM_OPSTATE_NORMAL;
 
 	pfl_workq_lock();
-	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS,
-	    sizeof(struct slmwork_thread), "slmwkthr%d");
+	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS, 0, "slmwkthr%d");
 	pfl_workq_waitempty();
 
 	for (i = 0; i < 4; i++) {

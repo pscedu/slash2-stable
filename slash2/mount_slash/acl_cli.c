@@ -90,6 +90,7 @@ slc_acl_get_fcmh(struct pscfs_req *pfr, __unusedx const struct pscfs_creds *pcr,
 		(_rv);							\
 	} _PFL_RVEND
 
+/* subtle: || 1 is there in case gid is zero to avoid premature exit */
 #define FOREACH_GROUP(g, i, pcrp)					\
 	for ((i) = 0; (i) <= (pcrp)->pcr_ngid && (((g) = (i) == 0 ?	\
 	    (pcrp)->pcr_gid : (pcrp)->pcr_gidv[(i) - 1]) || 1); (i)++)
@@ -170,13 +171,15 @@ int
 sl_fcmh_checkacls(struct fidc_membh *f, struct pscfs_req *pfr,
     const struct pscfs_creds *pcrp, int accmode)
 {
-	int locked, rv;
+	int locked, rc;
 	acl_t a;
 
 	a = slc_acl_get_fcmh(pfr, pcrp, f);
+	/*
+	 * If there is no ACL entries, we revert to traditional
+	 * Unix mode bits for permission checking.
+	 */
 	if (a == NULL) {
-		int rc;
-
 #ifdef SLOPT_POSIX_ACLS_REVERT
 		locked = FCMH_RLOCK(f);
 		rc = checkcreds(&f->fcmh_sstb, pcrp, accmode);
@@ -187,10 +190,10 @@ sl_fcmh_checkacls(struct fidc_membh *f, struct pscfs_req *pfr,
 		return (rc);
 	}
 	locked = FCMH_RLOCK(f);
-	rv = sl_checkacls(a, &f->fcmh_sstb, pcrp, accmode);
+	rc = sl_checkacls(a, &f->fcmh_sstb, pcrp, accmode);
 	FCMH_URLOCK(f, locked);
 	acl_free(a);
-	return (rv);
+	return (rc);
 }
 
 /* acl-2.2.52: setfacl/do_set.c */

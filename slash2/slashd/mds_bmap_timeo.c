@@ -76,6 +76,11 @@ mds_bmap_setcurseq(uint64_t maxseq, uint64_t minseq)
 void
 mds_bmap_getcurseq(uint64_t *maxseq, uint64_t *minseq)
 {
+	/*
+ 	 * Reading these two 64-bit sequence number is atomic.
+	 * So don't take the slm_bmap_leases.btt_lock spinlock.
+	 * It has caused a deadlock involving multiple parties.
+ 	 */
 	if (minseq)
 		*minseq = slm_bmap_leases.btt_minseq;
 	if (maxseq)

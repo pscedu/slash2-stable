@@ -164,7 +164,7 @@ slm_batch_repl_cb(void *req, void *rep, void *scratch, int rc)
 			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 			OPSTAT_INCR("repl-fail-soft");
 		} else {
-			/* Fatal error: cancel replication. */
+			/* Fatal error: cancel replication.  Saw this. */
 			tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE_QUEUED;
 			OPSTAT_INCR("repl-fail-hard");
 		}
@@ -897,7 +897,7 @@ upd_pagein_wk(void *p)
 }
 
 int
-upd_proc_pagein_cb(struct slm_sth *sth, void *p)
+upd_proc_pagein_cb(sqlite3_stmt *sth, void *p)
 {
 	struct slm_wkdata_upschq *wk;
 	struct psc_dynarray *da = p;
@@ -909,8 +909,8 @@ upd_proc_pagein_cb(struct slm_sth *sth, void *p)
 
 	/* pfl_workrq_pool */
 	wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
-	wk->fid = sqlite3_column_int64(sth->sth_sth, 0);
-	wk->bno = sqlite3_column_int(sth->sth_sth, 1);
+	wk->fid = sqlite3_column_int64(sth, 0);
+	wk->bno = sqlite3_column_int(sth, 1);
 	psc_dynarray_add(da, wk);
 	return (0);
 }
@@ -935,7 +935,6 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 	 * selects a different user at random, so over time, no users
 	 * will starve.
 	 */
-	spinlock(&slm_upsch_lock);
     	r->res_offset = 0;
 	while (1) {
 		dbdo(upd_proc_pagein_cb, da,
@@ -961,7 +960,6 @@ slm_page_work(struct sl_resource *r, struct psc_dynarray *da)
 		}
 		break;
 	}
-	freelock(&slm_upsch_lock);
 }
 
 #if 0
@@ -993,11 +991,11 @@ upd_proc(struct slm_update_data *upd)
 }
 
 int
-slm_upsch_tally_cb(struct slm_sth *sth, void *p)
+slm_upsch_tally_cb(sqlite3_stmt *sth, void *p)
 {
 	int *val = p;
 
-	*val = sqlite3_column_int(sth->sth_sth, 0);
+	*val = sqlite3_column_int(sth, 0);
 
 	return (0);
 }
@@ -1008,7 +1006,7 @@ slm_upsch_tally_cb(struct slm_sth *sth, void *p)
  */
 
 int
-slm_upsch_requeue_cb(struct slm_sth *sth, __unusedx void *p)
+slm_upsch_requeue_cb(sqlite3_stmt *sth, __unusedx void *p)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST];
 	struct fidc_membh *f = NULL;
@@ -1018,9 +1016,9 @@ slm_upsch_requeue_cb(struct slm_sth *sth, __unusedx void *p)
 
 	OPSTAT_INCR("revert-cb");
 
-	fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
+	fg.fg_fid = sqlite3_column_int64(sth, 0);
 	fg.fg_gen = FGEN_ANY;
-	bno = sqlite3_column_int(sth->sth_sth, 1);
+	bno = sqlite3_column_int(sth, 1);
 
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc)
@@ -1066,7 +1064,6 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	r = libsl_id2res(resid);
 	if (r == NULL)
 		return (ESRCH);
-	spinlock(&slm_upsch_lock);
 	rc = dbdo(NULL, NULL,
 	    " INSERT INTO upsch ("
 	    "	resid,"						/* 1 */
@@ -1098,7 +1095,6 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	    SQLITE_INTEGER, usr_prio,				/* 7 */
 	    SQLITE_INTEGER, sl_sys_upnonce);			/* 8 */
 
-	freelock(&slm_upsch_lock);
 	if (!rc) {
 		/*
 		 * XXX this is an optimization path, use non-blocking.
@@ -1187,12 +1183,11 @@ slmupschthr_spawn(void)
 	struct psc_thread *thr;
 
 	for (i = 0; i < SLM_NUPSCHED_THREADS; i++) {
-		thr = pscthr_init(SLMTHRT_UPSCHED, slmupschthr_main,
-		    sizeof(struct slmupsch_thread), "slmupschthr%d", i);
+		thr = pscthr_init(SLMTHRT_UPSCHED, slmupschthr_main, 
+		    0, "slmupschthr%d", i);
 		pscthr_setready(thr);
 	}
-	thr = pscthr_init(SLMTHRT_PAGER, slmpagerthr_main,
-	    sizeof(struct slmupsch_thread), "slmpagerthr");
+	thr = pscthr_init(SLMTHRT_PAGER, slmpagerthr_main, 0, "slmpagerthr");
 	pscthr_setready(thr);
 }
 

@@ -35,6 +35,7 @@
 #define	BASE_NAME_MAX		128
 #define BASE_NAME_SUFFIX	10
 
+int verbose;
 char scratch[MAX_BUF_LEN];
 
 struct testfile {
@@ -87,7 +88,7 @@ create_file(int i)
 		tmp2 = write(files[i].fd, files[i].buf, tmp1);
 		if (tmp2 < 0) {
 			printf("Fail to write file %s, errno = %d\n", files[i].name, errno);
-			exit (0);
+			exit (1);
 		}
 		if (tmp1 == tmp2)
 			return;
@@ -95,7 +96,7 @@ create_file(int i)
 		j++;
 	}
 	printf("Can't finish creating file %s within 20 attempts\n", files[i].name);
-	exit (0);
+	exit (1);
 }
 
 read_file(int i)
@@ -111,7 +112,7 @@ read_file(int i)
 	tmp1 = lseek(files[i].fd, offset, SEEK_SET);
 	if (tmp1 != offset) {
 		printf("Seek fail: file = %d, offset = %d\n", i, j);
-		exit (0);
+		exit (1);
 	}
 
 	if (files[i].size - offset > MAX_BUF_LEN) {
@@ -123,22 +124,24 @@ read_file(int i)
 	}
 
 	tmp1 = size;
+	if (verbose)
+		printf("Read %6d bytes from file %s at offset %12ld\n", tmp1, files[i].name, offset);
 	tmp2 = read(files[i].fd, scratch, tmp1);
 	if (tmp1 != tmp2) {
 		printf("Read fail: file = %d, offset = %d, errno = %d\n", i, offset, errno);
-		exit (0);
+		exit (1);
 	}
 
 	for (j = 0; j < size; j++) {
 		if (scratch[j] != files[i].buf[offset + j]) {
-			printf("Compare Fail: file = %d, offset = %d, size = %d\n", i, j, size);
+			printf("Compare fail: file = %d, offset = %d, size = %d\n", i, j, size);
 			tmp1 = 0;
 			for (k = j; k < size; k++) {
 				if (tmp1++ > 100)
 					break;
 				printf("%08x: %08x - %08x\n", k, scratch[k], files[i].buf[offset + k]);
 			}
-			exit (0);
+			exit (1);
 		}
 	}
 }
@@ -155,7 +158,7 @@ write_file(int i)
 	tmp1 = lseek(files[i].fd, offset, SEEK_SET);
 	if (tmp1 != offset) {
 		printf("Seek fail: file = %d, offset = %d\n", i, offset);
-		exit (0);
+		exit (1);
 	}
 
 	size = random();
@@ -182,10 +185,12 @@ write_file(int i)
 			buf[j] = (char)random();
 		}
 
+		if (verbose)
+			printf("Write %6d bytes to file %s at offset %12ld\n", tmp1, files[i].name, offset);
 		tmp2 = write(files[i].fd, files[i].buf + offset, tmp1);
 		if (tmp1 != tmp2) {
 			printf("Write fail: file = %d, offset = %d, errno = %d\n", i, offset, errno);
-			exit (0);
+			exit (1);
 		}
 			
 		offset += tmp1;
@@ -193,7 +198,7 @@ write_file(int i)
 	}
 }
 
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	char *name;
 	size_t tmp;
@@ -203,7 +208,7 @@ main(int argc, char *argv[])
 	struct timeval t1, t2, t3;
 
 	gettimeofday(&t1, NULL);
-	while ((c = getopt(argc, argv, "s:n:")) != -1) {
+	while ((c = getopt(argc, argv, "s:n:v")) != -1) {
 		switch (c) {
 			case 's':
 				seed = atoi(optarg);
@@ -211,16 +216,20 @@ main(int argc, char *argv[])
                         case 'n':
 				times = atoi(optarg);
 				break;
+                        case 'v':
+				verbose = 1;
+				break;
 		}   
 	}
 	if (optind > argc - 1) {
-		printf("Usage: a.out [-s seed] [-n count] name\n");
-		exit(0);
+		printf("optind = %d, argc - 1 = %d\n", optind, argc - 1);
+		printf("Usage: a.out [-v] [-s seed] [-n count] name\n");
+		exit (1);
 	}   
 
 	if (strlen(argv[optind]) > BASE_NAME_MAX) {
 		printf("Base name is too long\n");
-		exit (0);
+		exit (1);
 	}
 
 	srandom(seed);
@@ -239,7 +248,7 @@ main(int argc, char *argv[])
 		files[i].buf = malloc(files[i].size);
 		if (!files[i].buf) {
 			printf("Fail to allocate memory, errno = %d\n", errno);
-			exit (0);
+			exit (1);
 		}
 
 		for (j = 0; j < files[i].size; j++)
@@ -252,7 +261,7 @@ main(int argc, char *argv[])
 	        files[i].fd = open(files[i].name, O_RDWR | O_CREAT | O_TRUNC, 0600);
 		if (files[i].fd < 0) {
 			printf("Fail to create file %s, errno = %d\n", files[i].name, errno);
-			exit (0);
+			exit (1);
 		}
 		create_file(i);
 
@@ -265,7 +274,7 @@ main(int argc, char *argv[])
         	files[i].fd = open(files[i].name, O_RDWR);
 		if (files[i].fd < 0) {
 			printf("Fail to open file %s, errno = %d\n", files[i].name, errno);
-			exit (0);
+			exit (1);
 		}
 	}
 
@@ -294,4 +303,5 @@ main(int argc, char *argv[])
 	t3.tv_usec = t2.tv_usec - t1.tv_usec;
 
 	printf("\nTotal elapsed time is %02d:%02d:%02d.\n", t3.tv_sec / 3600, (t3.tv_sec % 3600) / 60, t3.tv_sec % 60);
+	exit (0);
 }

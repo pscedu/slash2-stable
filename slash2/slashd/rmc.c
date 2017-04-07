@@ -513,6 +513,12 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 		goto out;
 	}
 
+	/*
+ 	 * This returns attributes for a file without going through the code
+ 	 * that instantiates a fcmh for the child. One side effect is that
+ 	 * we can succeed here while failing the getattr RPC on the same 
+ 	 * file because we check the CRC of the inode there.
+ 	 */
 	mp->rc = -mdsio_lookupx(vfsid, fcmh_2_mfid(p), mq->name, NULL,
 	    &rootcreds, &mp->attr, &mp->xattrsize);
 	if (mp->rc)
@@ -1837,8 +1843,14 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	csvc = slm_getclcsvc(rq->rq_export);
-	if (csvc == NULL)
-		return (0);
+	if (csvc == NULL) {
+		mp->rc = -EHOSTDOWN;
+		goto out;
+	}
+	if (mq->fg.fg_fid == FID_ANY) {
+		mp->rc = -EINVAL;
+		goto out;
+	}
 
 	rsw = psc_pool_get(slm_repl_status_pool);
 	memset(rsw, 0, sizeof(*rsw));
@@ -1846,7 +1858,11 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	rsw->rsw_fg = mq->fg;
 	rsw->rsw_cid = mq->id;
 	rsw->rsw_csvc = csvc;
+
+	/* handled by slmrcmthr_main() */
 	lc_add(&slm_replst_workq, rsw);
+
+ out:
 	return (0);
 }
 

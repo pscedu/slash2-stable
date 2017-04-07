@@ -146,7 +146,9 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	}
 
 	res = libsl_id2res(ios);
-	if (res == NULL || !RES_ISFS(res))
+	if (res == NULL)
+		PFL_GOTOERR(out, rc = -SLERR_RES_UNKNOWN);
+	if (!RES_ISFS(res))
 		PFL_GOTOERR(out, rc = -SLERR_RES_BADTYPE);
 
 	/*
@@ -692,7 +694,6 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	}
 
 	for (n = 0; n < del.nios; n++) {
-		spinlock(&slm_upsch_lock);
 		dbdo(NULL, NULL,
 		    " DELETE FROM upsch"
 		    " WHERE	resid = ?"
@@ -701,11 +702,9 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		    SQLITE_INTEGER, del.iosv[n].bs_id,
 		    SQLITE_INTEGER64, bmap_2_fid(b),
 		    SQLITE_INTEGER, b->bcm_bmapno);
-		freelock(&slm_upsch_lock);
 	}
 
 	for (n = 0; n < chg.nios; n++) {
-		spinlock(&slm_upsch_lock);
 		dbdo(NULL, NULL,
 		    " UPDATE	upsch"
 		    " SET	status = IFNULL(?, status),"
@@ -723,7 +722,6 @@ slm_repl_upd_write(struct bmap *b, int rel)
 		    SQLITE_INTEGER, chg.iosv[n].bs_id,
 		    SQLITE_INTEGER64, bmap_2_fid(b),
 		    SQLITE_INTEGER, b->bcm_bmapno);
-		freelock(&slm_upsch_lock);
 	}
 
 	bmap_2_bmi(b)->bmi_sys_prio = -1;
@@ -737,7 +735,7 @@ slm_repl_upd_write(struct bmap *b, int rel)
 	}
 }
 
-#define FLAG_DIRTY			(1 << 0)	/* bmap was modified and must be saved */
+#define FLAG_REPLICA_STATE_DIRTY	(1 << 0)	/* bmap was modified and must be saved */
 #define FLAG_REPLICA_STATE_INVALID	(1 << 1)	/* return SLERR_REPLICA_STATE_INVALID */
 
 /*
@@ -761,13 +759,17 @@ slm_repl_addrq_cb(__unusedx struct bmap *b, __unusedx int iosidx,
 	case BREPLST_GARBAGE_QUEUED:
 	case BREPLST_GARBAGE_SCHED:
 	case BREPLST_INVALID:
-		 *flags |= FLAG_DIRTY;
+		 *flags |= FLAG_REPLICA_STATE_DIRTY;
 		 break;
 
-	default:
+	case BREPLST_TRUNC_QUEUED:
+	case BREPLST_TRUNC_SCHED:
 		 /* Report that the replica will not be made valid. */
 		 *flags |= FLAG_REPLICA_STATE_INVALID;
 		 break;
+
+	default:
+		psc_fatalx("Invalid replication state %d", val);
 	}
 }
 
@@ -863,7 +865,7 @@ mds_repl_addrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 		/* both default to -1 in parse_replrq() */
 		bmap_2_bmi(b)->bmi_sys_prio = sys_prio;
 		bmap_2_bmi(b)->bmi_usr_prio = usr_prio;
-		if (flags & FLAG_DIRTY)
+		if (flags & FLAG_REPLICA_STATE_DIRTY)
 			mds_bmap_write_logrepls(b);
 		else if (sys_prio != -1 || usr_prio != -1)
 			slm_repl_upd_write(b, 0);
@@ -894,11 +896,14 @@ struct slm_repl_valid {
  * operation, to ensure the last replicas aren't removed.
  */
 void
-slm_repl_countvalid_cb(__unusedx struct bmap *b, int iosidx, int val,
+slm_repl_countvalid_cb(struct bmap *b, int iosidx, int val,
     void *arg)
 {
 	struct slm_repl_valid *t = arg;
-	int i;
+	struct slash_inode_handle *ih;
+	struct fidc_membh *f;
+	sl_replica_t *repl;
+	int i, rc;
 
 	/* If the state isn't VALID, nothing to count. */
 	if (val != BREPLST_VALID)
@@ -911,7 +916,27 @@ slm_repl_countvalid_cb(__unusedx struct bmap *b, int iosidx, int val,
 	for (i = 0; i < t->nios; i++)
 		if (iosidx == t->idx[i])
 			return;
-	t->n++;
+
+	/*
+ 	 * If the "valid" replica is hold by an unknown I/Os, don't take
+ 	 * it into account.
+ 	 */
+	f = b->bcm_fcmh;
+	ih = fcmh_2_inoh(f);
+	if (iosidx < SL_DEF_REPLICAS) {
+		i = iosidx;
+		repl = ih->inoh_ino.ino_repls;
+	} else {
+		rc = mds_inox_ensure_loaded(ih);
+		if (rc)
+			return;
+		i = iosidx - SL_DEF_REPLICAS;
+		repl = ih->inoh_extras->inox_repls;
+	} 
+	if (libsl_id2res(repl[i].bs_id))
+		t->n++;
+	else
+		OPSTAT_INCR("unknown-valid");
 }
 
 void
@@ -924,7 +949,7 @@ slm_repl_delrq_cb(__unusedx struct bmap *b, __unusedx int iosidx,
 	case BREPLST_REPL_QUEUED:
 	case BREPLST_REPL_SCHED:
 	case BREPLST_VALID:
-		*flags |= FLAG_DIRTY;
+		*flags |= FLAG_REPLICA_STATE_DIRTY;
 		break;
 	default:
 		 break;
@@ -1002,7 +1027,7 @@ mds_repl_delrq(const struct sl_fidgen *fgp, sl_bmapno_t bmapno,
 			rc = _mds_repl_bmap_walk(b, tract, NULL, 0, iosidx,
 			    nios, slm_repl_delrq_cb, &flags);
 			psc_assert(!rc);
-			if (flags & FLAG_DIRTY)
+			if (flags & FLAG_REPLICA_STATE_DIRTY)
 				rc = mds_bmap_write_logrepls(b);
 		}
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);

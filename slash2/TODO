@@ -5510,3 +5510,150 @@ Potential wrapper issue - cores with two different file names:
 <zhihui_> [root@r503 c]# /usr/bin/file mount_wokfs.29728
 <zhihui_> mount_wokfs.29728: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.32, BuildID[sha1]=1ab3c5793a438291eb6710935b95f5eecc6fa0bf, not stripped
 <zhihui_> [root@r503 c]# 
+
+01/26/2017
+----------
+
+The get replication status RPC is very efficient.  Bob is running some script to verify files are really replicated elsewhere and it takes a very long time.
+
+02/17/2017
+----------
+
+(1) Make sure we ignore unknown I/O servers when checking for the last replica of a block in a file. - FIXED
+
+(2) An IOS is shown not connected to a client, double check that on-demand connection actually happens.
+
+
+02/21/2017
+----------
+
+* More performance metrics are needed (average disk I/O time, RPC time).
+* UID map should map a user to nobody if no explicit mapping for it exists (uid squash).
+
+* If we disable write on an I/O server, make sure that we can read the old data store on it and write new
+  data elsewhere.  If I wait a while, I seem to get the right result. Perhaps the client still think the
+  copy at the old I/O server is still valid.
+
+02/28/2017
+----------
+
+Gracefully online/offline an IOS (we have disable write, we need disable read as well).
+
+03/02/2017
+----------
+
+[zhihui@xl003 ~]$ msctl -p sys.version
+parameter                                               value
+================================================================================
+sys.version                                             43020
+[zhihui@xl003 ~]$ 
+
+(gdb) 
+#5  0x00007f90b45fcdb6 in _bmap_op_done (pci=0x7f8a5c000910, b=0x7f89200afd80, 
+    fmt=0x7f90b47e3500 "bmap@%p bno:%u flg:%#x:%s%s%s%s%s%s%s%s%s%s fid:%#018lx opcnt=%d : released reference (type=%u)")
+    at /opt/packages/slash2/cli/p/slash2/share/bmap.c:90
+90		psc_assert(!(b->bcm_flags & BMAPF_TOFREE));
+(gdb) bt
+#0  0x00007f90b749d5f7 in raise () from /lib64/libc.so.6
+#1  0x00007f90b749ece8 in abort () from /lib64/libc.so.6
+#2  0x000000000045d73c in pfl_abort () at /opt/packages/slash2/cli/p/pfl/init.c:106
+#3  0x0000000000474d15 in _psclogv (pci=0x7f8a5c000910, level=0, options=0, fmt=0x7f90b47e262f "[assert] %s", ap=0x7f8a6effa550)
+    at /opt/packages/slash2/cli/p/pfl/log.c:492
+#4  0x0000000000474ee4 in _psc_fatal (pci=0x7f8a5c000910, level=0, options=0, fmt=0x7f90b47e262f "[assert] %s")
+    at /opt/packages/slash2/cli/p/pfl/log.c:522
+#5  0x00007f90b45fcdb6 in _bmap_op_done (pci=0x7f8a5c000910, b=0x7f89200afd80, 
+    fmt=0x7f90b47e3500 "bmap@%p bno:%u flg:%#x:%s%s%s%s%s%s%s%s%s%s fid:%#018lx opcnt=%d : released reference (type=%u)")
+    at /opt/packages/slash2/cli/p/slash2/share/bmap.c:90
+#6  0x00007f90b460e5d8 in msl_bmap_lease_extend_cb (rq=0x7f89e401c3a0, args=0x7f89e401c548)
+    at /opt/packages/slash2/cli/p/slash2/mount_slash/bmap_cli.c:396
+#7  0x00007f90b478ef6a in pscrpc_interpret (rq=0x7f89e401c3a0) at /opt/packages/slash2/cli/p/pfl/rpcclient.c:85
+#8  0x00007f90b47ae466 in _pscrpc_set_check (set=0x7f90a0038f30, finish_one=1) at /opt/packages/slash2/cli/p/pfl/rpcclient.c:953
+#9  0x00007f90b471ef23 in pscrpc_nbreapthr_main (thr=0x7f90a06bfb50) at /opt/packages/slash2/cli/p/pfl/nb.c:81
+#10 0x00000000004aa8e3 in _pscthr_begin (arg=0x7f90b61fc120) at /opt/packages/slash2/cli/p/pfl/thread.c:332
+#11 0x00007f90b7830dc5 in start_thread () from /lib64/libpthread.so.0
+#12 0x00007f90b755e28d in clone () from /lib64/libc.so.6
+(gdb) up
+#6  0x00007f90b460e5d8 in msl_bmap_lease_extend_cb (rq=0x7f89e401c3a0, args=0x7f89e401c548)
+    at /opt/packages/slash2/cli/p/slash2/mount_slash/bmap_cli.c:396
+396		bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+(gdb) down
+#5  0x00007f90b45fcdb6 in _bmap_op_done (pci=0x7f8a5c000910, b=0x7f89200afd80, 
+    fmt=0x7f90b47e3500 "bmap@%p bno:%u flg:%#x:%s%s%s%s%s%s%s%s%s%s fid:%#018lx opcnt=%d : released reference (type=%u)")
+    at /opt/packages/slash2/cli/p/slash2/share/bmap.c:90
+90		psc_assert(!(b->bcm_flags & BMAPF_TOFREE));
+(gdb) p *b
+$1 = {bcm_bmapno = 0, bcm_flags = 38, bcm_fcmh = 0x7f89780416f0, bcm_opcnt = {value32 = 0}, bcm_lock = {psl_value = {value32 = 3}, 
+    psl_flags = 0, psl_owner_lineno = 378, 
+    psl_owner_file = 0x7f90b47e3220 "/opt/packages/slash2/cli/p/slash2/mount_slash/bmap_cli.c", psl_owner = 140232544466688}, 
+  bcm_tentry = {rbe_left = 0x0, rbe_right = 0x0, rbe_parent = 0x0, rbe_color = 0}, bcm_lentry = {plh_next = 0x7f899802fe20, 
+    plh_prev = 0x7f895001fb40, plh_magic = 1311693406324658740, plh_owner = 0x7f90a03a7e30}, bcm_owner = 0}
+(gdb) 
+
+03/21/2017
+----------
+
+You are correct that replicating to multiple sliods is not currently supported.
+
+03/21/2017
+----------
+
+Need to add more optstas for monitoring purposes:
+
+# Total and pending number of RPCs
+# Number of read and write on I/O server.
+
+
+03/27/2017
+----------
+
+(gdb) bt
+#0  0x00007fe46a3ae5f7 in raise () from /lib64/libc.so.6
+#1  0x00007fe46a3afce8 in abort () from /lib64/libc.so.6
+#2  0x000000000045d73c in pfl_abort () at /opt/packages/slash2/cli/p/pfl/init.c:106
+#3  0x0000000000474d15 in _psclogv (pci=0x7fe36c000910, level=0, options=0, fmt=0x4bbeeb "[assert] %s", ap=0x7fe37bbfd420)
+    at /opt/packages/slash2/cli/p/pfl/log.c:492
+#4  0x0000000000474ee4 in _psc_fatal (pci=0x7fe36c000910, level=0, options=0, fmt=0x4bbeeb "[assert] %s")
+    at /opt/packages/slash2/cli/p/pfl/log.c:522
+#5  0x0000000000468de3 in _psclist_add (e=0x7fe2600c51a0, prev=0x7fe2600c51a0, next=0x7fe4537f8260 <msl_bmaptimeoutq>)
+    at /opt/packages/slash2/cli/p/pfl/list.h:148
+#6  0x000000000046bfaa in _pll_add (pci=0x7fe36c000910, pll=0x7fe4537f8260 <msl_bmaptimeoutq>, p=0x7fe2600c4ff8, flags=2)
+    at /opt/packages/slash2/cli/p/pfl/lockedlist.c:83
+#7  0x0000000000462e2b in _lc_add (plc=0x7fe4537f8260 <msl_bmaptimeoutq>, p=0x7fe2600c4ff8, flags=1, cmpf=0x0)
+    at /opt/packages/slash2/cli/p/pfl/listcache.c:142
+#8  0x00007fe4533e3034 in msl_bmap_reap_init (b=0x7fe2600c4f80) at /opt/packages/slash2/cli/p/slash2/mount_slash/bmap_cli.c:853
+#9  0x00007fe4533cdeee in msl_bmap_retrieve_cb (rq=0x7fe2c81fe4e0, args=0x7fe2c81fe688)
+    at /opt/packages/slash2/cli/p/slash2/mount_slash/bmap_cli.c:225
+#10 0x00007fe453554f6a in pscrpc_interpret (rq=0x7fe2c81fe4e0) at /opt/packages/slash2/cli/p/pfl/rpcclient.c:85
+#11 0x00007fe453574466 in _pscrpc_set_check (set=0x7fe454038f40, finish_one=1) at /opt/packages/slash2/cli/p/pfl/rpcclient.c:953
+#12 0x00007fe4534e4f23 in pscrpc_nbreapthr_main (thr=0x7fe45462d860) at /opt/packages/slash2/cli/p/pfl/nb.c:81
+#13 0x00000000004aa8e3 in _pscthr_begin (arg=0x7fe46910d120) at /opt/packages/slash2/cli/p/pfl/thread.c:332
+#14 0x00007fe46a741dc5 in start_thread () from /lib64/libpthread.so.0
+#15 0x00007fe46a46f28d in clone () from /lib64/libc.so.6
+
+The above has happend a few times now ...
+
+03/28/2017
+----------
+
+[1490717843.93547700 msnbrqthr6:7f9a89ff7700:def bmap_cli.c msl_bmap_reap_init 837] Invalid IOS 41505
+
+Fix the above with EIO.
+
+04/05/2017
+----------
+
+Investigate if the following cause too much CPU time.
+
+[root@r193 zhihui]# msctl -S /var/run/mount_slash.r193.sock -p opstats > a1
+[root@r193 zhihui]# msctl -S /var/run/mount_slash.r193.sock -p opstats > a2
+[root@r193 zhihui]# diff a1 a2
+9,11c9,11
+< opstats.ctl.accept                                      68
+< opstats.ctl.recv                                        123
+< opstats.ctl.sent                                        12032
+---
+> opstats.ctl.accept                                      69
+> opstats.ctl.recv                                        124
+> opstats.ctl.sent                                        12610
+[root@r193 zhihui]# 
+

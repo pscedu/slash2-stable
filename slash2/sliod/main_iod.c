@@ -157,9 +157,13 @@ slihealththr_main(struct psc_thread *thr)
 	char cmdbuf[BUFSIZ];
 	int rc;
 
-	(void)FMTSTR(cmdbuf, sizeof(cmdbuf), slcfg_local->cfg_selftest,
-	    FMTSTRCASE('r', "s", slcfg_local->cfg_fsroot)
-	);
+	/* See ../../slash2/utils/fshealthtest for an example */
+	if (slcfg_local->cfg_selftest) {
+		FMTSTR(cmdbuf, sizeof(cmdbuf), slcfg_local->cfg_selftest,
+		    FMTSTRCASE('r', "s", slcfg_local->cfg_fsroot)
+		);
+		psclog_warnx("self-health check command is %s", cmdbuf);
+	}
 
 	signal(SIGALRM, SIG_IGN);
 	PFL_GETTIMESPEC(&ts);
@@ -167,26 +171,30 @@ slihealththr_main(struct psc_thread *thr)
 		ts.tv_sec += 60;
 		psc_waitq_waitabs(&dummy, NULL, &ts);
 		errno = 0;
-		rc = system(cmdbuf);
 
-		/*
-		 * Code		Description
-		 * ---------------------------------------
-		 * 0		OK
-		 * 1		serious error: do not use
-		 * 2		degraded: avoid
-		 */
-		if (rc == -1)
-			rc = -errno;
-		else if (WIFEXITED(rc))
-			rc = WEXITSTATUS(rc);
+		rc = 0;
+		if (slcfg_local->cfg_selftest) {
+			rc = system(cmdbuf);
+
+			/*
+			 * Code		Description
+			 * ---------------------------------------
+			 * 0		OK
+			 * 1		serious error: do not use
+			 * 2		degraded: avoid
+			 */
+			if (rc == -1)
+				rc = -errno;
+			else if (WIFEXITED(rc))
+				rc = WEXITSTATUS(rc);
+		}
+		if (!rc)
+			rc = !sli_has_enough_space(NULL, 0, 0, 0);
 		if (sli_selftest_rc != rc) {
-			psclog_warnx("self-health check command is %s", 
-			    cmdbuf);
-			psclog_warnx("health changed from %d to %d "
-			    "(errno=%d)", sli_selftest_rc, rc, errno);
 
 			sli_selftest_rc = rc;
+			psclog_warnx("health changed from %d to %d "
+			    "(errno=%d)", sli_selftest_rc, rc, errno);
 
 			CONF_LOCK();
 			PLL_LOCK(&sl_clients);
@@ -319,9 +327,8 @@ main(int argc, char *argv[])
 	pscthr_init(SLITHRT_STATFS, slistatfsthr_main, 0,
 	    "slistatfsthr");
 
-	if (slcfg_local->cfg_selftest)
-		pscthr_init(SLITHRT_HEALTH, slihealththr_main, 0,
-		    "slihealththr");
+	pscthr_init(SLITHRT_HEALTH, slihealththr_main, 0,
+	    "slihealththr");
 
 	pfl_workq_init(128, 1024, 1024);
 	pfl_wkthr_spawn(SLITHRT_WORKER, SLI_NWORKER_THREADS, 0, "sliwkthr%d");
@@ -331,8 +338,7 @@ main(int argc, char *argv[])
 	sl_drop_privs(1);
 
 	sliconnthr = slconnthr_spawn(SLITHRT_CONN, "sli",
-	    slcfg_local->cfg_selftest ?
-	    slirmiconnthr_upcall : NULL, NULL);
+	    slirmiconnthr_upcall, NULL);
 
 	prefmds = slcfg_local->cfg_prefmds;
 	if (argc)

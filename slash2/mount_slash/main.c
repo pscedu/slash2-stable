@@ -126,7 +126,7 @@ sl_ios_id_t			 msl_pref_ios = IOS_ID_ANY;
 const char			*msl_ctlsockfn = SL_PATH_MSCTLSOCK;
 
 char				 mountpoint[PATH_MAX];
-int				 msl_use_mapfile;
+int				 msl_has_mapfile;
 struct psc_dynarray		 allow_exe = DYNARRAY_INIT;
 char				*msl_cfgfn = SL_PATH_CONF;
 
@@ -135,9 +135,6 @@ struct psc_poolmgr		*msl_async_req_pool;
 
 struct psc_poolmaster		 msl_biorq_poolmaster;
 struct psc_poolmgr		*msl_biorq_pool;
-
-struct psc_poolmaster		 msl_retry_req_poolmaster;
-struct psc_poolmgr		*msl_retry_req_pool;
 
 struct psc_poolmaster		 msl_mfh_poolmaster;
 struct psc_poolmgr		*msl_mfh_pool;
@@ -152,6 +149,7 @@ uint32_t			 sl_sys_upnonce;
 
 struct psc_hashtbl		 msl_uidmap_ext;
 struct psc_hashtbl		 msl_uidmap_int;
+struct psc_hashtbl		 msl_gidmap_ext;
 struct psc_hashtbl		 msl_gidmap_int;
 
 /*
@@ -161,8 +159,10 @@ struct psc_hashtbl		 msl_gidmap_int;
  */
 int				 msl_acl;
 int				 msl_force_dio;
+int				 msl_map_enable;
 int				 msl_root_squash;
-int				 msl_repl_enable;
+int				 msl_bmap_reassign;
+int				 msl_repl_enable = 1;
 int				 msl_max_retries = 5;
 int				 msl_fuse_direct_io = 1;
 uint64_t			 msl_pagecache_maxsize;
@@ -172,7 +172,7 @@ struct resprof_cli_info		 msl_statfs_aggr_rpci;
 int				 msl_ios_max_inflight_rpcs = RESM_MAX_IOS_OUTSTANDING_RPCS;
 int				 msl_mds_max_inflight_rpcs = RESM_MAX_MDS_OUTSTANDING_RPCS;
 
-int				 msl_newent_inherit_groups = 1;
+int				 msl_newent_inherit_groups = 1;	/* default to BSD behavior */
 
 struct psc_thread		*slcconnthr;
 
@@ -248,6 +248,8 @@ newent_select_group(struct fidc_membh *p, struct pscfs_creds *pcr)
 //		return (pcr.pcr_gid);
 	if (p->fcmh_sstb.sst_mode & S_ISGID)
 		return (p->fcmh_sstb.sst_gid);
+
+	/* See notes on grpid in mount(8) */
 	if (msl_newent_inherit_groups)
 		return (p->fcmh_sstb.sst_gid);
 	return (pcr->pcr_gid);
@@ -257,7 +259,8 @@ struct pscfs_creds *
 slc_getfscreds(struct pscfs_req *pfr, struct pscfs_creds *pcr)
 {
 	pscfs_getcreds(pfr, pcr);
-	gidmap_int_cred(pcr);
+	uidmap_ext_cred(pcr);
+	gidmap_ext_cred(pcr);
 	return (pcr);
 }
 
@@ -361,6 +364,14 @@ _msl_progallowed(struct pscfs_req *pfr)
 	return (0);
 }
 
+static void
+msl_internalize_stat(struct srt_stat *sstb, struct stat *stb)
+{
+	sl_internalize_stat(sstb, stb);
+	uidmap_int_stat(sstb, &stb->st_uid);
+	gidmap_int_stat(sstb, &stb->st_gid);
+}
+
 void
 mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, int oflags, mode_t mode)
@@ -419,7 +430,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->prefios[0] = msl_pref_ios;
 	mq->owner.scr_uid = pcr.pcr_uid;
 	mq->owner.scr_gid = newent_select_group(p, &pcr);
-	uidmap_ext_cred(&mq->owner);
 	strlcpy(mq->name, name, sizeof(mq->name));
 	PFL_GETPTIMESPEC(&mq->time);
 
@@ -468,7 +478,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	FCMH_LOCK(c);
 	slc_fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_HAVELOCK |
 	    FCMH_SETATTRF_CLOBBER);
-	sl_internalize_stat(&c->fcmh_sstb, &stb);
+	msl_internalize_stat(&c->fcmh_sstb, &stb);
 
 	fci = fcmh_2_fci(c);
 
@@ -563,7 +573,6 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 
 	*mfhp = NULL;
 
-	slc_getfscreds(pfr, &pcr);
 	if (!msl_progallowed(pfr))
 		PFL_GOTOERR(out, rc = EPERM);
 
@@ -571,6 +580,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	slc_getfscreds(pfr, &pcr);
 	if ((oflags & O_ACCMODE) != O_WRONLY) {
 		rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
 		if (rc)
@@ -742,7 +752,6 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct stat stb;
 	int rc;
 
-	slc_getfscreds(pfr, &pcr);
 
 	/*
 	 * Lookup and possibly create a new fidcache handle for inum.
@@ -754,6 +763,11 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	slc_getfscreds(pfr, &pcr);
+	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
 	rc = msl_stat(f, pfr);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -762,7 +776,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 		f->fcmh_sstb.sst_blksize = MSL_FS_BLKSIZ;
 
 	FCMH_LOCK(f);
-	sl_internalize_stat(&f->fcmh_sstb, &stb);
+	msl_internalize_stat(&f->fcmh_sstb, &stb);
 
  out:
 	if (f)
@@ -791,8 +805,6 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	if (strlen(newname) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
-	slc_getfscreds(pfr, &pcr);
-
 	/* Check the parent inode. */
 	rc = msl_load_fcmh(pfr, p_inum, &p);
 	if (rc)
@@ -805,6 +817,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		PFL_GOTOERR(out, rc);
 
 	/* XXX this is wrong, it needs to check sticky */
+	slc_getfscreds(pfr, &pcr);
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -851,7 +864,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
-	sl_internalize_stat(&c->fcmh_sstb, &stb);
+	msl_internalize_stat(&c->fcmh_sstb, &stb);
 	FCMH_ULOCK(c);
 
  out:
@@ -906,7 +919,6 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
 	slc_getfscreds(pfr, &pcr);
-
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -924,9 +936,6 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->sstb.sst_uid = pcr.pcr_uid;
 	mq->sstb.sst_gid = newent_select_group(p, &pcr);
-	rc = uidmap_ext_stat(&mq->sstb);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 	mq->sstb.sst_mode = mode;
 	mq->to_set = PSCFS_SETATTRF_MODE;
 	strlcpy(mq->name, name, sizeof(mq->name));
@@ -954,7 +963,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
-	sl_internalize_stat(&mp->cattr, &stb);
+	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 
  out:
@@ -1382,7 +1391,6 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	mq->creds.scr_uid = pcr.pcr_uid;
 	mq->creds.scr_gid = newent_select_group(p, &pcr);
-	uidmap_ext_cred(&mq->creds);
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->mode = mode;
@@ -1412,7 +1420,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
-	sl_internalize_stat(&mp->cattr, &stb);
+	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 
  out:
@@ -1835,17 +1843,17 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	memset(&sstb, 0, sizeof(sstb));
 
-	slc_getfscreds(pfr, &pcr);
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
 	if (strlen(name) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
+	slc_getfscreds(pfr, &pcr);
 	rc = msl_lookup_fidcache_dcu(pfr, &pcr, pinum, name, &fg, &sstb,
 	    &c, &p, &dcu);
 	if (rc == ENOENT)
 		sstb.sst_fid = 0;
-	sl_internalize_stat(&sstb, &stb);
+	msl_internalize_stat(&sstb, &stb);
 	if (!S_ISDIR(stb.st_mode))
 		stb.st_blksize = MSL_FS_BLKSIZ;
 
@@ -1877,7 +1885,6 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 		PFL_GOTOERR(out, rc);
 
 	slc_getfscreds(pfr, &pcr);
-
 	rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2017,11 +2024,13 @@ msl_setattr(struct fidc_membh *f, int32_t to_set,
 	mq->attr.sst_fg = f->fcmh_fg;
 	mq->to_set = to_set;
 
+#if 0
 	if (to_set & (PSCFS_SETATTRF_GID | PSCFS_SETATTRF_UID)) {
 		rc = uidmap_ext_stat(&mq->attr);
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
+#endif
 
 	DEBUG_FCMH(PLL_DIAG, f, "before setattr RPC to_set=%#x",
 	    to_set);
@@ -2422,8 +2431,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (FID_GET_SITEID(opinum) != FID_GET_SITEID(npinum))
 		PFL_GOTOERR(out, rc = EXDEV);
 
-	slc_getfscreds(pfr, &pcr);
-
 	rc = msl_load_fcmh(pfr, opinum, &op);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2432,6 +2439,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	slc_getfscreds(pfr, &pcr);
 	if (pcr.pcr_uid) {
 		FCMH_LOCK(op);
 		sticky = op->fcmh_sstb.sst_mode & S_ISVTX;
@@ -2713,8 +2721,6 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	    strlen(name) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
-	slc_getfscreds(pfr, &pcr);
-
 	rc = msl_load_fcmh(pfr, pinum, &p);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2725,20 +2731,20 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	slc_getfscreds(pfr, &pcr);
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
  retry1:
+
 	MSL_RMC_NEWREQ(p, csvc, SRMT_SYMLINK, rq, mq, mp, rc);
 	if (rc)
 		goto retry2;
 
 	mq->sstb.sst_uid = pcr.pcr_uid;
 	mq->sstb.sst_gid = newent_select_group(p, &pcr);
-	rc = uidmap_ext_stat(&mq->sstb);
-	if (rc)
-		PFL_GOTOERR(out, rc);
+
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->linklen = strlen(buf);
@@ -2772,7 +2778,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
 	FCMH_LOCK(c);
 	slc_fcmh_setattr_locked(c, &mp->cattr);
-	sl_internalize_stat(&mp->cattr, &stb);
+	msl_internalize_stat(&mp->cattr, &stb);
 	FCMH_ULOCK(c);
 
  out:
@@ -2861,11 +2867,20 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	 * entry, so we have to defer the short circuit processing till
 	 * after loading the fcmh to avoid sending garbage resulting in
 	 * EIO.
+	 *
+	 * If mapping is enabled, we can reject setting UID/GID if there
+	 * is no explicit mapping exists.
 	 */
-	if ((to_set & PSCFS_SETATTRF_UID) && stb->st_uid == (uid_t)-1)
-		to_set &= ~PSCFS_SETATTRF_UID;
-	if ((to_set & PSCFS_SETATTRF_GID) && stb->st_gid == (gid_t)-1)
-		to_set &= ~PSCFS_SETATTRF_GID;
+	if (to_set & PSCFS_SETATTRF_UID) {
+		uidmap_ext_stat(stb);
+		if (stb->st_uid == (uid_t)-1)
+			to_set &= ~PSCFS_SETATTRF_UID;
+	}
+	if (to_set & PSCFS_SETATTRF_GID) {
+		gidmap_ext_stat(stb);
+ 		if (stb->st_gid == (gid_t)-1)
+			to_set &= ~PSCFS_SETATTRF_GID;
+	}
 	if (to_set == 0) {
 		FCMH_ULOCK(c);
 		goto out;
@@ -3085,7 +3100,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		}
 		if (rc && getting_attrs)
 			c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
-		sl_internalize_stat(&c->fcmh_sstb, stb);
+		msl_internalize_stat(&c->fcmh_sstb, stb);
 
 		if (flush_mtime || flush_size) {
 			if (rc) {
@@ -3203,23 +3218,16 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	struct sl_site *s;
 	int i, j, remaining;
 
+	pscthr_setdead(slcconnthr, 1);
+
 	/* mark listcaches as dead */
 	lc_kill(&msl_bmapflushq);
 	lc_kill(&msl_bmaptimeoutq);
 	lc_kill(&msl_attrtimeoutq);
 	lc_kill(&msl_readaheadq);
+	lc_kill(&msl_attrtimeoutq);
 
-	/* notify of termination */
-	LIST_CACHE_LOCK(&msl_bmaptimeoutq);
-	psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
-	LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
-
-	psc_waitq_wakeall(&msl_flush_attrq);
-
-	/* XXX crash on NULL sl_freapthr on destroy */
-	if (sl_freapthr)
-		pscthr_setdead(sl_freapthr, 1);
-	psc_waitq_wakeall(&sl_freap_waitq);
+	pscthr_setdead(sl_freapthr, 1);
 
 	/* wait for drain */
 	LISTCACHE_WAITEMPTY_UNLOCKED(&msl_bmapflushq,
@@ -3268,12 +3276,13 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	/*
 	 * Removal of the control socket is the last thing for
 	 * observability reasons.
-	 *
-	 * XXX: crash because msl_ctlthr0->pscthr_private is NULL.
 	 */
 	pfl_ctl_destroy(psc_ctlthr(msl_ctlthr0)->pct_ctldata);
 
 	PLL_LOCK(&psc_threads);
+	/*
+ 	 * See _pscthr_finish_init().
+ 	 */
 	PLL_FOREACH_SAFE(thr, thr_next, &psc_threads)
 	    if (strncmp(thr->pscthr_name, "msfsthr",
 		strlen("msfsthr")) == 0)
@@ -3294,9 +3303,10 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	psc_hashtbl_destroy(&msl_namecache_hashtbl);
 	slcfg_destroy();
 
-	if (msl_use_mapfile) {
+	if (msl_has_mapfile) {
 		psc_hashtbl_destroy(&msl_uidmap_ext);
 		psc_hashtbl_destroy(&msl_uidmap_int);
+		psc_hashtbl_destroy(&msl_gidmap_ext);
 		psc_hashtbl_destroy(&msl_gidmap_int);
 	}
 
@@ -3325,7 +3335,6 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	bmap_cache_destroy();
 
 	pfl_poolmaster_destroy(&msl_async_req_poolmaster);
-	pfl_poolmaster_destroy(&msl_retry_req_poolmaster);
 	pfl_poolmaster_destroy(&msl_biorq_poolmaster);
 	pfl_poolmaster_destroy(&msl_iorq_poolmaster);
 	pfl_poolmaster_destroy(&msl_mfh_poolmaster);
@@ -3416,7 +3425,6 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		PFL_GOTOERR(out, rc);
 
 	slc_getfscreds(pfr, &pcr);
-
 	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3515,6 +3523,10 @@ slc_setxattr(struct pscfs_req *pfr, const char *name,
 	struct srm_setxattr_rep *mp = NULL;
 	struct srm_setxattr_req *mq;
 
+	/*
+ 	 * XXX Do uid/gid mapping if the name is ACL_EA_ACCESS.
+ 	 */
+
  retry1:
 	MSL_RMC_NEWREQ(f, csvc, SRMT_SETXATTR, rq, mq, mp, rc);
 	if (rc)
@@ -3580,7 +3592,6 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 		PFL_GOTOERR(out, rc);
 
 	slc_getfscreds(pfr, &pcr);
-
 	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3694,7 +3705,6 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 		buf = PSCALLOC(size);
 
 	slc_getfscreds(pfr, &pcr);
-
 	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3853,7 +3863,8 @@ msreapthr_main(struct psc_thread *thr)
 void
 msreapthr_spawn(int thrtype, const char *name)
 {
-	pscthr_init(thrtype, msreapthr_main, 0, name);
+	/* client has its custom version of reaper */
+	sl_freapthr = pscthr_init(thrtype, msreapthr_main, 0, name);
 }
 
 void
@@ -3917,7 +3928,7 @@ slc_setprefios(sl_ios_id_t id)
 	r->res_flags |= RESF_PREFIOS;
 	if (RES_ISCLUSTER(r))
 		DYNARRAY_FOREACH(ri, j, &r->res_peers)
-			ri->res_flags &= ~RESF_PREFIOS;
+			ri->res_flags |= RESF_PREFIOS;
 //	CONF_ULOCK();
 }
 
@@ -3989,16 +4000,23 @@ msl_init(void)
 	if (slcfg_local->cfg_root_squash)
 		msl_root_squash = 1;
 	parse_allowexe();
-	if (msl_use_mapfile) {
+
+#ifdef Linux
+	msl_newent_inherit_groups = 0;
+#endif
+
+	if (msl_has_mapfile) {
 		psc_hashtbl_init(&msl_uidmap_ext, 0, struct uid_mapping,
 		    um_key, um_hentry, 191, NULL, "uidmapext");
 		psc_hashtbl_init(&msl_uidmap_int, 0, struct uid_mapping,
 		    um_key, um_hentry, 191, NULL, "uidmapint");
-
+		psc_hashtbl_init(&msl_gidmap_ext, 0, struct gid_mapping,
+		    gm_key, gm_hentry, 191, NULL, "gidmapext");
 		psc_hashtbl_init(&msl_gidmap_int, 0, struct gid_mapping,
-		    gm_key, gm_hentry, 191, NULL, "gidmapint");
+		    gm_key, gm_hentry, 191, NULL, "gidmapext");
 
 		parse_mapfile();
+		msl_map_enable = 1;
 	}
 
 	authbuf_checkkeyfile();
@@ -4099,6 +4117,9 @@ msl_init(void)
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
 
+	/* Catch future breakage after two-day's debugging */
+	psc_assert(msl_ctlthr0_private == msl_ctlthr0->pscthr_private);
+
 	time(&now);
 	psclogs_info(SLCSS_INFO, "SLASH2 client version %d "
 	    "started at %s", sl_stk_version, ctime(&now));
@@ -4143,7 +4164,7 @@ msl_opt_lookup(const char *opt)
 		{ "acl",		LOOKUP_TYPE_BOOL,	&msl_acl },
 		{ "ctlsock",		LOOKUP_TYPE_STR,	&msl_ctlsockfn },
 		{ "datadir",		LOOKUP_TYPE_STR,	&sl_datadir },
-		{ "mapfile",		LOOKUP_TYPE_BOOL,	&msl_use_mapfile },
+		{ "mapfile",		LOOKUP_TYPE_BOOL,	&msl_has_mapfile },
 		{ "pagecache_maxsize",	LOOKUP_TYPE_UINT64,	&msl_pagecache_maxsize },
 		{ "predio_issue_maxpages",
 					LOOKUP_TYPE_INT,	&msl_predio_issue_maxpages},

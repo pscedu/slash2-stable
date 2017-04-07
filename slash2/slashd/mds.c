@@ -297,11 +297,11 @@ mds_sliod_alive(void *arg)
  *	points at the real resm's identifier not the logical identifier.
  */
 __static int
-slm_try_sliodresm(struct sl_resm *resm)
+slm_try_sliodresm(struct sl_resm *resm, int repls)
 {
 	struct slrpc_cservice *csvc = NULL;
 	struct sl_mds_iosinfo *si;
-	int ok = 0;
+	int rc;
 
 	psclog_info("trying res(%s)", resm->resm_res->res_name);
 
@@ -310,22 +310,25 @@ slm_try_sliodresm(struct sl_resm *resm)
 	 * are marked RES_ISCLUSTER().  resm_res always points back to
 	 * the member's native resource and not to a logical resource
 	 * like a CNOS.
-	 *
-	 * XXX: If the IOS already has the block mapped, giving out a
-	 * lease should be okay because it does not increase disk usage.
 	 */
 	si = res2iosinfo(resm->resm_res);
 	if (si->si_flags & SIF_DISABLE_LEASE) {
 		OPSTAT_INCR("sliod-disable-lease");
 		psclog_diag("res=%s skipped due to DISABLE_LEASE",
 		    resm->resm_name);
-		return (0);
+		return (-SLERR_ION_READONLY);
 	}
-	if (si->si_flags & SIF_DISABLE_ADVLEASE) {
+	/*
+	 * If the IOS already has the block mapped, giving out a lease 
+	 * might be okay because it does not necessarily increase disk
+	 * usage.  In other words, SIF_DISABLE_ADVLEASE only affecting
+	 * a write into a new block.
+	 */
+	if (!repls && (si->si_flags & SIF_DISABLE_ADVLEASE)) {
 		OPSTAT_INCR("sliod-disable-advlease");
 		psclog_diag("res=%s skipped due to DISABLE_ADVLEASE",
 		    resm->resm_name);
-		return (0);
+		return (-SLERR_ION_READONLY);
 	}
 
 	csvc = slm_geticsvc(resm, NULL, CSVCF_NONBLOCK | CSVCF_NORECON,
@@ -334,19 +337,20 @@ slm_try_sliodresm(struct sl_resm *resm)
 		/* This sliod hasn't established a connection to us. */
 		psclog_diag("res=%s skipped due to NULL csvc",
 		    resm->resm_name);
-		return (0);
+		return (-SLERR_ION_OFFLINE);
 	}
 
-	ok = mds_sliod_alive(si);
-	if (!ok) {
+	rc = mds_sliod_alive(si);
+	if (!rc) {
 		OPSTAT_INCR("sliod-ping-awol");
 		psclog_notice("res=%s skipped due to lastcomm",
 		    resm->resm_name);
+		return (-SLERR_ION_OFFLINE);
 	}
 
 	sl_csvc_decref(csvc);
 
-	return (ok);
+	return (0);
 }
 
 /*
@@ -438,10 +442,11 @@ slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
  *	When found, slm_resm_select() must choose a replica which is
  *	marked as BREPLST_VALID.
  */
-__static struct sl_resm *
+__static int
 slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
-    int nskip)
+    int nskip, struct sl_resm **resmp)
 {
+	int rc = -SLERR_ION_OFFLINE;
 	int i, j, skip, off, val, nr, repls = 0;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct psc_dynarray a = DYNARRAY_INIT;
@@ -449,24 +454,22 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 	struct sl_resm *resm = NULL;
 	sl_ios_id_t ios;
 
-	FCMH_LOCK(f);
 	nr = fcmh_2_nrepls(f);
-	FCMH_ULOCK(f);
 
 	/* XXX if CRC check fails, we could end up with NULL inoh_extras */
-	if (nr > SL_DEF_REPLICAS)
-		mds_inox_ensure_loaded(fcmh_2_inoh(f));
+	if (nr > SL_DEF_REPLICAS) {
+		rc = mds_inox_ensure_loaded(fcmh_2_inoh(f));
+		if (rc)
+			goto out;
+	}
 
 	for (i = 0, off = 0; i < nr; i++, off += SL_BITS_PER_REPLICA) {
 		val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
 
-		/* Determine if there are any active replicas. */
-		if (val != BREPLST_INVALID)
-			repls++;
-
 		if (val != BREPLST_VALID)
 			continue;
 
+		repls++;
 		ios = fcmh_getrepl(f, i).bs_id;
 		resm = libsl_try_ios2resm(ios);
 		if (resm)
@@ -474,6 +477,10 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 	}
 
 	if (nskip) {
+		/*
+ 		 * This is because we already invalidate other bmaps 
+ 		 * when handing out a write lease.
+ 		 */
 		if (repls != 1) {
 			DEBUG_FCMH(PLL_WARN, f,
 			    "invalid reassign req");
@@ -502,21 +509,18 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 			    resm->resm_res_id);
 			goto out;
 		}
-		psc_dynarray_reset(&a);
-		repls = 0;
 	}
 
-	if (repls && !psc_dynarray_len(&a)) {
-		psc_dynarray_free(&a);
-		DEBUG_BMAPOD(PLL_ERROR, b, "no replicas marked valid we "
-		    "can use; repls=%d nskip=%d", repls, nskip);
-		return (NULL);
-	}
-
-	slm_get_ioslist(f, pios, &a);
+	/*
+ 	 * If we have valid replicas, we must select one of them.
+ 	 * Otherwise, we can lose data.
+ 	 */
+	if (!repls)
+		slm_get_ioslist(f, pios, &a);
 
 	DYNARRAY_FOREACH(resm, i, &a) {
 		for (j = 0, skip = 0; j < nskip; j++)
+			/* (gdb) p resm->resm_res->res_id */
 			if (resm->resm_res_id == to_skip[j]) {
 				skip = 1;
 				psclog_notice("res=%s skipped due being a "
@@ -524,13 +528,18 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 				break;
 			}
 
-		if (!skip && slm_try_sliodresm(resm))
+		if (skip)
+			continue;
+		rc = slm_try_sliodresm(resm, repls);
+		if (!rc) {
+			*resmp = resm;
 			break;
+		}
 	}
 
  out:
 	psc_dynarray_free(&a);
-	return (resm);
+	return (rc);
 }
 
 __static int
@@ -564,6 +573,10 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	/*
  	 * Here we assign a bmap as VALID even before a single byte
  	 * has been written to it. This might be a problem.
+ 	 *
+ 	 * If another client wants to read and write to the same 
+ 	 * bmap, the writing client should flush its dirty data first.
+ 	 * So we should be safe in theory.
  	 */
 	rc = mds_repl_inv_except(b, iosidx);
 	if (rc) {
@@ -631,10 +644,9 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	psc_assert(!bmi->bmi_assign);
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
-	resm = slm_resm_select(b, iosid, NULL, 0);
-	BMAP_LOCK(b);
-	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
-	if (!resm) {
+	rc = slm_resm_select(b, iosid, NULL, 0, &resm);
+	if (rc) {
+		BMAP_LOCK(b);
 		b->bcm_flags |= BMAPF_NOION;
 		BMAP_ULOCK(b);
 		bml->bml_flags |= BML_ASSFAIL; // XXX bml locked?
@@ -644,10 +656,8 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 		    "for lease, fid = "SLPRI_FID, iosid, 
 		    r ? r->res_name : NULL, fcmh_2_fid(f)); 
 
-		return (-SLERR_ION_OFFLINE);
+		return (rc);
 	}
-
-	BMAP_ULOCK(b);
 
 	bmi->bmi_wr_ion = rmmi = resm2rmmi(resm);
 	psc_atomic32_inc(&rmmi->rmmi_refcnt);
@@ -712,6 +722,8 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct bmap_ios_assign *bia;
 	int rc, dio;
+
+	OPSTAT_INCR("bmap-update");
 
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
@@ -1817,9 +1829,9 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	pfl_odt_getitem(slm_bia_odt, bmi->bmi_assign, &bia);
 	psc_assert(bia->bia_seq == bmi->bmi_seq);
 
-	resm = slm_resm_select(b, pios, prev_ios, nprev_ios);
-	if (!resm)
-		PFL_GOTOERR(out1, rc = -SLERR_ION_OFFLINE);
+	rc = slm_resm_select(b, pios, prev_ios, nprev_ios, &resm);
+	if (rc)
+		PFL_GOTOERR(out1, rc);
 
 	/*
 	 * Deal with the lease renewal and repl_add before modifying the
@@ -1902,7 +1914,11 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		goto out;
 	}
 
-	/* Do some post setup on the new lease. */
+	/* 
+	 * Do some post setup on the new lease. This is probably a 
+	 * good idea because the bmap replication table can change
+	 * at anytime.
+	 */
 	slm_fill_bmapdesc(sbd_out, b);
 	sbd_out->sbd_seq = bml->bml_seq;
 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
@@ -2198,21 +2214,6 @@ slm_ptrunc_prepare(struct fidc_membh *f)
 	return (rc);
 }
 
-int
-str_escmeta(const char in[PATH_MAX], char out[PATH_MAX])
-{
-	const char *i;
-	char *o;
-
-	for (i = in, o = out; *i && o < out + PATH_MAX - 1; i++, o++) {
-		if (*i == '\\' || *i == '\'')
-			*o++ = '\\';
-		*o = *i;
-	}
-	out[PATH_MAX - 1] = '\0';
-	return (0);
-}
-
 /*
  * Execute an SQL query on the SQLite database.
  *
@@ -2223,57 +2224,25 @@ str_escmeta(const char in[PATH_MAX], char out[PATH_MAX])
  */
 int
 _dbdo(const struct pfl_callerinfo *pci,
-    int (*cb)(struct slm_sth *, void *), void *cbarg,
+    int (*cb)(sqlite3_stmt *, void *), void *cbarg,
     const char *fmt, ...)
 {
-	static int check;
-	int type, log = 0, dbuf_off = 0, rc, n, j;
+	int type, log = 0, dbuf_off = 0, rc, n, i;
 	char *p, dbuf[LINE_MAX] = "";
 	struct timeval tv, tv0, tvd;
-	struct slmthr_dbh *dbh;
-	struct slm_sth *sth;
-	uint64_t key;
+	sqlite3_stmt *sth;
 	va_list ap;
 
-	dbh = slmthr_getdbh();
+	spinlock(&slm_upsch_lock);
+	do {
+		rc = sqlite3_prepare_v2(db_handle, fmt, -1, &sth, NULL);
+		if (rc == SQLITE_BUSY)
+			pscthr_yield();
+	} while (rc == SQLITE_BUSY);
+	/* saw SQLITE_MISUSE  = 21  */
+	psc_assert(rc == SQLITE_OK);
 
-	if (dbh->dbh == NULL) {
-		char dbfn[PATH_MAX], *estr;
-
-		xmkfn(dbfn, "%s/%s", SL_PATH_DEV_SHM, SL_FN_UPSCHDB);
-		rc = sqlite3_open(dbfn, &dbh->dbh);
-		if (rc == SQLITE_OK && !check) {
-			rc = sqlite3_exec(dbh->dbh,
-			    "PRAGMA integrity_check", NULL, NULL,
-			    &estr);
-			check = 1;
-		}
-		psc_assert(rc == SQLITE_OK);
-		psc_hashtbl_init(&dbh->dbh_sth_hashtbl, 0,
-		    struct slm_sth, sth_fmt, sth_hentry,
-		    pscthr_get()->pscthr_type == SLMTHRT_CTL ? 11 : 5,
-		    NULL, "sth-%s", pscthr_get()->pscthr_name);
-	}
-
-	key = (uint64_t)fmt;
-	sth = psc_hashtbl_search(&dbh->dbh_sth_hashtbl, &key);
-	if (sth == NULL) {
-		sth = PSCALLOC(sizeof(*sth));
-		psc_hashent_init(&dbh->dbh_sth_hashtbl, sth);
-		sth->sth_fmt = fmt;
-
-		do {
-			rc = sqlite3_prepare_v2(dbh->dbh, fmt, -1,
-			    &sth->sth_sth, NULL);
-			if (rc == SQLITE_BUSY)
-				pscthr_yield();
-		} while (rc == SQLITE_BUSY);
-		psc_assert(rc == SQLITE_OK);
-
-		psc_hashtbl_add_item(&dbh->dbh_sth_hashtbl, sth);
-	}
-
-	n = sqlite3_bind_parameter_count(sth->sth_sth);
+	n = sqlite3_bind_parameter_count(sth);
 	va_start(ap, fmt);
 	log = psc_log_shouldlog(pci, PLL_DEBUG);
 	if (log) {
@@ -2281,48 +2250,48 @@ _dbdo(const struct pfl_callerinfo *pci,
 		dbuf_off = strlen(fmt);
 	}
 	PFL_GETTIMEVAL(&tv0);
-	for (j = 0; j < n; j++) {
+	for (i = 0; i < n; i++) {
 		type = va_arg(ap, int);
 		switch (type) {
 		case SQLITE_INTEGER64: {
 			int64_t arg;
 
 			arg = va_arg(ap, int64_t);
-			rc = sqlite3_bind_int64(sth->sth_sth, j + 1,
+			rc = sqlite3_bind_int64(sth, i + 1,
 			    arg);
 			if (log)
 				dbuf_off += snprintf(dbuf + dbuf_off,
 				    sizeof(dbuf) - dbuf_off,
-				    "; arg %d: %"PRId64, j + 1, arg);
+				    "; arg %d: %"PRId64, i + 1, arg);
 			break;
 		    }
 		case SQLITE_INTEGER: {
 			int32_t arg;
 
 			arg = va_arg(ap, int32_t);
-			rc = sqlite3_bind_int(sth->sth_sth, j + 1, arg);
+			rc = sqlite3_bind_int(sth, i + 1, arg);
 			if (log)
 				dbuf_off += snprintf(dbuf + dbuf_off,
 				    sizeof(dbuf) - dbuf_off,
-				    "; arg %d: %d", j + 1, arg);
+				    "; arg %d: %d", i + 1, arg);
 			break;
 		    }
 		case SQLITE_TEXT:
 			p = va_arg(ap, char *);
-			rc = sqlite3_bind_text(sth->sth_sth, j + 1, p,
+			rc = sqlite3_bind_text(sth, i + 1, p,
 			    strlen(p), SQLITE_STATIC);
 			if (log)
 				dbuf_off += snprintf(dbuf + dbuf_off,
 				    sizeof(dbuf) - dbuf_off,
-				    "; arg %d: %s", j + 1, p);
+				    "; arg %d: %s", i + 1, p);
 			break;
 		case SQLITE_NULL:
 			(void)va_arg(ap, int);
-			rc = sqlite3_bind_null(sth->sth_sth, j + 1);
+			rc = sqlite3_bind_null(sth, i + 1);
 			if (log)
 				dbuf_off += snprintf(dbuf + dbuf_off,
 				    sizeof(dbuf) - dbuf_off,
-				    "; arg %d: NULL", j + 1);
+				    "; arg %d: NULL", i + 1);
 			break;
 		default:
 			psc_fatalx("type");
@@ -2332,15 +2301,14 @@ _dbdo(const struct pfl_callerinfo *pci,
 	va_end(ap);
 
 	do {
-		rc = sqlite3_step(sth->sth_sth);
+		rc = sqlite3_step(sth);
 		if (rc == SQLITE_ROW && cb)
 			cb(sth, cbarg);
 		if (rc != SQLITE_DONE)
 			pscthr_yield();
 		if (rc == SQLITE_LOCKED)
-			sqlite3_reset(sth->sth_sth);
-	} while (rc == SQLITE_ROW || rc == SQLITE_BUSY ||
-	    rc == SQLITE_LOCKED);
+			sqlite3_reset(sth);
+	} while (rc == SQLITE_ROW || rc == SQLITE_BUSY || rc == SQLITE_LOCKED);
 
 	PFL_GETTIMEVAL(&tv);
 	timersub(&tv, &tv0, &tvd);
@@ -2353,8 +2321,10 @@ _dbdo(const struct pfl_callerinfo *pci,
 
 	if (rc != SQLITE_DONE)
 		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,
-		    fmt, sqlite3_errmsg(dbh->dbh));
-	sqlite3_reset(sth->sth_sth);
+		    fmt, sqlite3_errmsg(db_handle));
+
+	sqlite3_finalize(sth);
+	freelock(&slm_upsch_lock);
 	return (rc == SQLITE_DONE ? 0 : rc);
 }
 
