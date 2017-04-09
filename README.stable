@@ -1,6 +1,8 @@
 04/07/2017
 ----------
 
+Release 1.18:
+
 A bunch of good fixes went in, including: 15% improvement replicating a kernel tree, disable write
 data corruption fix and enhancement, UID/GID mapping do-over, crashes, hangs, etc.
 
