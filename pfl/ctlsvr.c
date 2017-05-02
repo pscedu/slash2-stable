@@ -1975,6 +1975,11 @@ psc_ctlrep_getopstat(int fd, struct psc_ctlmsghdr *mh, void *m)
 	strlcpy(name, pcop->pco_name, sizeof(name));
 	all = (strcmp(name, "") == 0);
 
+	/*
+ 	 * Allocate memory in advance to reduce lock contention.
+ 	 */
+	psc_dynarray_ensurelen(&all_ops, opst);
+
 	spinlock(&pfl_opstats_lock);
 	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
 		psc_dynarray_add(&all_ops, opst);
