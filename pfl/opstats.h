@@ -121,6 +121,7 @@ void	pfl_opstats_grad_destroy(struct pfl_opstats_grad *);
 #define pfl_opstats_grad_incr(og, criteria)				\
 	pfl_opstat_incr(pfl_opstats_grad_get((og), (criteria))->ob_opst)
 
+extern int			pfl_opstats_sum;
 extern struct psc_dynarray	pfl_opstats;
 extern struct psc_spinlock	pfl_opstats_lock;
 
