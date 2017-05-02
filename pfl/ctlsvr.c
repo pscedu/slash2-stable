@@ -1915,6 +1915,8 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 
 	reset = (mh->mh_type == PCMT_SETPARAM);
 
+	psc_dynarray_ensurelen(&all_ops, pfl_opstats_sum);
+
 	spinlock(&pfl_opstats_lock);
 	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
 		psc_dynarray_add(&all_ops, opst);
