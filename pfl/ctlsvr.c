@@ -1978,7 +1978,7 @@ psc_ctlrep_getopstat(int fd, struct psc_ctlmsghdr *mh, void *m)
 	/*
  	 * Allocate memory in advance to reduce lock contention.
  	 */
-	psc_dynarray_ensurelen(&all_ops, opst);
+	psc_dynarray_ensurelen(&all_ops, pfl_opstats_sum);
 
 	spinlock(&pfl_opstats_lock);
 	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
