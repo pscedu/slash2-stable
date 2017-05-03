@@ -1915,6 +1915,8 @@ psc_ctlparam_opstats(int fd, struct psc_ctlmsghdr *mh,
 
 	reset = (mh->mh_type == PCMT_SETPARAM);
 
+	psc_dynarray_ensurelen(&all_ops, pfl_opstats_sum);
+
 	spinlock(&pfl_opstats_lock);
 	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
 		psc_dynarray_add(&all_ops, opst);
@@ -1974,6 +1976,11 @@ psc_ctlrep_getopstat(int fd, struct psc_ctlmsghdr *mh, void *m)
 	found = 0;
 	strlcpy(name, pcop->pco_name, sizeof(name));
 	all = (strcmp(name, "") == 0);
+
+	/*
+ 	 * Allocate memory in advance to reduce lock contention.
+ 	 */
+	psc_dynarray_ensurelen(&all_ops, pfl_opstats_sum);
 
 	spinlock(&pfl_opstats_lock);
 	DYNARRAY_FOREACH(opst, i, &pfl_opstats)
