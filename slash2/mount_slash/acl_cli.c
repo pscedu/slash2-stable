@@ -29,7 +29,8 @@
 #include "fidcache.h"
 #include "mount_slash.h"
 
-#define ACL_EA_ACCESS "system.posix_acl_access"
+#define ACL_DEF_SIZE	128
+#define ACL_EA_ACCESS	"system.posix_acl_access"
 
 /*
  * Pull POSIX ACLs from an fcmh via RPCs to MDS.
@@ -38,14 +39,14 @@ acl_t
 slc_acl_get_fcmh(struct pscfs_req *pfr, __unusedx const struct pscfs_creds *pcr,
     struct fidc_membh *f)
 {
-	char trybuf[64] = { 0 };
+	char trybuf[ACL_DEF_SIZE] = { 0 };
 	void *buf = NULL;
 	size_t retsz;
 	ssize_t rc;
 	int alloc = 0;
 	acl_t a = NULL;
 
-	retsz = 64;
+	retsz = ACL_DEF_SIZE;
 	buf = trybuf;
 
  again:
