@@ -40,26 +40,35 @@ slc_acl_get_fcmh(struct pscfs_req *pfr, __unusedx const struct pscfs_creds *pcr,
 {
 	char trybuf[64] = { 0 };
 	void *buf = NULL;
-	size_t retsz = 0;
+	size_t retsz;
 	ssize_t rc;
-	acl_t a;
+	int alloc = 0;
+	acl_t a = NULL;
 
-	rc = slc_getxattr(pfr, ACL_EA_ACCESS, trybuf,
-	    sizeof(trybuf), f, &retsz);
-	if (rc == 0) {
-		buf = trybuf;
-	} else if (rc == ERANGE) {
-		buf = PSCALLOC(retsz);
-		rc = slc_getxattr(pfr, ACL_EA_ACCESS, buf, retsz,
-		    f, &retsz);
-		if (rc) {
-			PSCFREE(buf);
-			return (NULL);
-		}
-	} else
-		return (NULL);
+	retsz = 64;
+	buf = trybuf;
 
-	a = pfl_acl_from_xattr(buf, retsz);
+ again:
+
+	rc = slc_getxattr(pfr, ACL_EA_ACCESS, buf, retsz, f, &retsz);
+	if (rc == 0)
+		goto out;
+	if (rc != ERANGE || alloc)
+		goto out;
+
+	retsz = 0;
+	rc = slc_getxattr(pfr, ACL_EA_ACCESS, buf, retsz, f, &retsz);
+	if (rc) 
+		goto out;
+
+	alloc = 1;
+	buf = PSCALLOC(retsz);
+	goto again;
+
+ out:
+
+	if (!rc)
+		a = pfl_acl_from_xattr(buf, retsz);
 
 	if (buf != trybuf)
 		PSCFREE(buf);
