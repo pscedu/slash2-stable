@@ -61,6 +61,7 @@ lnet_md_unlink(lnet_libmd_t *md)
                         md->md_me = NULL;
                         me->me_md = NULL;
                         if (me->me_unlink == LNET_UNLINK)
+				/* 05/02/2017: signal 7, bus error */
                                 lnet_me_unlink(me);
                 }
 
