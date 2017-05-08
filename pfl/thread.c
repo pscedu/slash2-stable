@@ -121,7 +121,7 @@ pfl_tls_get(int idx, size_t len)
 	void **tbl;
 	int rc;
 
-	/* 05/04/2017: mysterious crash here */
+	/* 05/04/2017: mysterious crash here, sigbus pfl_tlskey = 1 */
 	tbl = pthread_getspecific(pfl_tlskey);
 	if (tbl == NULL) {
 		tbl = psc_calloc(sizeof(*tbl), PFL_TLSIDX_MAX,
