@@ -796,6 +796,7 @@ pscrpc_unregister_service(struct pscrpc_service *svc)
 
 	LASSERT(psc_listhd_empty(&svc->srv_threads));
 
+	/* 05/08/2017: crash  psl_owner_file = 0xffffffffffffffff */
 	spinlock(&pscrpc_all_services_lock);
 	psclist_del(&svc->srv_lentry, &pscrpc_all_services);
 	freelock(&pscrpc_all_services_lock);
