@@ -211,6 +211,11 @@ rsx_bulkserver(struct pscrpc_request *rq, int type, int ptl,
 			rq->rq_repmsg      = NULL;
 		}
 #endif
+		/* 
+		 * 05/09/2017: SIGBUS: We crash here because rq is not 
+		 * garbage, it looks valid on entry to this function 
+		 * though.
+		 */
 		DEBUG_REQ(PLL_WARN, rq, buf,
 		    "ignoring bulk I/O comm error; "
 		    "id %s - client will retry",
