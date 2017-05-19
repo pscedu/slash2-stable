@@ -65,6 +65,13 @@
 #include "pfl/time.h"
 
 #ifndef PSC_LOG_FMT
+/*
+ * To change the log format on-the-fly, you can use log.format.  For example:
+ *
+ * # msctl -p log.format="[%D<%c> %n:%I:%T %B %F %l]"
+ *
+ */
+
 #define PSC_LOG_FMT "[%s.%06u00 %n:%I:%T %B %F %l] "
 #endif
 
