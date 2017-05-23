@@ -60,4 +60,4 @@ Unit tests
 
 10. Run bigfile.sh.
 
-11. Test map file on a remote client.
+11. Test UID/GID map file on a remote client.
