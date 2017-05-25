@@ -264,6 +264,11 @@ _pscthr_finish_init(struct psc_thread_init *thr_init)
 	if (sigaction(SIGUSR2, &sa, NULL) == -1)
 		psc_fatal("sigaction");
 
+	/* 
+	 * See psc_ctlmsg_thread_send() on how to return thread
+	 * formation via command like msctl -s threads.
+	 *
+	 */
 	pll_addtail(&psc_threads, thr);
 
 	/*
