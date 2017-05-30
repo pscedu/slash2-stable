@@ -75,6 +75,11 @@ struct fcmh_cli_info {
 	struct sl_resm			*fci_resm;
 	struct timeval			 fci_age;
 
+	uint64_t                         fci_pino;	/* silly rename fields */
+	int                         	 fci_nopen;
+	char                            *fci_name;
+	int				 fci_pos;	/* next to displace */
+
 	union {
 		struct fcmh_cli_info_file f;
 #define fci_xattrsize		u.f.xattrsize
@@ -120,6 +125,7 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 #define FCMH_CLI_DIRTY_MTIME		(_FCMH_FLGSHFT << 3)	/* has dirty mtime */
 #define FCMH_CLI_DIRTY_QUEUE		(_FCMH_FLGSHFT << 4)	/* on dirty queue */
 #define FCMH_CLI_XATTR_INFO		(_FCMH_FLGSHFT << 5)
+#define FCMH_CLI_SILLY_RENAME		(_FCMH_FLGSHFT << 6)
 
 #define FCMH_CLI_DIRTY_ATTRS		(FCMH_CLI_DIRTY_DSIZE | FCMH_CLI_DIRTY_MTIME)
 

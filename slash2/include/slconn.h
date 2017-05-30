@@ -133,8 +133,7 @@ struct slrpc_cservice {
 #define CSVCF_DISCONNECTING	(1 << 5)	/* want to disconnect but in use; ASAP */
 #define CSVCF_TOFREE		(1 << 6)	/* don't use */
 
-/* debugging */
-#define CSVCF_ONLIST		(1 << 7)	/* On sl_clients list */
+#define CSVCF_ONLIST		(1 << 7)	/* debugging: on sl_clients list */
 
 /* sl_csvc_get() flags, shared in numerical space */
 
@@ -146,6 +145,7 @@ struct slrpc_cservice {
 #define CSVC_CONN_INTV		10		/* seconds */
 #define CSVC_PING_INTV		30		/* seconds */
 
+/* keep in sync with sl_conn_prdat() */
 #define DEBUG_CSVC(lvl, csvc, fmt, ...)					\
 	psclog((lvl), "csvc@%p fl=%#x:%s%s%s%s ref:%d " fmt,		\
 	    (csvc), (csvc)->csvc_flags,					\

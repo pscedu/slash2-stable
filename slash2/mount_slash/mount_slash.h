@@ -349,11 +349,8 @@ void	 gidmap_int_stat(struct srt_stat *, uint32_t *);
 
 void	 parse_mapfile(void);
 
-#define bmap_flushq_wake(reason)					\
-	_bmap_flushq_wake(PFL_CALLERINFOSS(SLSS_BMAP), (reason))
-
-void	 _bmap_flushq_wake(const struct pfl_callerinfo *, int);
-void	  bmap_flush_resched(struct bmpc_ioreq *, int);
+void	 bmap_flushq_wake(int);
+void	 bmap_flush_resched(struct bmpc_ioreq *, int);
 
 /* bmap flush modes (bmap_flushq_wake) */
 #define BMAPFLSH_RPCWAIT	(1 << 0)
@@ -388,6 +385,8 @@ extern struct psc_poolmgr	*msl_biorq_pool;
 extern struct psc_poolmgr	*msl_mfh_pool;
 
 extern int			 msl_acl;
+extern int			 msl_enable_namecache;
+extern int			 msl_enable_sillyrename;
 extern int			 msl_force_dio;
 extern int			 msl_map_enable;
 extern int			 msl_bmap_reassign;
@@ -403,6 +402,7 @@ extern int			 msl_root_squash;
 extern int			 msl_repl_enable;
 extern int			 msl_statfs_pref_ios_only;
 extern uint64_t			 msl_pagecache_maxsize;
+extern int			 msl_max_namecache_per_directory; 
 
 void				 msl_pgcache_init(void);
 void				 msl_pgcache_reap(void);

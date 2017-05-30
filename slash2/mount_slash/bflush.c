@@ -184,7 +184,7 @@ bwc_unpin_pages(struct bmpc_write_coalescer *bwc)
 }
 
 void
-_bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
+bmap_flushq_wake(int reason)
 {
 	int wake = 0;
 
@@ -398,6 +398,10 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	BMAP_LOCK(b);
 	bmpc = bmap_2_bmpc(b);
 	DYNARRAY_FOREACH(r, i, &bwc->bwc_biorqs) {
+		/*
+ 		 * 04/26/2017: Crash here with bcm_bmapno = 3783215504, 
+ 		 * bcm_flags = 32751, rc=32751, from bmap_flush_resched().
+ 		 */
 		psc_assert(b == r->biorq_bmap);
 		/*
 		 * No need to lock because we have already replied to
@@ -702,9 +706,9 @@ msbwatchthr_main(struct psc_thread *thr)
 
 	while (pscthr_run(thr)) {
 		/*
-		 * A bmap can be on both msl_bmapflushq and
-		 * msl_bmaptimeoutq.  It is taken off the msl_bmapflushq
-		 * after all its biorqs are flushed if any.
+		 * A bmap can be on both msl_bmapflushq and msl_bmaptimeoutq.  
+		 * It is taken off the msl_bmapflushq after all its biorqs 
+		 * are flushed if any.
 		 */
 		LIST_CACHE_LOCK(&msl_bmapflushq);
 		if (lc_peekheadwait(&msl_bmapflushq) == NULL) {

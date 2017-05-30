@@ -434,6 +434,7 @@ restype_stmt	: NAME '=' RESOURCE_TYPE ';' {
 		}
 		;
 
+
 path_stmt	: NAME '=' PATHNAME ';' {
 			psclog_debug("found path statement: tok "
 			    "'%s' val '%s'", $1, $3);
@@ -698,11 +699,14 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 	freeaddrinfo(res0);
 }
 
+/*
+ * Handle resource flags (e.g., flags   = "disable_write";)
+ */
 int
 slcfg_str2flags(const char *flags)
 {
 	char *p, *t, *s, **fp, buf[LINE_MAX], *ftab[] = {
-		"disable_bia",		/* historical name, should be disable_write */
+		"disable_write",
 		NULL
 	};
 	int i, rc = 0;

@@ -981,6 +981,10 @@ msctlthr_spawn(void)
 	/* XXX: add max_fs_iosz */
 	psc_ctlparam_register_var("sys.datadir", PFLCTL_PARAMT_STR, 0,
 	    (char *)sl_datadir);
+
+	psc_ctlparam_register_var("sys.enable_namecache", PFLCTL_PARAMT_INT,
+	    PFLCTL_PARAMF_RDWR, &msl_enable_namecache);
+
 	psc_ctlparam_register_var("sys.mountpoint", PFLCTL_PARAMT_STR,
 	    0, mountpoint);
 	psc_ctlparam_register_var("sys.offline_nretries",
@@ -1000,6 +1004,9 @@ msctlthr_spawn(void)
 
 	psc_ctlparam_register_var("sys.max_retries", PFLCTL_PARAMT_INT,
 	    PFLCTL_PARAMF_RDWR, &msl_max_retries);
+
+	psc_ctlparam_register_var("sys.max_namecache_per_directory", PFLCTL_PARAMT_INT,
+	    PFLCTL_PARAMF_RDWR, &msl_max_namecache_per_directory);
 
 	psc_ctlparam_register_var("sys.pid", PFLCTL_PARAMT_INT, 0,
 	    &pfl_pid);
@@ -1037,6 +1044,9 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_var("sys.mds_max_inflight_rpcs",
 	    PFLCTL_PARAMT_INT, PFLCTL_PARAMF_RDWR,
 	    &msl_mds_max_inflight_rpcs);
+
+	psc_ctlparam_register_var("sys.enable_sillyrename", PFLCTL_PARAMT_INT,
+	    PFLCTL_PARAMF_RDWR, &msl_enable_sillyrename);
 
 	thr = pscthr_init(MSTHRT_CTL, msctlthr_main,
 	    sizeof(struct psc_ctlthr), "msctlthr0");

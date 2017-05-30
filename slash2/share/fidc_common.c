@@ -228,15 +228,20 @@ _fidc_lookup(const struct pfl_callerinfo *pci, slfid_t fid,
 			psc_pool_return(sl_fcmh_pool, fnew);
 			fnew = NULL;
 		}
-
 		psc_assert(fid == fcmh_2_fid(f));
+
+		if (flags & FIDC_LOOKUP_EXCL) {
+			FCMH_ULOCK(f);
+			psc_hashbkt_put(&sl_fcmh_hashtbl, b);
+			return (EEXIST);
+		}
 
 		/* keep me around after unlocking later */
 		fcmh_op_start_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 
 		psc_hashbkt_put(&sl_fcmh_hashtbl, b);
 
-		/* call sli_fcmh_reopen() sliod only */
+		/* call sli_fcmh_reopen() - sliod only */
 		if (sl_fcmh_ops.sfop_reopen) {
 			rc = sl_fcmh_ops.sfop_reopen(f, fgen);
 			FCMH_LOCK_ENSURE(f);
