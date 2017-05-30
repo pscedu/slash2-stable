@@ -382,8 +382,10 @@ psc_pool_try_shrink(struct psc_poolmgr *m, int n)
 				 * 09/23/2016: hit this message with pool bmpce. Need
 				 * to double check locking.
 				 */
-				fprintf(stderr, "pool corrupt? m = %p, name = %s.\n",  
-				    m, m->ppm_master->pms_name);
+				fprintf(stderr, "pool corrupt? m = %p, total = %d, "
+				    "min = %d, name = %s.\n", 
+				    m, m->ppm_total, m->ppm_min, 
+				    m->ppm_master->pms_name);
 				return (i);
 			}
 			_psc_pool_destroy_obj(m, p);

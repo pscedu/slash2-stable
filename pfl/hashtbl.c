@@ -194,12 +194,9 @@ psc_hashbkt_get(struct psc_hashtbl *t, const void *key)
 	struct psc_hashbkt *b;
 	int locked, gen;
 
- begin:
+ retry: 
 	gen = t->pht_gen;
 	b = GETBKT(t, t->pht_buckets, t->pht_nbuckets, key);
-
-	if (gen != t->pht_gen)
-		goto begin;
 
 	psc_hashbkt_reqlock(b);
 	b->phb_refcnt++;
@@ -210,7 +207,7 @@ psc_hashbkt_get(struct psc_hashtbl *t, const void *key)
 			psc_waitq_wait(&t->pht_waitq,
 			    &t->pht_lock);
 		PSC_HASHTBL_URLOCK(t, locked);
-		goto begin;
+		goto retry;
 	}
 
 	return (b);

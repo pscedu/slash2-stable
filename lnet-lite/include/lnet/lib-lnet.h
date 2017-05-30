@@ -145,6 +145,12 @@ do {                                            \
 
 #define MAX_PORTALS     64
 
+#ifdef _SLASH_MDS
+#define	LNET_POOL_SIZE		64
+#else
+#define	LNET_POOL_SIZE		32
+#endif
+
 #if 1
 
 extern struct psc_poolmgr *lnet_eq_pool;

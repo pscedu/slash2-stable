@@ -55,7 +55,8 @@ lnet_create_peer_table(void)
 	int               i;
 
 	psc_poolmaster_init(&lnet_peer_poolmaster, lnet_peer_t,
-	    lp_lentry, PPMF_AUTO, 32, 32, 0, NULL, "lnetpeer");
+	    lp_lentry, PPMF_AUTO, LNET_POOL_SIZE, LNET_POOL_SIZE, 
+	    0, NULL, "lnetpeer");
 	lnet_peer_pool = psc_poolmaster_getmgr(&lnet_peer_poolmaster);
 
 	LASSERT (the_lnet.ln_peer_hash == NULL);

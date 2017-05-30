@@ -121,6 +121,7 @@ pfl_tls_get(int idx, size_t len)
 	void **tbl;
 	int rc;
 
+	/* 05/04/2017: mysterious crash here, sigbus pfl_tlskey = 1 */
 	tbl = pthread_getspecific(pfl_tlskey);
 	if (tbl == NULL) {
 		tbl = psc_calloc(sizeof(*tbl), PFL_TLSIDX_MAX,
@@ -263,6 +264,11 @@ _pscthr_finish_init(struct psc_thread_init *thr_init)
 	if (sigaction(SIGUSR2, &sa, NULL) == -1)
 		psc_fatal("sigaction");
 
+	/* 
+	 * See psc_ctlmsg_thread_send() on how to return thread
+	 * formation via command like msctl -s threads.
+	 *
+	 */
 	pll_addtail(&psc_threads, thr);
 
 	/*
