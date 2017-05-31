@@ -65,11 +65,7 @@ pid_t	 pfl_getsysthrid(void);
 void	 pfl_init(void);
 void	 pfl_print_flag(const char *, int *);
 void	 pfl_setprocesstitle(char **, const char *, ...);
-void	*pfl_tls_get(int, size_t);
 
-#define PFL_TLSIDX_LOGDATA	0
-#define PFL_TLSIDX_CALLERINFO	1
-#define PFL_TLSIDX_MAX		2
 
 #ifdef HAVE_TLS
 /*
@@ -118,27 +114,7 @@ extern pid_t			  pfl_pid;
 # define __callerinfo __unusedx const struct pfl_callerinfo *pci
 #endif
 
-static __inline const struct pfl_callerinfo *
-_pfl_callerinfo_get(const char *fn, const char *func, int lineno,
-    int subsys)
-{
-	struct pfl_callerinfo *pci;
-
-	/*
-	 * Hit segmentation fault with _psc_realloc() from here
-	 * coming from pscrpcthr_waitevent(). The MDS has been
-	 * running for 40+ days.
-	 *
-	 * XXX we have no way to check if allocation of pci is
-	 * successful or not.  Instead of being smart, just
-	 * allocate them in the per-thread structure.
-	 */
-	pci = pfl_tls_get(PFL_TLSIDX_CALLERINFO, sizeof(*pci));
-	pci->pci_filename = fn;
-	pci->pci_func = func;
-	pci->pci_lineno = lineno;
-	pci->pci_subsys = subsys;
-	return (pci);
-}
+__inline const struct pfl_callerinfo *
+_pfl_callerinfo_get(const char *, const char *, int, int);
 
 #endif /* _PFL_PFL_H_ */

@@ -290,8 +290,12 @@ struct psclog_data *
 psclog_getdata(void)
 {
 	struct psclog_data *d;
+	
+	struct psc_thread *thr;
 
-	d = pfl_tls_get(PFL_TLSIDX_LOGDATA, sizeof(*d));
+	thr = pscthr_get();
+	d = thr->pscthr_log;
+
 	if (d->pld_thrid == 0) {
 		/* XXX try to read this if the pscthr is available */
 		d->pld_thrid = pfl_getsysthrid();
