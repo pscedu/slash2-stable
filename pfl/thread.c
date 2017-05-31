@@ -105,6 +105,8 @@ pscthr_destroy(struct psc_thread *arg)
 	_pscthr_destroy(arg);
 }
 
+struct pfl_callerinfo tmp_pci;
+
 __inline const struct pfl_callerinfo *
 _pfl_callerinfo_get(const char *fn, const char *func, int lineno,
     int subsys)
@@ -112,8 +114,11 @@ _pfl_callerinfo_get(const char *fn, const char *func, int lineno,
 	struct pfl_callerinfo *pci;
 	struct psc_thread *thr;
 
-	thr = pscthr_get();
-	pci = thr->pscthr_pci;
+	thr = pscthr_get_canfail();
+	if (thr)
+		pci = thr->pscthr_pci;
+	else
+		pci = &tmp_pci;
 
 	pci->pci_filename = fn;
 	pci->pci_func = func;
@@ -247,19 +252,19 @@ _pscthr_finish_init(struct psc_thread_init *thr_init)
 	if (sigaction(SIGUSR2, &sa, NULL) == -1)
 		psc_fatal("sigaction");
 
-	/* 
-	 * See psc_ctlmsg_thread_send() on how to return thread
-	 * formation via command like msctl -s threads.
-	 *
-	 */
-	pll_addtail(&psc_threads, thr);
-
 	/*
 	 * Do this allocation now instead during fatal() if malloc is
 	 * corrupted.
 	 */
 	thr->pscthr_pci = psc_alloc(sizeof(struct pfl_callerinfo), PAF_NOLOG);
 	thr->pscthr_log = psc_alloc(sizeof(struct psclog_data), PAF_NOLOG);
+
+	/* 
+	 * See psc_ctlmsg_thread_send() on how to return thread
+	 * formation via command like msctl -s threads.
+	 *
+	 */
+	pll_addtail(&psc_threads, thr);
 
 	psclog_info("%s <pthr %"PSCPRI_PTHRT" thrid %d> alive",
 	    thr->pscthr_name, thr->pscthr_pthread,
