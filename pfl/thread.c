@@ -54,7 +54,6 @@
 #include "pfl/vbitmap.h"
 
 struct psc_dynarray		 pfl_thread_classes = DYNARRAY_INIT;
-__static pthread_key_t		 pfl_tlskey;
 __static pthread_key_t		 psc_thrkey;
 __static struct psc_vbitmap	 psc_uniqthridmap = VBITMAP_INIT_AUTO;
 struct psc_lockedlist		 psc_threads =
@@ -115,26 +114,6 @@ _pfl_tls_release(void *arg)
 	for (i = 0; i < PFL_TLSIDX_MAX; i++)
 		psc_free(tbl[i], PAF_NOGUARD | PAF_NOLOG);
 	psc_free(tbl, PAF_NOGUARD | PAF_NOLOG);
-}
-
-void *
-pfl_tls_get(int idx, size_t len)
-{
-	void **tbl;
-	int rc;
-
-	/* 05/04/2017: mysterious crash here, sigbus pfl_tlskey = 1 */
-	tbl = pthread_getspecific(pfl_tlskey);
-	if (tbl == NULL) {
-		tbl = psc_calloc(sizeof(*tbl), PFL_TLSIDX_MAX,
-		    PAF_NOLOG | PAF_NOGUARD);
-		rc = pthread_setspecific(pfl_tlskey, tbl);
-		if (rc)
-			errx(1, "pthread_setspecific: %s", strerror(rc));
-	}
-	if (tbl[idx] == NULL)
-		tbl[idx] = psc_alloc(len, PAF_NOLOG | PAF_NOGUARD);
-	return (tbl[idx]);
 }
 
 __inline const struct pfl_callerinfo *
@@ -205,10 +184,6 @@ pscthrs_init(void)
 	psc_waitq_init_nolog(&pthread_waitq, "thrs_wait");
 
 	rc = pthread_key_create(&psc_thrkey, _pscthr_destroy);
-	if (rc)
-		errx(1, "pthread_key_create: %s", strerror(rc));
-
-	rc = pthread_key_create(&pfl_tlskey, _pfl_tls_release);
 	if (rc)
 		errx(1, "pthread_key_create: %s", strerror(rc));
 
