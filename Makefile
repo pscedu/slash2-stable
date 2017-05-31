@@ -1,4 +1,8 @@
 # $Id$
+#
+# If you have problem to build, try remove the old pickle file under mk
+# (e.g., mk/gen-localdefs-polybius-pickle.mk)
+#
 
 ROOTDIR=.
 include ${ROOTDIR}/Makefile.path
