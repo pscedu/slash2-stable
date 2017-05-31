@@ -65,11 +65,7 @@ pid_t	 pfl_getsysthrid(void);
 void	 pfl_init(void);
 void	 pfl_print_flag(const char *, int *);
 void	 pfl_setprocesstitle(char **, const char *, ...);
-void	*pfl_tls_get(int, size_t);
 
-#define PFL_TLSIDX_LOGDATA	0
-#define PFL_TLSIDX_CALLERINFO	1
-#define PFL_TLSIDX_MAX		2
 
 #ifdef HAVE_TLS
 /*

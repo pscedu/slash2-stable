@@ -105,17 +105,6 @@ pscthr_destroy(struct psc_thread *arg)
 	_pscthr_destroy(arg);
 }
 
-void
-_pfl_tls_release(void *arg)
-{
-	void **tbl = arg;
-	int i;
-
-	for (i = 0; i < PFL_TLSIDX_MAX; i++)
-		psc_free(tbl[i], PAF_NOGUARD | PAF_NOLOG);
-	psc_free(tbl, PAF_NOGUARD | PAF_NOLOG);
-}
-
 __inline const struct pfl_callerinfo *
 _pfl_callerinfo_get(const char *fn, const char *func, int lineno,
     int subsys)
