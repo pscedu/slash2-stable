@@ -134,10 +134,9 @@ void
 _pscthr_pause(__unusedx int sig)
 {
 	struct psc_thread *thr;
-	int locked;
 
 	thr = pscthr_get();
-	while (!tryreqlock(&pthread_lock, &locked))
+	while (!trylock(&pthread_lock))
 		pscthr_yield();
 	thr->pscthr_flags |= PTF_PAUSED;
 	while (thr->pscthr_flags & PTF_PAUSED) {
@@ -145,7 +144,7 @@ _pscthr_pause(__unusedx int sig)
 		    &pthread_lock);
 		spinlock(&pthread_lock);
 	}
-	ureqlock(&pthread_lock, locked);
+	freelock(&pthread_lock);
 }
 
 /*
@@ -255,12 +254,12 @@ _pscthr_finish_init(struct psc_thread_init *thr_init)
 	 * Do this allocation now instead during fatal() if malloc is
 	 * corrupted.
 	 */
-	thr->pscthr_pci = psc_alloc(sizeof(struct pfl_callerinfo), PAF_NOLOG);
+	thr->pscthr_pci = psc_alloc(sizeof(struct pfl_callerinfo), 
+	    PAF_NOLOG);
 
 	/* 
 	 * See psc_ctlmsg_thread_send() on how to return thread
 	 * formation via command like msctl -s threads.
-	 *
 	 */
 	pll_addtail(&psc_threads, thr);
 

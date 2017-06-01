@@ -36,9 +36,9 @@
 #include "pfl/log.h"
 #include "pfl/waitq.h"
 
-#define PSC_THRNAME_MAX		32				/* must be 8-byte aligned */
+#define PSC_THRNAME_MAX		  32				/* must be 8-byte aligned */
 
-extern psc_spinlock_t		  	pthread_lock;
+extern psc_spinlock_t		  pthread_lock;
 
 struct psc_thread {
 	struct psclist_head	  pscthr_lentry;		/* list management */
