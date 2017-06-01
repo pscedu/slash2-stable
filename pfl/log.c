@@ -57,6 +57,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/err.h"
 #include "pfl/fmtstr.h"
+#include "pfl/fs.h"
 #include "pfl/hashtbl.h"
 #include "pfl/log.h"
 #include "pfl/pfl.h"
@@ -277,7 +278,16 @@ const char	*(*pflog_get_peer_addr)(struct psc_thread *) =
 void
 psclog_clear_uprog(void)
 {
+	struct psc_thread *thr;
+	struct pfl_fsthr *pft;
 
+	thr = pscthr_get();
+
+	if (thr->pscthr_type != PFL_THRT_FS)
+		return;
+
+	pft = thr->pscthr_private;
+	pft->pft_uprog[0] = '\0';
 
 }
 
