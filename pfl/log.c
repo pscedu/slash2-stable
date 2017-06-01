@@ -417,7 +417,6 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 	char *p, buf[BUFSIZ];
 	extern const char *__progname;
 	struct psc_thread *thr;
-	struct psclog_data *d;
 	struct timeval tv;
 	const char *thrname;
 	int rc, save_errno;
@@ -426,16 +425,9 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 
 	save_errno = errno;
 
-	d = psclog_getdata();
-
-	thr = pscthr_get_canfail();
-	if (thr) {
-		thrid = thr->pscthr_thrid;
-		thrname = thr->pscthr_name;
-	} else {
-		thrid = d->pld_thrid;
-		thrname = d->pld_nothrname;
-	}
+	thr = pscthr_get();
+	thrid = thr->pscthr_thrid;
+	thrname = thr->pscthr_name;
 
 	gettimeofday(&tv, NULL);
 	(void)FMTSTR(buf, sizeof(buf), psc_logfmt,
@@ -454,7 +446,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		FMTSTRCASE('X', "s", pflog_get_fsctx_uprog(thr))
 		FMTSTRCASE('n', "s", thrname)
 		FMTSTRCASE('P', "d", pflog_get_fsctx_pid(thr))
-		FMTSTRCASE('r', "d", d->pld_rank)
+		//FMTSTRCASE('r', "d", d->pld_rank)
 		FMTSTRCASE('S', "s", pflog_get_stacktrace())
 		FMTSTRCASE('s', "lu", tv.tv_sec)
 		FMTSTRCASE('T', "s", pfl_subsys_name(pci->pci_subsys))
