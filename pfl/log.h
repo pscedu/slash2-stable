@@ -44,13 +44,6 @@
 
 struct psc_thread;
 
-/* per-thread */
-struct psclog_data {
-	char		 pld_nothrname[24];
-	int		 pld_rank;	/* MPI rank */
-	pid_t		 pld_thrid;
-	const char	*pld_uprog;	/* userland program via FUSE */
-};
 
 /* Log levels. */
 #define PLL_FATAL	0		/* process termination */
