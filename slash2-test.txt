@@ -77,3 +77,13 @@ real    117m28.634s
 user    57m15.873s
 sys     12m47.270s
 
+
+
+zhihui@yuzu: /zzh-slash2/zhihui$ time ~/iozone -a
+
+iozone test complete.
+
+real    15m33.789s
+user    0m3.465s
+sys     0m15.197s
+
