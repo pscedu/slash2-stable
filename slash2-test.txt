@@ -61,3 +61,19 @@ Unit tests
 10. Run bigfile.sh.
 
 11. Test UID/GID map file on a remote client.
+
+05/30/2017
+----------
+
+zhihui@yuzu: /zzh-slash2/zhihui/linux-4.4$ time make -j 3
+
+.....
+
+  LD      drivers/video/fbdev/built-in.o
+  LD      drivers/video/built-in.o
+  LD      drivers/built-in.o
+
+real    117m28.634s
+user    57m15.873s
+sys     12m47.270s
+
