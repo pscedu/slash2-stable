@@ -358,7 +358,7 @@ extern pid_t		 (*pflog_get_fsctx_pid)(struct psc_thread *);
 extern uid_t		 (*pflog_get_fsctx_uid)(struct psc_thread *);
 extern const char	*(*pflog_get_peer_addr)(struct psc_thread *);
 
-struct psclog_data	  *psclog_getdata(void);
+void			   psclog_clear_uprog(void);
 
 const char		  *psc_loglevel_getname(int);
 int			   psc_loglevel_fromstr(const char *);

@@ -95,7 +95,6 @@ _pscthr_destroy(void *arg)
 	/* crash below @40977 */
 	psc_free(thr->pscthr_loglevels, PAF_NOLOG);
 	psc_free(thr->pscthr_pci, PAF_NOLOG);
-	psc_free(thr->pscthr_log, PAF_NOLOG);
 	psc_free(thr, PAF_NOLOG);
 }
 
@@ -257,7 +256,6 @@ _pscthr_finish_init(struct psc_thread_init *thr_init)
 	 * corrupted.
 	 */
 	thr->pscthr_pci = psc_alloc(sizeof(struct pfl_callerinfo), PAF_NOLOG);
-	thr->pscthr_log = psc_alloc(sizeof(struct psclog_data), PAF_NOLOG);
 
 	/* 
 	 * See psc_ctlmsg_thread_send() on how to return thread

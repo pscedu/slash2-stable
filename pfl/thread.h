@@ -51,7 +51,7 @@ struct psc_thread {
 	char			  pscthr_name[PSC_THRNAME_MAX]; /* human readable name */
 	int			 *pscthr_loglevels;		/* logging granularity */
 	struct pfl_callerinfo	 *pscthr_pci;
-	struct psclog_data	 *pscthr_log;
+	int		 	  pscthr_rank;
 	void			 *pscthr_private;		/* app-specific data */
 };
 

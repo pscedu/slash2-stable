@@ -241,18 +241,6 @@ psc_log_setlevel(int subsys, int newlevel)
 
 #endif
 
-#ifndef HAVE_MPI
-/**
- * MPI_Comm_rank - Dummy overrideable MPI rank retriever.
- */
-int
-MPI_Comm_rank(__unusedx int comm, int *rank)
-{
-	*rank = -1;
-	return (0);
-}
-#endif
-
 const char *
 pflog_get_fsctx_uprog_stub(__unusedx struct psc_thread *thr)
 {
@@ -286,28 +274,11 @@ uid_t		 (*pflog_get_fsctx_uid)(struct psc_thread *) =
 const char	*(*pflog_get_peer_addr)(struct psc_thread *) =
 		    pflog_get_peer_addr_stub;
 
-struct psclog_data *
-psclog_getdata(void)
+void
+psclog_clear_uprog(void)
 {
-	struct psclog_data *d;
-	
-	struct psc_thread *thr;
 
-	thr = pscthr_get();
-	d = thr->pscthr_log;
 
-	if (d->pld_thrid == 0) {
-		/* XXX try to read this if the pscthr is available */
-		d->pld_thrid = pfl_getsysthrid();
-		snprintf(d->pld_nothrname, sizeof(d->pld_nothrname),
-		    "<%"PSCPRI_PTHRT">", pthread_self());
-#ifdef HAVE_CNOS
-		d->pld_rank = cnos_get_rank();
-#else
-		MPI_Comm_rank(1, &d->pld_rank); /* 1=MPI_COMM_WORLD */
-#endif
-	}
-	return (d);
 }
 
 const char *
