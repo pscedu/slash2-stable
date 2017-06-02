@@ -73,7 +73,7 @@
  *
  */
 
-#define PSC_LOG_FMT "[%s.%06u00 %n:%I:%T %B %F %l] "
+#define PSC_LOG_FMT "[%s.%06u00 %n:%I:%T %B %F %l]"
 #endif
 
 int				 psc_log_console = 0;
@@ -424,7 +424,6 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		FMTSTRCASE('L', "d", level)
 		FMTSTRCASE('l', "d", pci->pci_lineno)
 		FMTSTRCASE('N', "s", __progname)
-		FMTSTRCASE('X', "s", pflog_get_fsctx_uprog(thr))
 		FMTSTRCASE('n', "s", thrname)
 		FMTSTRCASE('P', "d", pflog_get_fsctx_pid(thr))
 		FMTSTRCASE('S', "s", pflog_get_stacktrace())
