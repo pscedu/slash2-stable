@@ -267,22 +267,6 @@ uid_t		 (*pflog_get_fsctx_uid)(struct psc_thread *) =
 const char	*(*pflog_get_peer_addr)(struct psc_thread *) =
 		    pflog_get_peer_addr_stub;
 
-void
-psclog_clear_uprog(void)
-{
-	struct psc_thread *thr;
-	struct pfl_fsthr *pft;
-
-	thr = pscthr_get();
-
-	if (thr->pscthr_type != PFL_THRT_FS)
-		return;
-
-	pft = thr->pscthr_private;
-	pft->pft_uprog[0] = '\0';
-
-}
-
 const char *
 pfl_fmtlogdate(const struct timeval *tv, const char **s, char *bufp)
 {
