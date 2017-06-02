@@ -101,7 +101,7 @@ mod_load(const char *path, const char *opts, char *errbuf,
 	h = dlopen(path, RTLD_NOW);
 	if (h == NULL) {
 		snprintf(errbuf, LINE_MAX, "%s\n", dlerror()); 
-		fprintf(stderr, "%s\n", dlerror());
+		fprintf(stderr, "%s\n", errbuf);
 		return (NULL);
 	}
 
