@@ -94,7 +94,7 @@ _pscthr_destroy(void *arg)
 	PLL_ULOCK(&psc_threads);
 	/* crash below @40977 */
 	psc_free(thr->pscthr_loglevels, PAF_NOLOG);
-	psc_free(thr->pscthr_pci, PAF_NOLOG);
+	psc_free(thr->pscthr_callerinfo, PAF_NOLOG);
 	psc_free(thr, PAF_NOLOG);
 }
 
@@ -115,7 +115,7 @@ _pfl_callerinfo_get(const char *fn, const char *func, int lineno,
 
 	thr = pscthr_get_canfail();
 	if (thr)
-		pci = thr->pscthr_pci;
+		pci = thr->pscthr_callerinfo;
 	else
 		pci = &tmp_pci;
 
@@ -254,7 +254,7 @@ _pscthr_finish_init(struct psc_thread_init *thr_init)
 	 * Do this allocation now instead during fatal() if malloc is
 	 * corrupted.
 	 */
-	thr->pscthr_pci = psc_alloc(sizeof(struct pfl_callerinfo), 
+	thr->pscthr_callerinfo = psc_alloc(sizeof(struct pfl_callerinfo), 
 	    PAF_NOLOG);
 
 	/* 

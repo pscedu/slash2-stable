@@ -50,7 +50,7 @@ struct psc_thread {
 	char			 *pscthr_waitq;			/* debugging only */
 	char			  pscthr_name[PSC_THRNAME_MAX]; /* human readable name */
 	int			 *pscthr_loglevels;		/* logging granularity */
-	struct pfl_callerinfo	 *pscthr_pci;
+	struct pfl_callerinfo	 *pscthr_callerinfo;
 	void			 *pscthr_private;		/* app-specific data */
 };
 
