@@ -31,6 +31,9 @@ Unit tests
 
    It also makes sure that the client can skip the down IOS quickly.
 
+   To make it more interesting, replicate the source tree to a third IOS and kill the 
+   second IOS, and build the tree.
+
 6. Force MDS to always return DIO bmap lease (sys.force_dio=1) and do a self build.
 
    self-build non DIO mode:
