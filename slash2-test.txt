@@ -1,5 +1,201 @@
+11/14/2016
+----------
+
+This file is used to record test results of slash2 stable tree.
+
+12/16/2016
+----------
+
+After I rework the throttling mechanism, I use bigfile3.c to create a test file and replicate it:
+
+zhihui@orange: ~/projects-orange/slash2/slmctl$ slmctl -sop | egrep "rate|repl-s"
+opstat                                          avg rate      max rate      cur rate         total
+repl-sched                                          0B/s       17.8G/s          0B/s         81.4G
+repl-schedwk-ok                                      0/s          32/s           0/s           652
+repl-success                                         0/s          32/s           0/s           652
+repl-success-aggr                                   0B/s        4.0G/s          0B/s         81.4G
+
+It is done in less than 15 minutes. So I have 80*1024/(15*60) = 91 MB/s
+
+This is on 10 year old hardware. Ethtool says the network speed is 1000Mb/s.
+
+01/05/2017
+----------
+
+zhihui@zebes: /zzh-slash2/zhihui$ time tar xf ~/gcc-6.3.0.tar.bz2 
+
+real	10m8.012s
+user	0m24.106s
+sys	0m17.363s
+
+zhihui@zebes: /zzh-slash2/zhihui$ cd gcc-6.3.0/
+zhihui@zebes: /zzh-slash2/zhihui/gcc-6.3.0$ ./configure --disable-multilib
+zhihui@zebes: /zzh-slash2/zhihui/gcc-6.3.0$ time make >& make.result
+
+real	70m38.089s
+user	149m42.010s
+sys	11m58.926s
+
+
+01/06/2017
+----------
+
+zhihui@yuzu: ~/projects-yuzu/slash2/tests$ bigfile.sh /zzh-slash2/zhihui/dir/
+Base name = /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat, file count = 9, seed = 1234, loop = 10.
+
+Try to allocate          123 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.00
+Try to allocate        24789 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.01
+Try to allocate    770924789 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.02
+Try to allocate       524789 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.03
+Try to allocate     22524789 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.04
+Try to allocate     57824789 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.05
+Try to allocate     52478900 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.06
+Try to allocate   2111524789 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.07
+Try to allocate   3111520000 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.08
+
+Memory for 9 files have been allocated/initialized successfully.
+
+Initial 9 files have been created successfully.
+
+Loop 0 on 9 files is done successfully.
+Loop 1 on 9 files is done successfully.
+Loop 2 on 9 files is done successfully.
+Loop 3 on 9 files is done successfully.
+Loop 4 on 9 files is done successfully.
+Loop 5 on 9 files is done successfully.
+Loop 6 on 9 files is done successfully.
+Loop 7 on 9 files is done successfully.
+Loop 8 on 9 files is done successfully.
+Loop 9 on 9 files is done successfully.
+
+Total elapsed time is 00:15:27.
+Seed = 4456, file name = /zzh-slash2/zhihui/dir//yuzu.bigfile2.dat, bsize = 5678, blocks = 1234567, size = 7009871426
+File has been created successfully.
+
+Total elapsed time is 00:05:55.
+Seed = 4456, file name = /zzh-slash2/zhihui/dir//yuzu.bigfile2.dat, bsize = 5678, blocks = 1234568, size = 7009871426
+No corruption has been found (last block has 0 bytes)
+
+Total elapsed time is 00:05:20.
+seed = 35438, # of threads = 5, block size = 71781, nblocks = 243456, file size = 87377575680.
+
+Thread   0 is done with errno = 0, fd =   4
+Thread   1 is done with errno = 0, fd =   5
+Thread   2 is done with errno = 0, fd =   6
+Thread   3 is done with errno = 0, fd =   7
+Thread   4 is done with errno = 0, fd =   8
+
+All threads has exited. Now verifying file contents ...
+
+
+Total elapsed time is 00:26:24.
+seed = 7738, # of threads = 6, block size = 71785, nblocks = 243656, file size = 104945075760.
+
+Thread   0 is done with errno = 0, fd =   4
+Thread   1 is done with errno = 0, fd =   5
+Thread   2 is done with errno = 0, fd =   6
+Thread   3 is done with errno = 0, fd =   7
+Thread   4 is done with errno = 0, fd =   8
+Thread   5 is done with errno = 0, fd =   9
+
+All threads has exited. Now verifying file contents ...
+
+
+Total elapsed time is 00:31:46.
+seed = 3873, # of threads = 7, block size = 91785, nblocks = 143659, file size = 92300189205.
+
+Thread   0 is done with errno = 0, fd =   4
+Thread   1 is done with errno = 0, fd =   5
+Thread   2 is done with errno = 0, fd =   6
+Thread   3 is done with errno = 0, fd =   7
+Thread   4 is done with errno = 0, fd =   8
+Thread   5 is done with errno = 0, fd =   9
+Thread   6 is done with errno = 0, fd =  10
+
+All threads has exited. Now verifying file contents ...
+
+
+Total elapsed time is 00:24:30.
+seed = 3805, # of threads = 9, block size = 1785, nblocks = 443957, file size = 7132169205.
+
+Thread   0 is done with errno = 0, fd =   4
+Thread   1 is done with errno = 0, fd =   5
+Thread   2 is done with errno = 0, fd =   6
+Thread   3 is done with errno = 0, fd =   7
+Thread   4 is done with errno = 0, fd =   8
+Thread   5 is done with errno = 0, fd =   9
+Thread   6 is done with errno = 0, fd =  10
+Thread   7 is done with errno = 0, fd =  11
+Thread   8 is done with errno = 0, fd =  12
+
+All threads has exited. Now verifying file contents ...
+
+
+Total elapsed time is 00:14:27.
+seed = 9805, # of threads = 3, block size = 111785, nblocks = 143206, file size = 48024848130.
+
+Thread   0 is done with errno = 0, fd =   4
+Thread   1 is done with errno = 0, fd =   5
+Thread   2 is done with errno = 0, fd =   6
+
+All threads has exited. Now verifying file contents ...
+
+
+Total elapsed time is 00:18:23.
+seed = 1805, # of threads = 5, block size = 81025, nblocks = 213258, file size = 86396147250.
+
+Thread   0 is done with errno = 0, fd =   4
+Thread   1 is done with errno = 0, fd =   5
+Thread   2 is done with errno = 0, fd =   6
+Thread   3 is done with errno = 0, fd =   7
+Thread   4 is done with errno = 0, fd =   8
+
+All threads has exited. Now verifying file contents ...
+
+
+Total elapsed time is 00:26:49.
+seed = 1234, # of threads = 11, block size = 21029, nblocks = 110052, file size = 25457118588.
+
+Thread   0 is done with errno = 0, fd =   4
+Thread   1 is done with errno = 0, fd =   5
+Thread   2 is done with errno = 0, fd =   6
+Thread   3 is done with errno = 0, fd =   7
+Thread   4 is done with errno = 0, fd =   8
+Thread   5 is done with errno = 0, fd =   9
+Thread   6 is done with errno = 0, fd =  10
+Thread   7 is done with errno = 0, fd =  11
+Thread   8 is done with errno = 0, fd =  12
+Thread   9 is done with errno = 0, fd =  13
+Thread  10 is done with errno = 0, fd =  14
+
+All threads has exited. Now verifying file contents ...
+
+
+Total elapsed time is 00:07:45.
+seed = 91234, # of threads = 13, block size = 51029, nblocks = 210052, file size = 139343665604.
+
+Thread   0 is done with errno = 0, fd =   4
+Thread   1 is done with errno = 0, fd =   5
+Thread   2 is done with errno = 0, fd =   6
+Thread   3 is done with errno = 0, fd =   7
+Thread   4 is done with errno = 0, fd =   8
+Thread   5 is done with errno = 0, fd =   9
+Thread   6 is done with errno = 0, fd =  10
+Thread   7 is done with errno = 0, fd =  11
+Thread   8 is done with errno = 0, fd =  12
+Thread   9 is done with errno = 0, fd =  13
+Thread  10 is done with errno = 0, fd =  14
+Thread  11 is done with errno = 0, fd =  16
+Thread  12 is done with errno = 0, fd =  15
+
+All threads has exited. Now verifying file contents ...
+
+
+Total elapsed time is 00:57:58.
+Total time 14090.21800062 seconds
+
 03/31/2017
----------
+----------
 
 Basic tests
 -----------
