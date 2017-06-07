@@ -261,6 +261,17 @@ Unit tests
 
 11. Test UID/GID map file on a remote client.
 
+12. Use FID namespace to read a regular file and list a directory. For example:
+
+	bash-4.2# pwd
+	/zzh-slash2/.slfidns
+	bash-4.2# ls -al 0x48c000000019b21
+	total 55943
+	qdrwxrwxrwx 3 root   root     3 Jun  7 14:17 .
+	d--x--x--x 2 root   root     2 Dec 31  1969 ..
+	drwxrwxr-x 2 zhihui pscstaff 2 Jun  7 11:55 dddd
+	bash-4.2# 
+
 05/30/2017
 ----------
 
