@@ -233,6 +233,10 @@ fcmh_checkcreds(struct fidc_membh *f,
 	    (fcmh_2_fid(f) != SLFID_ROOT || accmode & W_OK))
 		return (EACCES);
 
+	/* root can do anything without root squash */
+	if (pcrp->pcr_uid == 0)
+		return (0);
+
 #ifdef SLOPT_POSIX_ACLS
 	if (msl_acl)
 		rc = sl_fcmh_checkacls(f, pfr, pcrp, accmode);
@@ -1266,7 +1270,7 @@ msl_remove_sillyname(struct fidc_membh *f)
 	if (rc) {
 		/*
 		 * This can happen if I rename the silly name to a
-		 * different name.
+		 * different name. This is unusual but oaky.
 		 */
 		psclogs_warnx(SLCSS_FSOP, "Fail to remove sillyname: "
 		    "pfid="SLPRI_FID "name='%s' rc=%d", 
@@ -2375,132 +2379,6 @@ mfh_decref(struct msl_fhent *mfh)
 		MFH_ULOCK(mfh);
 }
 
-/*
- * Scrape user program name (uprog).
- *
- * Interpreters get special treatment as the arguments get included so
- * parsers of these logs can differentiate entries by script name.
- *
- * Examples:
- *	/bin/sh - foo.sh
- *	/bin/sh foo.sh
- *	/bin/perl -W foo.pl
- */
-void
-slc_getuprog(pid_t pid, char *uprog, size_t maxlen)
-{
-	char *sp, *dp, fn[128], buf[128];
-	ssize_t sz, dst_remaining;
-	int n, fd;
-
-	n = snprintf(fn, sizeof(fn), "/proc/%d/exe", pid);
-	if (n == -1)
-		return;
-	n = readlink(fn, uprog, maxlen - 1);
-	if (n == -1)
-		n = 0;
-	uprog[n] = '\0';
-
-	/* no space to append script name */
-	if (n == -1 || (size_t)n >= maxlen)
-		return;
-
-	if (strstr(uprog, "/bash") == NULL &&
-	    strstr(uprog, "/python") == NULL &&
-	    strstr(uprog, "/perl") == NULL &&
-	    strstr(uprog, "/ksh") == NULL)
-		return;
-
-	snprintf(fn, sizeof(fn), "/proc/%d/cmdline", pid);
-	fd = open(fn, O_RDONLY);
-	if (fd == -1)
-		return;
-
-	sz = read(fd, buf, sizeof(buf) - 1);
-	close(fd);
-
-	if (sz == -1)
-		return;
-
-	/* Note: arguments in `buf' are separated by NUL bytes. */
-
-	buf[sz] = '\0';
-
-	dp = uprog + n;
-
-	/*
-	 * Skip first argument which is the executable name (e.g. `sh').
-	 */
-	for (sp = buf; *sp; sp++)
-		;
-
-	dst_remaining = maxlen - (dp - uprog) + 1;
-	if (dst_remaining < sz)
-		sz = dst_remaining;
-
-	/*
-	 * Copy as much of the command as we can fit, substituting
-	 * newlines for spaces.
-	 */
-	for (; sp - buf < sz; sp++, dp++) {
-		switch (*sp) {
-		case '\0':
-			/*
-			 * Two sequential NULs denotes end of argument
-			 * list.
-			 */
-			if (sp[1] == '\0') {
-				dp--;
-				goto out;
-			}
-			/* FALLTHRU */
-		case '\n':
-			*dp = ' ';
-			break;
-		default:
-			*dp = *sp;
-			break;
-		}
-	}
- out:
-	if (dp >= uprog + n)
-		*dp = '\0';
-}
-
-const char *
-slc_log_get_fsctx_uprog(struct psc_thread *thr)
-{
-	struct psclog_data *pld;
-	struct pfl_fsthr *pft;
-	struct pscfs_req *pfr;
-
-	pld = psclog_getdata();
-// || mft->mft_lastp != p
-	if (pld->pld_uprog)
-		return (pld->pld_uprog);
-
-	if (thr->pscthr_type != PFL_THRT_FS)
-		return "<n/a>";
-
-	pft = thr->pscthr_private;
-	if (pft->pft_uprog[0] == '\0' && pft->pft_pfr) {
-		struct msl_fhent *mfh;
-		pid_t pid;
-
-		pfr = pft->pft_pfr; /* set by GETPFR() */
-		mfh = pfr ? pflfs_req_getfh(pfr) : NULL;
-		if (mfh)
-			pid = mfh->mfh_pid;
-		else
-			pid = pscfs_getclientctx(pfr)->pfcc_pid;
-
-		slc_getuprog(pid, pft->pft_uprog,
-		    sizeof(pft->pft_uprog));
-	}
-
-	return (pld->pld_uprog = pft->pft_uprog);
-}
-
 pid_t
 slc_log_get_fsctx_pid(struct psc_thread *thr)
 {
@@ -2570,7 +2448,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 			    "oatime="PFLPRI_PTIMESPEC" "
 			    "mtime="PFLPRI_PTIMESPEC" sessid=%d "
 			    "otime="PSCPRI_TIMESPEC" "
-			    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT" prog=%s",
+			    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT,
 			    fcmh_2_fid(f),
 			    mfh->mfh_accessing_euid,
 			    f->fcmh_sstb.sst_uid, f->fcmh_sstb.sst_gid,
@@ -2579,8 +2457,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 			    PFLPRI_PTIMESPEC_ARGS(&f->fcmh_sstb.sst_mtim),
 			    mfh->mfh_sid,
 			    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
-			    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr,
-			    mfh->mfh_uprog);
+			    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr);
 	}
 	//psclogs(PLL_WARN, SLCSS_FSOP, "RELEASE fid="SLPRI_FID" "
 	psclogs(PLL_DIAG, SLCSS_FSOP, "RELEASE fid="SLPRI_FID" "
@@ -3549,7 +3426,6 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 			pfl_opstat_destroy_pos(i--);
 	freelock(&pfl_opstats_lock);
 
-	pflog_get_fsctx_uprog = NULL;
 	pflog_get_fsctx_uid = NULL;
 	pflog_get_fsctx_pid = NULL;
 
@@ -4185,7 +4061,6 @@ msl_init(void)
 	pfl_subsys_register(SLCSS_INFO, "info");
 	pfl_subsys_register(SLCSS_FSOP, "fsop");
 
-	pflog_get_fsctx_uprog = slc_log_get_fsctx_uprog;
 	pflog_get_fsctx_uid = slc_log_get_fsctx_uid;
 	pflog_get_fsctx_pid = slc_log_get_fsctx_pid;
 
