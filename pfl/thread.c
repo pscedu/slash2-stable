@@ -54,7 +54,6 @@
 #include "pfl/vbitmap.h"
 
 struct psc_dynarray		 pfl_thread_classes = DYNARRAY_INIT;
-__static pthread_key_t		 pfl_tlskey;
 __static pthread_key_t		 psc_thrkey;
 __static struct psc_vbitmap	 psc_uniqthridmap = VBITMAP_INIT_AUTO;
 struct psc_lockedlist		 psc_threads =
@@ -95,6 +94,7 @@ _pscthr_destroy(void *arg)
 	PLL_ULOCK(&psc_threads);
 	/* crash below @40977 */
 	psc_free(thr->pscthr_loglevels, PAF_NOLOG);
+	psc_free(thr->pscthr_callerinfo, PAF_NOLOG);
 	psc_free(thr, PAF_NOLOG);
 }
 
@@ -104,35 +104,26 @@ pscthr_destroy(struct psc_thread *arg)
 	_pscthr_destroy(arg);
 }
 
-void
-_pfl_tls_release(void *arg)
+struct pfl_callerinfo tmp_pci;
+
+__inline const struct pfl_callerinfo *
+_pfl_callerinfo_get(const char *fn, const char *func, int lineno,
+    int subsys)
 {
-	void **tbl = arg;
-	int i;
+	struct pfl_callerinfo *pci;
+	struct psc_thread *thr;
 
-	for (i = 0; i < PFL_TLSIDX_MAX; i++)
-		psc_free(tbl[i], PAF_NOGUARD | PAF_NOLOG);
-	psc_free(tbl, PAF_NOGUARD | PAF_NOLOG);
-}
+	thr = pscthr_get_canfail();
+	if (thr)
+		pci = thr->pscthr_callerinfo;
+	else
+		pci = &tmp_pci;
 
-void *
-pfl_tls_get(int idx, size_t len)
-{
-	void **tbl;
-	int rc;
-
-	/* 05/04/2017: mysterious crash here, sigbus pfl_tlskey = 1 */
-	tbl = pthread_getspecific(pfl_tlskey);
-	if (tbl == NULL) {
-		tbl = psc_calloc(sizeof(*tbl), PFL_TLSIDX_MAX,
-		    PAF_NOLOG | PAF_NOGUARD);
-		rc = pthread_setspecific(pfl_tlskey, tbl);
-		if (rc)
-			errx(1, "pthread_setspecific: %s", strerror(rc));
-	}
-	if (tbl[idx] == NULL)
-		tbl[idx] = psc_alloc(len, PAF_NOLOG | PAF_NOGUARD);
-	return (tbl[idx]);
+	pci->pci_filename = fn;
+	pci->pci_func = func;
+	pci->pci_lineno = lineno;
+	pci->pci_subsys = subsys;
+	return (pci);
 }
 
 /*
@@ -143,10 +134,9 @@ void
 _pscthr_pause(__unusedx int sig)
 {
 	struct psc_thread *thr;
-	int locked;
 
 	thr = pscthr_get();
-	while (!tryreqlock(&pthread_lock, &locked))
+	while (!trylock(&pthread_lock))
 		pscthr_yield();
 	thr->pscthr_flags |= PTF_PAUSED;
 	while (thr->pscthr_flags & PTF_PAUSED) {
@@ -154,7 +144,7 @@ _pscthr_pause(__unusedx int sig)
 		    &pthread_lock);
 		spinlock(&pthread_lock);
 	}
-	ureqlock(&pthread_lock, locked);
+	freelock(&pthread_lock);
 }
 
 /*
@@ -186,10 +176,6 @@ pscthrs_init(void)
 	psc_waitq_init_nolog(&pthread_waitq, "thrs_wait");
 
 	rc = pthread_key_create(&psc_thrkey, _pscthr_destroy);
-	if (rc)
-		errx(1, "pthread_key_create: %s", strerror(rc));
-
-	rc = pthread_key_create(&pfl_tlskey, _pfl_tls_release);
 	if (rc)
 		errx(1, "pthread_key_create: %s", strerror(rc));
 
@@ -264,18 +250,19 @@ _pscthr_finish_init(struct psc_thread_init *thr_init)
 	if (sigaction(SIGUSR2, &sa, NULL) == -1)
 		psc_fatal("sigaction");
 
-	/* 
-	 * See psc_ctlmsg_thread_send() on how to return thread
-	 * formation via command like msctl -s threads.
-	 *
-	 */
-	pll_addtail(&psc_threads, thr);
-
 	/*
 	 * Do this allocation now instead during fatal() if malloc is
 	 * corrupted.
 	 */
-	psclog_getdata();
+	thr->pscthr_callerinfo = psc_alloc(sizeof(struct pfl_callerinfo), 
+	    PAF_NOLOG);
+
+	/* 
+	 * See psc_ctlmsg_thread_send() on how to return thread
+	 * formation via command like msctl -s threads.
+	 */
+	pll_addtail(&psc_threads, thr);
+
 	psclog_info("%s <pthr %"PSCPRI_PTHRT" thrid %d> alive",
 	    thr->pscthr_name, thr->pscthr_pthread,
 	    thr->pscthr_thrid);

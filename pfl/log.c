@@ -57,6 +57,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/err.h"
 #include "pfl/fmtstr.h"
+#include "pfl/fs.h"
 #include "pfl/hashtbl.h"
 #include "pfl/log.h"
 #include "pfl/pfl.h"
@@ -72,7 +73,7 @@
  *
  */
 
-#define PSC_LOG_FMT "[%s.%06u00 %n:%I:%T %B %F %l] "
+#define PSC_LOG_FMT "[%s.%06u00 %n:%I:%T %B %F %l]"
 #endif
 
 int				 psc_log_console = 0;
@@ -241,24 +242,6 @@ psc_log_setlevel(int subsys, int newlevel)
 
 #endif
 
-#ifndef HAVE_MPI
-/**
- * MPI_Comm_rank - Dummy overrideable MPI rank retriever.
- */
-int
-MPI_Comm_rank(__unusedx int comm, int *rank)
-{
-	*rank = -1;
-	return (0);
-}
-#endif
-
-const char *
-pflog_get_fsctx_uprog_stub(__unusedx struct psc_thread *thr)
-{
-	return ("");
-}
-
 uid_t
 pflog_get_fsctx_uid_stub(__unusedx struct psc_thread *thr)
 {
@@ -277,34 +260,12 @@ pflog_get_peer_addr_stub(__unusedx struct psc_thread *thr)
 	return ("");
 }
 
-const char	*(*pflog_get_fsctx_uprog)(struct psc_thread *) =
-		    pflog_get_fsctx_uprog_stub;
 pid_t		 (*pflog_get_fsctx_pid)(struct psc_thread *) =
 		    pflog_get_fsctx_pid_stub;
 uid_t		 (*pflog_get_fsctx_uid)(struct psc_thread *) =
 		    pflog_get_fsctx_uid_stub;
 const char	*(*pflog_get_peer_addr)(struct psc_thread *) =
 		    pflog_get_peer_addr_stub;
-
-struct psclog_data *
-psclog_getdata(void)
-{
-	struct psclog_data *d;
-
-	d = pfl_tls_get(PFL_TLSIDX_LOGDATA, sizeof(*d));
-	if (d->pld_thrid == 0) {
-		/* XXX try to read this if the pscthr is available */
-		d->pld_thrid = pfl_getsysthrid();
-		snprintf(d->pld_nothrname, sizeof(d->pld_nothrname),
-		    "<%"PSCPRI_PTHRT">", pthread_self());
-#ifdef HAVE_CNOS
-		d->pld_rank = cnos_get_rank();
-#else
-		MPI_Comm_rank(1, &d->pld_rank); /* 1=MPI_COMM_WORLD */
-#endif
-	}
-	return (d);
-}
 
 const char *
 pfl_fmtlogdate(const struct timeval *tv, const char **s, char *bufp)
@@ -413,7 +374,6 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 	char *p, buf[BUFSIZ];
 	extern const char *__progname;
 	struct psc_thread *thr;
-	struct psclog_data *d;
 	struct timeval tv;
 	const char *thrname;
 	int rc, save_errno;
@@ -422,16 +382,9 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 
 	save_errno = errno;
 
-	d = psclog_getdata();
-
-	thr = pscthr_get_canfail();
-	if (thr) {
-		thrid = thr->pscthr_thrid;
-		thrname = thr->pscthr_name;
-	} else {
-		thrid = d->pld_thrid;
-		thrname = d->pld_nothrname;
-	}
+	thr = pscthr_get();
+	thrid = thr->pscthr_thrid;
+	thrname = thr->pscthr_name;
 
 	gettimeofday(&tv, NULL);
 	(void)FMTSTR(buf, sizeof(buf), psc_logfmt,
@@ -447,10 +400,8 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		FMTSTRCASE('L', "d", level)
 		FMTSTRCASE('l', "d", pci->pci_lineno)
 		FMTSTRCASE('N', "s", __progname)
-		FMTSTRCASE('X', "s", pflog_get_fsctx_uprog(thr))
 		FMTSTRCASE('n', "s", thrname)
 		FMTSTRCASE('P', "d", pflog_get_fsctx_pid(thr))
-		FMTSTRCASE('r', "d", d->pld_rank)
 		FMTSTRCASE('S', "s", pflog_get_stacktrace())
 		FMTSTRCASE('s', "lu", tv.tv_sec)
 		FMTSTRCASE('T', "s", pfl_subsys_name(pci->pci_subsys))

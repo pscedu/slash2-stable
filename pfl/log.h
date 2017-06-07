@@ -44,13 +44,6 @@
 
 struct psc_thread;
 
-/* per-thread */
-struct psclog_data {
-	char		 pld_nothrname[24];
-	int		 pld_rank;	/* MPI rank */
-	pid_t		 pld_thrid;
-	const char	*pld_uprog;	/* userland program via FUSE */
-};
 
 /* Log levels. */
 #define PLL_FATAL	0		/* process termination */
@@ -357,8 +350,6 @@ extern const char	*(*pflog_get_fsctx_uprog)(struct psc_thread *);
 extern pid_t		 (*pflog_get_fsctx_pid)(struct psc_thread *);
 extern uid_t		 (*pflog_get_fsctx_uid)(struct psc_thread *);
 extern const char	*(*pflog_get_peer_addr)(struct psc_thread *);
-
-struct psclog_data	  *psclog_getdata(void);
 
 const char		  *psc_loglevel_getname(int);
 int			   psc_loglevel_fromstr(const char *);
