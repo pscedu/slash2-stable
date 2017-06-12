@@ -104,28 +104,6 @@ pscthr_destroy(struct psc_thread *arg)
 	_pscthr_destroy(arg);
 }
 
-struct pfl_callerinfo tmp_pci;
-
-__inline const struct pfl_callerinfo *
-_pfl_callerinfo_get(const char *fn, const char *func, int lineno,
-    int subsys)
-{
-	struct pfl_callerinfo *pci;
-	struct psc_thread *thr;
-
-	thr = pscthr_get_canfail();
-	if (thr)
-		pci = thr->pscthr_callerinfo;
-	else
-		pci = &tmp_pci;
-
-	pci->pci_filename = fn;
-	pci->pci_func = func;
-	pci->pci_lineno = lineno;
-	pci->pci_subsys = subsys;
-	return (pci);
-}
-
 /*
  * Pause thread execution.
  * @sig: signal number.
@@ -558,7 +536,30 @@ pscthr_killall(void)
 	PLL_ULOCK(&psc_threads);
 }
 
+struct pfl_callerinfo *
+pscthr_get_callerinfo(void)
+{
+	struct psc_thread *thr;
+	struct pfl_callerinfo *pci;
+	static struct pfl_callerinfo tmp_pci;
+
+	thr = pscthr_get_canfail();
+	if (thr)
+		pci = thr->pscthr_callerinfo;
+	else
+		pci = &tmp_pci;
+
+	return (pci);
+}
+
 #else
+
+struct struct pfl_callerinfo *
+pscthr_get_callerinfo(void)
+{
+	static struct pfl_callerinfo tmp_pci;
+	return (&tmp_pci);
+}
 
 void *
 pfl_tls_get(int idx, size_t len)

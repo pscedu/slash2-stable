@@ -114,7 +114,21 @@ extern pid_t			  pfl_pid;
 # define __callerinfo __unusedx const struct pfl_callerinfo *pci
 #endif
 
-__inline const struct pfl_callerinfo *
-_pfl_callerinfo_get(const char *, const char *, int, int);
+struct pfl_callerinfo * pscthr_get_callerinfo();
+
+static __inline const struct pfl_callerinfo *
+_pfl_callerinfo_get(const char *fn, const char *func, int lineno, int subsys)
+{
+	struct pfl_callerinfo *pci;
+
+	pci = pscthr_get_callerinfo();
+
+	pci->pci_filename = fn;
+	pci->pci_func = func;
+	pci->pci_lineno = lineno;
+	pci->pci_subsys = subsys;
+
+	return (pci);
+}
 
 #endif /* _PFL_PFL_H_ */
