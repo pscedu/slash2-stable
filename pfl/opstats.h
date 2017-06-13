@@ -65,7 +65,7 @@ struct pfl_opstat {
 #define pfl_opstat_add(opst, n)	psc_atomic64_add(&(opst)->opst_lifetime, (n))
 #define	pfl_opstat_incr(opst)	pfl_opstat_add((opst), 1)
 
-#define pfl_opstat_dec(opst, n)	psc_atomic64_dec(&(opst)->opst_lifetime, (n))
+#define pfl_opstat_dec(opst, n)	psc_atomic64_sub(&(opst)->opst_lifetime, (n))
 #define	pfl_opstat_decr(opst)	pfl_opstat_dec((opst), 1)
 
 /*
@@ -87,7 +87,7 @@ struct pfl_opstat {
 									\
 		if (_opst == NULL)					\
 			_opst = pfl_opstat_initf((flags), (name));	\
-		pfl_opstat_del(_opst, (n));				\
+		pfl_opstat_dec(_opst, (n));				\
 	} while (0)
 
 #define	OPSTAT_INCR(name)	OPSTATF_ADD(OPSTF_BASE10, (name), 1)
