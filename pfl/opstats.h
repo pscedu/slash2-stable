@@ -65,6 +65,9 @@ struct pfl_opstat {
 #define pfl_opstat_add(opst, n)	psc_atomic64_add(&(opst)->opst_lifetime, (n))
 #define	pfl_opstat_incr(opst)	pfl_opstat_add((opst), 1)
 
+#define pfl_opstat_dec(opst, n)	psc_atomic64_dec(&(opst)->opst_lifetime, (n))
+#define	pfl_opstat_decr(opst)	pfl_opstat_dec((opst), 1)
+
 /*
  * This API explicitly disallows printf-like args as it caches the
  * opstat for speed and thus cannot do so with variadic names.
@@ -78,8 +81,20 @@ struct pfl_opstat {
 		pfl_opstat_add(_opst, (n));				\
 	} while (0)
 
+#define	OPSTATF_SUB(flags, name, n)					\
+	do {								\
+		static struct pfl_opstat *_opst;			\
+									\
+		if (_opst == NULL)					\
+			_opst = pfl_opstat_initf((flags), (name));	\
+		pfl_opstat_del(_opst, (n));				\
+	} while (0)
+
 #define	OPSTAT_INCR(name)	OPSTATF_ADD(OPSTF_BASE10, (name), 1)
 #define	OPSTAT_ADD(name, n)	OPSTATF_ADD(OPSTF_BASE10, (name), (n))
+
+#define	OPSTAT_DECR(name)	OPSTATF_SUB(OPSTF_BASE10, (name), 1)
+#define	OPSTAT_SUB(name, n)	OPSTATF_SUB(OPSTF_BASE10, (name), (n))
 
 #define	OPSTAT2_ADD(name, n)	OPSTATF_ADD(0, (name), (n))
 
