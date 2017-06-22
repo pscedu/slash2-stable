@@ -1,12 +1,19 @@
 #!/bin/sh
 # $Id$
 #
-# file system self test
+# Sample file system self test script used by the sliod. Please 
+# tweak it as need be or write your own script.
 #
-# exit codes:
-# 0: healthy
-# 1: serious error
-# 2: degraded
+# Usage example:
+#
+#    # ./fshealthtest -u 75 /arc_sliod/0
+#    # ./fshealthtest  /sbb5_pool0
+#
+# Exit code: 
+#
+# zero: healthy
+# non-zero: problematic
+#
 
 warn()
 {
@@ -35,12 +42,25 @@ done
 shift $((OPTIND - 1))
 
 [ $# -eq 1 ] || usage
-fs=$1
-set -e
+
+fsroot=$1
 
 # phase 1: check for degraded or unavailable file systems
-set -- $(mount | grep -w "$fs")
+#
+# Linux example:
+#
+# # mount | grep -w sbb5_pool0
+# sbb5_pool0 on /sbb5_pool0 type zfs (rw,relatime,xattr,noacl)
+#
+# FreeBSD example:
+#
+# # mount | grep -w arc_sliod/0
+# sense1_pool0 on /arc_sliod/0 (zfs, local, noatime, nfsv4acls)
+#
+
+set -- $(mount | grep -w "$fsroot")
 if [ x"$4" = x"type" ]; then
+	# Linux
 	# $1            $2 $3             $4   $5
 	# sense51_pool4 on /sense51_pool4 type zfs
 	fstype=$5
@@ -53,31 +73,43 @@ fi
 
 case $fstype in
 zfs)	pool=$1
-	stat=$(zpool list -H $pool | awk '{print $7}')
-	case $stat in
-	ONLINE)	;;
-	DEGRADED)	exit 2 ;;
-	# SCRUB)	exit 2 ;;
-	*)		exit 1 ;
-	esac
+        #
+        # We used to look for ONLINE and DEGRADED in specific
+        # column in the zpool list output with awk. However,
+        # FreeBSD and Linux have different formats. So grep
+        # is used now.
+        #
+        zpool list -H $pool | grep --quiet ONLINE
+        if [ $? -ne 0 ]
+        then
+            exit 1
+        fi
 esac
 
 # check disk space utilization
 
 if [ $util -gt 0 ]; then
+
 	# phase 2: disable if X% full
-	fs_util=$(df $fs | awk '{print $5}' | tr -d % | tail -1)
+	fs_util=$(df $fsroot | awk '{print $5}' | tr -d % | tail -1)
 	[ $fs_util -le $util ] || exit 1
 fi
 
 # phase 3: do a simple I/O test and verify correctness
-[ -d $fs ]
-mkdir -p $fs/.selftest
-[ \! -f $fs/.selftest/fault_inject ]
+
+# set -e so that we exit immediately if a command exits with 
+# a non-zero status. Without this, [ command ] below won't 
+# exit when the command fails.
+
+set -e
+
+[ -d $fsroot ]
+mkdir -p $fsroot/.selftest
+[ \! -f $fsroot/.selftest/fault_inject ]
 
 sum="a5b5761d31a2c201170f62c33acab475"
 
-fn=$fs/.selftest/$(date +%s)
+fn=$fsroot/.selftest/$(date +%s)
 
 md5=md5sum
 type md5sum >/dev/null 2>&1 || md5="md5 -q"
