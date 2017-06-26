@@ -272,8 +272,8 @@ Unit tests
 	drwxrwxr-x 2 zhihui pscstaff 2 Jun  7 11:55 dddd
 	bash-4.2# 
 
-13. Create a big file and replicate it to two IOSes.  Do a partial truncation, make sure
-    that the component files on both IOSes are properly truncated.
+13. Create a big file and replicate it to one or two IOSes.  Do several partial truncation, make 
+    sure that the component files on all IOSes are properly truncated each time.
 
 05/30/2017
 ----------
