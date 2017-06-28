@@ -275,6 +275,8 @@ Unit tests
 13. Create a big file and replicate it to one or two IOSes.  Do several partial truncation, make 
     sure that the component files on all IOSes are properly truncated each time.
 
+14. Use $msctl -s fcmh to verify all files are recycled after tests are done and wait for a while.
+
 05/30/2017
 ----------
 
