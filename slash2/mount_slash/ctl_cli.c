@@ -54,7 +54,10 @@
 struct psc_thread	*msl_ctlthr0;
 void			*msl_ctlthr0_private;
 
-psc_atomic32_t		 msctl_id = PSC_ATOMIC32_INIT(0);
+/*
+ * We use the same ID to attribute different RPCs to the same request.
+ */
+psc_atomic32_t		 msctl_repl_id = PSC_ATOMIC32_INIT(0);
 struct psc_lockedlist	 msctl_replsts = PLL_INIT(&msctl_replsts,
     struct msctl_replstq, mrsq_lentry);
 
@@ -294,6 +297,8 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mrq->mrq_fid, strerror(rc)));
 
  issue:
+
+	/* handled by slm_rmc_handle_getreplst() of the MDS */
 	MSL_RMC_NEWREQ(f, csvc, SRMT_REPL_GETST, rq, mq, mp, rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, NULL, SLPRI_FID": %s",
@@ -302,7 +307,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
 
 	mq->fg = fg;
-	mq->id = psc_atomic32_inc_getnew(&msctl_id);
+	mq->id = psc_atomic32_inc_getnew(&msctl_repl_id);
 
 	memset(&mrsq, 0, sizeof(mrsq));
 	INIT_PSC_LISTENTRY(&mrsq.mrsq_lentry);

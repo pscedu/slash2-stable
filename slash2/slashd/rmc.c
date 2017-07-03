@@ -408,6 +408,19 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		goto out;
 	}
 
+	/*
+ 	 * If we don't wait for a truncation to complete on an IOS, a
+ 	 * later write beyond the truncation point could race with it 
+ 	 * and cause data corruption.  Give more head start to the
+ 	 * truncation RPC to finish first.
+ 	 */
+	FCMH_LOCK(f);
+	if (mq->rw == SL_WRITE && f->fcmh_flags & FCMH_MDS_IN_PTRUNC) {
+		OPSTAT_INCR("getbmap-lease-write-ptrunc");
+		sleep(3);
+	}
+	FCMH_ULOCK(f);
+
 	mp->flags = mq->flags;
 
 	mp->rc = mds_bmap_load_cli(f, mq->bmapno, mq->flags, mq->rw,
@@ -710,7 +723,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
-#if 0
+#ifdef OLD_DEBUG_BITS
 	if (strcmp(mq->name, ".sconsign.dblite") == 0)
 		psclog_max("creating file .sconsign.dblite");
 #endif
@@ -1170,6 +1183,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	return (0);
 }
 
+/* handle SRMT_SETATTR RPC */
 int
 slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
@@ -1216,6 +1230,10 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			 * we must still bump the generation since size
 			 * updates from the sliod may be pending for
 			 * this generation.
+			 *
+			 * If the client has pending attributes for a new
+			 * file, we will hit this case as well. Any problem
+			 * in that case?
 			 */
 			OPSTAT_INCR("truncate-full");
 			mq->attr.sst_fg.fg_gen = fcmh_2_gen(f) + 1;
@@ -1258,15 +1276,21 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		if (mp->rc) {
 			if (unbump)
 				fcmh_2_gen(f)--;
+			FCMH_LOCK(f);
 			goto out;
 		}
 		FCMH_LOCK(f);
 	}
 
+	/*
+ 	 * The above if statement may only set ctime and mtime. So we still
+ 	 * might need to do the truncation below.
+ 	 */
 	if (tadj & PSCFS_SETATTRF_DATASIZE) {
-		mp->rc = slm_setattr_core(f, &mq->attr, to_set | tadj);
+		mp->rc = slm_ptrunc_prepare(f, &mq->attr, to_set | tadj);
 		if (!mp->rc)
 			mp->rc = -SLERR_BMAP_PTRUNC_STARTED;
+		FCMH_LOCK(f);
 	}
 
  out:
@@ -1775,6 +1799,7 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 	return (rc);
 }
 
+/* Handle SRMT_REMOVEXATTR RPC */
 int
 slm_rmc_handle_removexattr(struct pscrpc_request *rq)
 {
@@ -1830,6 +1855,15 @@ slm_rmc_handle_delreplrq(struct pscrpc_request *rq)
 	mp->nbmaps_processed = mq->nbmaps;
 	return (0);
 }
+void
+slm_repl_queue_cb(__unusedx struct bmap *b, __unusedx int iosidx,
+    int val, void *arg)
+{
+	int *queued = arg;
+
+	if (val >= 0 && val < NBREPLST)
+		queued[val]++;
+}
 
 /* Handle SRMT_REPL_GETST request */
 int
@@ -1839,6 +1873,10 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	struct srm_replst_master_rep *mp;
 	struct slm_replst_workreq *rsw;
 	struct slrpc_cservice *csvc;
+	struct fidc_membh *f = NULL;
+	struct bmap *b = NULL;
+	sl_bmapno_t i;
+	int rc, queued[NBREPLST];
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -1852,15 +1890,66 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	rsw = psc_pool_get(slm_repl_status_pool);
-	memset(rsw, 0, sizeof(*rsw));
-	INIT_PSC_LISTENTRY(&rsw->rsw_lentry);
-	rsw->rsw_fg = mq->fg;
-	rsw->rsw_cid = mq->id;
-	rsw->rsw_csvc = csvc;
+	rc = slm_fcmh_get(&mq->fg, &f);
+	if (rc) {
+		mp->rc = rc;
+		goto out;
+	}
+	/*
+ 	 * We allow retrieving the replication table of a directory. 
+ 	 * However, only regular files have real bmaps.
+ 	 */
+	if (fcmh_isreg(f)) {
+		/*
+	 	 * Scan for any bmap in an outstanding queued state. 
+ 		 * Since we are going to retrieve bmap states anyway,
+ 		 * so this should not add much overhead.
+ 		 *
+ 		 * All bmap changes (replication, partial truncation
+ 		 * and reclamation) are done by best effort. If there
+ 		 * is a network issue, a bmap would be stuck in a 
+ 		 * queued state. If so, a user can trigger action on
+ 		 * such a bmap by querying the replication status of
+ 		 * the file.
+ 		 */
+		for (i = 0; i < NBREPLST; i++)
+			queued[i] = 0;
+		for (i = 0; i < fcmh_nvalidbmaps(f); i++) {
+			rc = -bmap_get(f, i, SL_WRITE, &b);
+			if (rc) {
+				mp->rc = rc;
+				break;
+			}
+			_mds_repl_bmap_walk(b, NULL, NULL, 0, NULL, 0,
+			    slm_repl_queue_cb, &queued);
+	
+			if (queued[BREPLST_TRUNC_QUEUED]) {
+				OPSTAT_INCR("bmap-trunc-requeue");
+				upsch_enqueue(bmap_2_upd(b));
+			}
+			if (queued[BREPLST_REPL_QUEUED]) {
+				OPSTAT_INCR("bmap-repl-requeue");
+				upsch_enqueue(bmap_2_upd(b));
+			}
+			if (queued[BREPLST_GARBAGE_QUEUED]) {
+				OPSTAT_INCR("bmap-garbage-requeue");
+				upsch_enqueue(bmap_2_upd(b));
+			}
+			bmap_op_done(b);
+		}
+	}
+	fcmh_op_done(f);
 
-	/* handled by slmrcmthr_main() */
-	lc_add(&slm_replst_workq, rsw);
+	if (!rc) {
+		rsw = psc_pool_get(slm_repl_status_pool);
+		rsw->rsw_csvc = csvc;
+		rsw->rsw_fg = mq->fg;
+		rsw->rsw_cid = mq->id;
+		INIT_PSC_LISTENTRY(&rsw->rsw_lentry);
+
+		/* queue work for slmrcmthr_main() */
+		lc_add(&slm_replst_workq, rsw);
+	}
 
  out:
 	return (0);

@@ -70,7 +70,7 @@ msl_pgcache_init(void)
 	lc_reginit(&page_buffers, struct bmap_page_entry,
 	    page_lentry, "pagebuffers");
 
-	for (i = 0; i < msl_bmpces_min; i++) {
+	for (i = 0; i < bmpce_pool->ppm_min; i++) {
 		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
 		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
 
@@ -88,14 +88,16 @@ void *
 msl_pgcache_get(int wait)
 {
 	void *p;
+	struct timespec ts;
 	static int warned = 0, failed = 0;
 
 	p = lc_getnb(&page_buffers);
 	if (p)
 		return p;
+ again:
 
 	LIST_CACHE_LOCK(&page_buffers);
-	if (page_buffers_count < msl_bmpces_max) {
+	if (page_buffers_count < bmpce_pool->ppm_max) {
 		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
 		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
 		if (p != MAP_FAILED) {
@@ -115,9 +117,18 @@ msl_pgcache_get(int wait)
 		psclog_warnx("Please raise vm.max_map_count for performance");
 	}
 
-	if (wait)
-		p = lc_getwait(&page_buffers);
-	else
+	if (wait) {
+		/*
+		 * Use timed wait in case the limit is bumped by sys admin.
+		 */
+		ts.tv_nsec = 0;
+		ts.tv_sec = time(NULL) + 30;
+		p = lc_gettimed(&page_buffers, &ts);
+		if (!p) {
+			OPSTAT_INCR("pagecache-get-retry");
+			goto again;
+		}
+	} else
 		p = lc_getnb(&page_buffers);
 	return (p);
 }
@@ -125,9 +136,22 @@ msl_pgcache_get(int wait)
 void
 msl_pgcache_put(void *p)
 {
+	int rc;
+	/*
+ 	 * Do not assume that the max value has not changed.
+ 	 */
 	LIST_CACHE_LOCK(&page_buffers);
-	INIT_PSC_LISTENTRY((struct psc_listentry *)p);
-	lc_add(&page_buffers, p);
+	if (page_buffers_count > bmpce_pool->ppm_max) {
+		rc = munmap(p, BMPC_BUFSZ);
+		if (rc)
+			OPSTAT_INCR("munmap-drop-failure");
+		else
+			OPSTAT_INCR("munmap-drop-success");
+		page_buffers_count--;
+	} else {
+		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
+		lc_add(&page_buffers, p);
+	}
 	LIST_CACHE_ULOCK(&page_buffers);
 }
 
@@ -139,18 +163,18 @@ msl_pgcache_reap(void)
 	static int count;		/* this assume one reaper */
 
 	/* 
-	 * We don't reap even if the number of free buffers keeps 
-	 * growing. This greatly cuts down the mmap() calls.
+	 * We don't reap if the number of free buffers keeps growing. 
+	 * This greatly cuts down the number of mmap() calls.
 	 */
 	curr = lc_nitems(&page_buffers);
 	if (!count || count != curr) {
 		count = curr;
 		return;
 	}
-	if (curr <= msl_bmpces_min)
+	if (curr <= bmpce_pool->ppm_min)
 		return;
 
-	nfree = (curr - msl_bmpces_min) / 2;
+	nfree = (curr - bmpce_pool->ppm_min) / 2;
 	if (!nfree)
 		nfree = 1;
 	for (i = 0; i < nfree; i++) {
@@ -159,13 +183,13 @@ msl_pgcache_reap(void)
 			break;
 		rc = munmap(p, BMPC_BUFSZ);
 		if (rc)
-			OPSTAT_INCR("munmap-failure");
+			OPSTAT_INCR("munmap-reap-failure");
 		else
-			OPSTAT_INCR("munmap-success");
-		LIST_CACHE_LOCK(&page_buffers);
-		page_buffers_count--;
-		LIST_CACHE_ULOCK(&page_buffers);
+			OPSTAT_INCR("munmap-reap-success");
 	}
+	LIST_CACHE_LOCK(&page_buffers);
+	page_buffers_count -= i;
+	LIST_CACHE_ULOCK(&page_buffers);
 }
 
 /*
@@ -665,16 +689,21 @@ bmpce_reap(struct psc_poolmgr *m)
 void
 bmpc_global_init(void)
 {
+	/*
+	 * msl_pagecache_maxsize can be set like this: pagecache_maxsize=2G
+ 	 */
 	if (msl_pagecache_maxsize)
 		msl_bmpces_max = msl_pagecache_maxsize / BMPC_BUFSZ;
-
-	msl_pgcache_init();
+	if (msl_bmpces_max < msl_bmpces_min)
+		msl_bmpces_max = msl_bmpces_min;
 
 	psc_poolmaster_init(&bmpce_poolmaster,
 	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 
 	    msl_bmpces_min, msl_bmpces_min, msl_bmpces_max, 
 	    bmpce_reap, "bmpce");
 	bmpce_pool = psc_poolmaster_getmgr(&bmpce_poolmaster);
+
+	msl_pgcache_init();
 
 	psc_poolmaster_init(&bwc_poolmaster,
 	    struct bmpc_write_coalescer, bwc_lentry, PPMF_AUTO, 64,

@@ -4,8 +4,15 @@
 Motivation:
 
 	* Remove the dependency of MDS on ZFS-fuse so that it can run on any file system.
+
 	* All metadata are user visible files.
+
 	* Help MDS run as non-root.
+
+	* No more confusion between zfs-fuse toolchains and ZFS-on-Linux toolchains (which 
+	  ones to use).
+
+	* Use file handle is more efficient than going through the FID namespace.
 
 Feasibility:
 
@@ -17,17 +24,70 @@ Things to change:
 
 	* All RPCs will have to change to replace a fid with a file handle.
 
+		- currently we path 64-bit FID around.  The value of MAX_HANDLE_SZ is 128.
+
+		- Do I need to add a sequence number to all RPCs to deal with out-of-order
+		  arrivals?
+
 	* All slash2 per-file metadata must be store in a file.  Right now, we modify
-	  ZFS inode to store some slash2 specific inode information.
+	  ZFS inode to store some slash2 specific inode information (e.g., zp_s2nblks
+	  and zp_s2ptruncgen).
+
+	  Other information like owner, permission can stay.
 
 	* Journaling code. We don't know when the file system flushes its caches, so a 
 	  replay can fail. Also, we need a way to reclaim log space - use syncfs().
 	
+	  Each log entry can be associated with a file descriptor.  The log entry can
+	  only be reclaimed after the file is synced.  This way, we can avoid syncing
+	  the entire file system.
+
 	  Replay made easy because we never re-use FID, we never truncate.
+
+	  Instead of using a system wide transaction group ID, we can use generation number 
+	  associated with different parts of a file to determine whether we should reply a log
+	  entry (bmap generation number, inode generation number, etc).  The generation number
+	  is stored in each log entry.
 
 	* We still need to keep the FID name space. Our replication script uses it and
 	  it can be a quick way to do FID->name mapping.
 
+	  Also, the IOS uses FID to do I/O.
+
+	* Right now, the state of bmap take 3 bits.  We can make it 4 bits so that (1)
+	  allow future growth (2) easier to implement and debug.
+
 Obstacle:
 
 	* This is a on-disk format change.
+
+		- mandatory: we have to store things like slash2 file size ourselves.
+
+		- currently the metadata file of slash2 file can be huge. Last time
+		  I looked, some CRC fields are probably not needed any more.
+
+		- since we have on-disk format change, we might as well do the following:
+
+			- combine ino and inox, add a version to inode
+			- increase number of IOS per inode from 64 to 128
+			- get rid of CRC stuff.
+
+	* ZFS-fuse has some xattr that are constructed on the fly (e.g.,  SLXAT_INOXSTAT)
+	  used by dumpfid.c.  It might also have something to do with scans (/opt/packages/slash2/scans),
+	  ask Ed.
+
+Concerns:
+
+	* The new MDS will take some time to stablize.
+
+	* There will be work needed to migrate existing data to the new MDS code.
+
+
+
+
+<yanovich> so it *should* entail just replacing mdsio-zfs.c
+<yanovich> that was my plan long ago
+<yanovich> but we laced way too many hooks
+<yanovich> also, there is a lot of functionality that you have to replace (if you so choose), like the zfs send/recv and 
+	   raidz3 and everything else provided (unless you switch to a system that provides that..)
+<yanovich> i am sorry but i do not have any time right now to review anything that would require serious attention

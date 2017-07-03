@@ -149,6 +149,11 @@ mds_replay_bmap(void *jent, int op)
 		memcpy(bmi_orepls, bmi->bmi_repls,
 		    sizeof(bmi->bmi_orepls));
 
+		/*
+ 		 * Here, we assume that if we replay the log entry, the
+ 		 * correponding changes have not be made to the file
+ 		 * system.
+ 		 */
 		bmap_2_replpol(b) = sjbr->sjbr_replpol;
 		memcpy(bmi->bmi_repls, sjbr->sjbr_repls,
 		    SL_REPLICA_NBYTES);
@@ -157,12 +162,12 @@ mds_replay_bmap(void *jent, int op)
 		brepls_init(tract, -1);
 		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 		tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_QUEUED;
+		tract[BREPLST_TRUNC_SCHED] = BREPLST_TRUNC_QUEUED;
 		mds_repl_bmap_walk_all(b, tract, NULL, 0);
 
 		BMAP_ULOCK(b);
 
-		memcpy(bmi->bmi_orepls, bmi_orepls,
-		    sizeof(bmi->bmi_orepls));
+		memcpy(bmi->bmi_orepls, bmi_orepls, sizeof(bmi->bmi_orepls));
 
 		slm_repl_upd_write(b, 1);
 
@@ -179,6 +184,7 @@ mds_replay_bmap(void *jent, int op)
 			switch (SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,
 			    off)) {
 			case BREPLST_REPL_QUEUED:
+			case BREPLST_TRUNC_QUEUED:
 			case BREPLST_GARBAGE_QUEUED:
 				resid = fcmh_2_repl(f, n);
 
@@ -212,8 +218,7 @@ mds_replay_bmap(void *jent, int op)
 static int
 mds_replay_bmap_repls(struct psc_journal_enthdr *pje)
 {
-	return (mds_replay_bmap(PJE_DATA(pje),
-	    B_REPLAY_OP_REPLS));
+	return (mds_replay_bmap(PJE_DATA(pje), B_REPLAY_OP_REPLS));
 }
 
 /*

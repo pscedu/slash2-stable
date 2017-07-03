@@ -1168,7 +1168,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 
 		rc = msl_load_fcmh(pfr, fid, &c);
 		if (rc)
-			return (-rc);
+			return (ENOENT);
 		if (fgp)
 			*fgp = c->fcmh_fg;
 		if (sstb) {
@@ -1290,6 +1290,9 @@ msl_remove_sillyname(struct fidc_membh *f)
 	FCMH_ULOCK(f);
 
  out:
+	if (p)
+		fcmh_op_done(p);
+
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -1309,12 +1312,12 @@ msl_create_sillyname(struct fidc_membh *f, pscfs_inum_t pinum, const char *name,
 	struct timeval tv;
 	struct psc_thread *me;
 
-	me = pscthr_get();
-	gettimeofday(&tv, NULL);
-
 	MSL_RMC_NEWREQ(f, csvc, SRMT_RENAME, rq, mq, mp, rc);
 	if (rc)
 		goto out; 
+
+	me = pscthr_get();
+	gettimeofday(&tv, NULL);
 
 	mq->opfg.fg_fid = pinum;
 	mq->npfg.fg_fid = pinum;
@@ -1438,9 +1441,6 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 			inum = mp0->attr.sst_fg.fg_fid;
 		} else
 			OPSTAT_INCR("msl.unlink-cache-hit");
-		rc = msl_load_fcmh(pfr, inum, &c);
-		if (rc)
-			PFL_GOTOERR(out, rc);
 
 		rc = sl_fcmh_lookup(inum, FGEN_ANY, 0, &c, NULL); 
 		if (!rc) {
@@ -1453,7 +1453,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 				rc = msl_create_sillyname(p, pinum, name, c);
 				PFL_GOTOERR(out, rc);
 			}
-			FCMH_ULOCK(c);
+			fcmh_op_done(c);
 			c = NULL;
 		}
 	}
@@ -2202,7 +2202,7 @@ msl_setattr(struct fidc_membh *f, int32_t to_set,
 	struct pscrpc_request *rq = NULL;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
-	int rc;
+	int rc, retries = 0;
 
 	FCMH_BUSY_ENSURE(f);
 
@@ -2212,6 +2212,13 @@ msl_setattr(struct fidc_membh *f, int32_t to_set,
 			sstb->sst_size, to_set & PSCFS_SETATTRF_DATASIZE);
 #endif
 
+again:
+
+	/*
+	 * There won't be a leak of pscrpc_request() because MSL_RMC_NEWREQ()
+	 * will drop it automatically. In other words, rq must be initialized 
+	 * to NULL at the beginning.
+	 */
 	MSL_RMC_NEWREQ(f, csvc, SRMT_SETATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2239,19 +2246,25 @@ msl_setattr(struct fidc_membh *f, int32_t to_set,
 	if (rc == 0)
 		rc = -mp->rc;
 
-	if (rc == SLERR_BMAP_IN_PTRUNC)
+	if (rc == SLERR_BMAP_IN_PTRUNC) {
+		if (retries < 256) {
+			retries++;
+			sleep(1);
+			OPSTAT_INCR("ptrunc-retry");
+			goto again;
+		}
+		OPSTAT_INCR("ptrunc-bail");
 		rc = EAGAIN;
-	else if (rc == SLERR_BMAP_PTRUNC_STARTED)
+	} else if (rc == SLERR_BMAP_PTRUNC_STARTED) {
+		OPSTAT_INCR("ptrunc-queue");
 		rc = 0;
+	}
 
+	if (!rc)
+		slc_fcmh_setattrf(f, &mp->attr, setattrflags);
+ out:
 	DEBUG_SSTB(rc ? PLL_WARN : PLL_DIAG, &f->fcmh_sstb,
 	    "attr flush; set=%#x rc=%d", to_set, rc);
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	slc_fcmh_setattrf(f, &mp->attr, setattrflags);
-
- out:
 	pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -3071,30 +3084,18 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			OPSTAT_INCR("msl.truncate-noop");
 			goto out;
 		} else {
+			/*
+			 * A tricky case to handle: we might be called when 
+			 * a previous partial truncation is not fully completed 
+			 * yet.
+			 */
 			struct psc_dynarray a = DYNARRAY_INIT;
 			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
 
-			OPSTAT_INCR("msl.truncate-part");
+			OPSTAT_INCR("msl.truncate-partial");
 			DEBUG_FCMH(PLL_DIAG, c, "partial truncate");
 
 			FCMH_ULOCK(c);
-
-			/* Partial truncate.  Block and flush. */
-			pfl_rwlock_rdlock(&c->fcmh_rwlock);
-			RB_FOREACH(b, bmaptree, &c->fcmh_bmaptree) {
-				if (b->bcm_bmapno < x)
-					continue;
-
-				/*
-				 * Take a reference to ensure the bmap
-				 * is still valid.
-				 * bmap_biorq_waitempty() shouldn't be
-				 * called while holding the fcmh lock.
-				 */
-				bmap_op_start_type(b, BMAP_OPCNT_TRUNCWAIT);
-				psc_dynarray_add(&a, b);
-			}
-			pfl_rwlock_unlock(&c->fcmh_rwlock);
 
 			/*
  			 * Write beyond the truncation point can be cancelled
@@ -3102,6 +3103,28 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
  			 * fact that partial truncation is rare, we should be 
  			 * happy as long as it works.
 			 */
+			pfl_rwlock_rdlock(&c->fcmh_rwlock);
+			RB_FOREACH(b, bmaptree, &c->fcmh_bmaptree) {
+				BMAP_LOCK(b);
+				if ((b->bcm_bmapno < x) ||
+				    (b->bcm_flags & BMAPF_TOFREE)) {
+					BMAP_ULOCK(b);
+					continue;
+				}
+				
+				/*
+				 * Take a reference to ensure the bmap
+				 * is still valid.
+				 *  
+				 * bmap_biorq_waitempty() shouldn't be
+				 * called while holding the fcmh lock.
+				 */
+				bmap_op_start_type(b, BMAP_OPCNT_TRUNCWAIT);
+				BMAP_ULOCK(b);
+				psc_dynarray_add(&a, b);
+			}
+			pfl_rwlock_unlock(&c->fcmh_rwlock);
+
 			DYNARRAY_FOREACH(b, i, &a) {
 				struct bmap_pagecache *bmpc;
 
@@ -3109,6 +3132,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 				BMAP_LOCK(b);
 				bmpc_expire_biorqs(bmpc);
 				BMAP_ULOCK(b);
+				OPSTAT_INCR("msl.truncate-expire-bmap");
 			}
 
 			DYNARRAY_FOREACH(b, i, &a) {
