@@ -3,7 +3,7 @@
  * %GPL_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright 2006-2016, Pittsburgh Supercomputing Center
+ * Copyright 2006-2017, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -537,6 +537,7 @@ _dump_bmapod(const struct pfl_callerinfo *pci, int level,
 	va_end(ap);
 }
 
+/* Keep the symbols in sync with fnstat_prdat() */
 #define DUMP_BMAP_REPLS(repls, buf)					\
 	do {								\
 		int _k, off, ch[NBREPLST];				\
@@ -608,7 +609,6 @@ dump_bmap_flags(uint32_t flags)
 
 	_dump_bmap_flags_common(&flags, &seq);
 	PFL_PRFLAG(BMAPF_CRC_UP, &flags, &seq);
-	PFL_PRFLAG(BMAPF_NOION, &flags, &seq);
 	PFL_PRFLAG(BMAPF_REPLMODWR, &flags, &seq);
 	PFL_PRFLAG(BMAPF_IOSASSIGNED, &flags, &seq);
 	if (flags)
@@ -630,7 +630,6 @@ dump_bml_flags(uint32_t flags)
 	PFL_PRFLAG(BML_RECOVER, &flags, &seq);
 	PFL_PRFLAG(BML_CHAIN, &flags, &seq);
 	PFL_PRFLAG(BML_FREEING, &flags, &seq);
-	PFL_PRFLAG(BML_ASSFAIL, &flags, &seq);
 	PFL_PRFLAG(BML_RECOVERFAIL, &flags, &seq);
 	printf("\n");
 }

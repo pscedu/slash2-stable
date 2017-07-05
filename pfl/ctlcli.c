@@ -1527,8 +1527,7 @@ psc_ctlcli_main(const char *osockfn, int ac, char *av[],
 	psc_ctlmsg_sendlast();
 
 	spinlock(&psc_ctl_lock);
-	if (psc_ctl_sock != -1 &&
-	    shutdown(psc_ctl_sock, SHUT_WR) == -1)
+	if (psc_ctl_sock != -1 && shutdown(psc_ctl_sock, SHUT_WR) == -1)
 		psc_fatal("shutdown");
 	freelock(&psc_ctl_lock);
 

@@ -609,6 +609,9 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 		 * adj = MAX(1, m->ppm_total / 20)
 		 * adj = MIN(64, adj)
 		 * adj = PSC_ALIGN(adj, 8)
+		 *
+		 * If there is a max setting, the following grow
+		 * will fail if we have aleady reached our limit.
 		 */
 		POOL_ULOCK(m);
 		n = psc_pool_grow(m, 2); // MAX(1, m->ppm_total / 20)

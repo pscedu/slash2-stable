@@ -1,3 +1,8 @@
+07/03/2017
+----------
+
+We now support partial truncation.
+
 06/07/2017
 ----------
 

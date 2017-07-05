@@ -165,6 +165,7 @@ psc_ctlsenderrv(int fd, const struct psc_ctlmsghdr *mhp, struct pfl_mutex *lock,
 	/* XXX check overflow */
 	vsnprintf(pce.pce_errmsg, sizeof(pce.pce_errmsg), fmt, ap);
 
+	/* This triggers ms_ctlmsg_error_prdat() on the client side */
 	mh.mh_id = mhp->mh_id;
 	mh.mh_type = PCMT_ERROR;
 	mh.mh_size = sizeof(pce);

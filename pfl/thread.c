@@ -561,14 +561,6 @@ pscthr_get_callerinfo(void)
 	return (&tmp_pci);
 }
 
-void *
-pfl_tls_get(int idx, size_t len)
-{
-	if (_pfl_tls[idx] == NULL)
-		_pfl_tls[idx] = psc_alloc(len, PAF_NOLOG | PAF_NOGUARD);
-	return (_pfl_tls[idx]);
-}
-
 struct psc_thread *
 pscthr_get_canfail(void)
 {

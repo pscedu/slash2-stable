@@ -98,6 +98,8 @@ struct bmap_ondisk {
 
 /* used by SL_REPL_GET_BMAP_IOS_STAT() */
 
+/* Some of the following are used by dumpfid.c */
+
 #define bod_repls	bod_corestate.bcs_repls
 #define bod_crcstates	bod_corestate.bcs_crcstates
 #define bod_crcs	bod_extrastate.bes_crcs
@@ -264,6 +266,8 @@ struct bmap {
 /*
  * bmap per-replica states. Note that these values have been baked into
  * the on-disk data structures. So do not change them.
+ *
+ * See DUMP_BMAP_REPLS() for the corresponding symbols of these flags.
  */
 #define BREPLST_INVALID		0	/* no data present (zeros) */
 #define BREPLST_REPL_SCHED	1	/* replica is being made */

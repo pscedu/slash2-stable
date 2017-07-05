@@ -352,45 +352,49 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 
 void
 slm_upsch_finish_ptrunc(struct slrpc_cservice *csvc,
-    struct bmap *b, int sched, int rc, int off)
+    struct bmap *b, int rc, int off)
 {
 	struct fidc_membh *f;
 	struct fcmh_mds_info *fmi;
 	int ret, tract[NBREPLST], retifset[NBREPLST];
 
 	psc_assert(b);
-
 	f = b->bcm_fcmh;
-	DEBUG_FCMH(PLL_MAX, f, "ptrunc finished");
 
-	if (sched) {
-		/*
-		 * If successful, the IOS is responsible to send a
-		 * SRMT_BMAPCRCWRT RPC to update CRCs in the block
-		 * and the disk usage. However, we don't wait for
-		 * it to happen.
-		 */
-		brepls_init(tract, -1);
-		tract[BREPLST_TRUNC_SCHED] = rc ?
-		    BREPLST_TRUNC_QUEUED : BREPLST_VALID;
-		brepls_init_idx(retifset);
-
-		BMAP_LOCK(b);
-		ret = mds_repl_bmap_apply(b, tract, retifset, off);
-		if (ret != BREPLST_TRUNC_SCHED)
-			DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
-		mds_bmap_write_logrepls(b);
-		BMAP_ULOCK(b);
+	/*
+	 * Regardless of success or failure, the operation on the
+	 * IOS is done for now.  We might try later.
+	 */
+	FCMH_LOCK(f);
+	fmi = fcmh_2_fmi(f);
+	fmi->fmi_ptrunc_nios--;
+	if (!fmi->fmi_ptrunc_nios) {
+		OPSTAT_INCR("msl.ptrunc-done");
+		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
 	}
+	FCMH_ULOCK(f);
 
-	if (!rc) {
-		FCMH_LOCK(f);
-		fmi = fcmh_2_fmi(f);
-		fmi->fmi_ptrunc_nios--;
-		if (!fmi->fmi_ptrunc_nios)
-			f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
-		FCMH_ULOCK(f);
+	DEBUG_FCMH(PLL_MAX, f, "ptrunc finished, rc = %d", rc);
+
+	/*
+	 * If successful, the IOS is responsible to send a
+	 * SRMT_BMAPCRCWRT RPC to update CRCs in the block
+	 * and the disk usage. However, we don't wait for
+	 * it to happen.
+	 */
+	brepls_init(tract, -1);
+	tract[BREPLST_TRUNC_SCHED] = rc ?
+	    BREPLST_TRUNC_QUEUED : BREPLST_VALID;
+	brepls_init_idx(retifset);
+
+	BMAP_LOCK(b);
+	ret = mds_repl_bmap_apply(b, tract, retifset, off);
+	if (ret != BREPLST_TRUNC_SCHED) {
+		OPSTAT_INCR("msl.ptrunc-bmap-err");
+		DEBUG_BMAPOD(PLL_DEBUG, b, "bmap is corrupted");
 	}
+	mds_bmap_write_logrepls(b);
+	BMAP_ULOCK(b);
 
 	psclog(rc ? PLL_WARN : PLL_DIAG,
 	    "partial truncation resolution: ios_repl_off=%d, rc=%d",
@@ -409,8 +413,9 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
 	struct slrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
 	struct bmap *b = av->pointer_arg[IP_BMAP];
 
+	OPSTAT_INCR("msl.ptrunc-bmap-done");
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srt_ptrunc_rep, rc);
-	slm_upsch_finish_ptrunc(csvc, b, 1, rc, off);
+	slm_upsch_finish_ptrunc(csvc, b, rc, off);
 	return (0);
 }
 
@@ -421,7 +426,7 @@ int
 slm_upsch_tryptrunc(struct bmap *b, int off,
     struct sl_resource *dst_res)
 {
-	int tract[NBREPLST], retifset[NBREPLST], rc, sched = 0;
+	int tract[NBREPLST], retifset[NBREPLST], rc;
 	struct pscrpc_request *rq = NULL;
 	struct slrpc_cservice *csvc;
 	struct srt_ptrunc_req *mq;
@@ -431,28 +436,12 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	struct fidc_membh *f;
 
 	f = b->bcm_fcmh;
-	if (!slm_ptrunc_enabled) {
-		DEBUG_FCMH(PLL_DIAG, f, "ptrunc averted");
-		return (0);
-	}
 	dst_resm = res_getmemb(dst_res);
 	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
 
 	memset(&av, 0, sizeof(av));
 	av.pointer_arg[IP_DSTRESM] = dst_resm;
 	av.space[IN_OFF] = off;
-
-	/*
-	 * Make sure that a truncation is not already scheduled on
-	 * this bmap.
-	 */
-	brepls_init(retifset, 0);
-	retifset[BREPLST_TRUNC_SCHED] = 1;
-
-	if (mds_repl_bmap_walk_all(b, NULL, retifset,
-	    REPL_WALKF_SCIRCUIT))
-		DEBUG_BMAPOD(PLL_FATAL, b,
-		    "truncate already scheduled");
 
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
 	    CSVCF_NORECON, NULL);
@@ -471,12 +460,18 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 
 	brepls_init(tract, -1);
 	tract[BREPLST_TRUNC_QUEUED] = BREPLST_TRUNC_SCHED;
-	retifset[BREPLST_TRUNC_QUEUED] = BREPLST_TRUNC_QUEUED;
-	rc = mds_repl_bmap_apply(b, tract, retifset, off);
-	if (rc != BREPLST_TRUNC_QUEUED)
-		DEBUG_BMAPOD(PLL_FATAL, b, "bmap is corrupted");
 
-	sched = 1;
+	brepls_init(retifset, 0);
+	retifset[BREPLST_TRUNC_QUEUED] = BREPLST_TRUNC_QUEUED;
+
+	rc = mds_repl_bmap_apply(b, tract, retifset, off);
+	if (rc != BREPLST_TRUNC_QUEUED) {
+		OPSTAT_INCR("msl.ptrunc-bmap-bail");
+		DEBUG_BMAPOD(PLL_DEBUG, b, "bmap inconsistency: expected "
+		    "state=TRUNC at off %d", off);
+		PFL_GOTOERR(out, rc = EINVAL);
+	}
+
 	av.pointer_arg[IP_BMAP] = b;
 
 	DEBUG_FCMH(PLL_MAX, f, "ptrunc req=%p, off=%d, id=%#x",
@@ -485,12 +480,19 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	rq->rq_interpret_reply = slm_upsch_tryptrunc_cb;
 	rq->rq_async_args = av;
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (rc == 0)
+	if (rc == 0) {
+		OPSTAT_INCR("msl.ptrunc-bmap-send");
 		return (0);
+	}
 
  out:
 	pscrpc_req_finished(rq);
-	slm_upsch_finish_ptrunc(csvc, b, sched, rc, off);
+
+	/* There has to be a better way than this lock/unlock juggle */
+	BMAP_ULOCK(b);
+	slm_upsch_finish_ptrunc(csvc, b, rc, off);
+	BMAP_LOCK(b);
+
 	return (rc);
 }
 
@@ -498,6 +500,7 @@ void
 slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 {
 	sl_replica_t repl;
+	struct resprof_mds_info *rpmi;
 	int rc, idx, tract[NBREPLST];
 	struct slm_batchscratch_preclaim *bsp = scratch;
 	struct srt_preclaim_req *q = req;
@@ -508,21 +511,19 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	if (!error && pp && pp->rc)
 		error = -pp->rc;
 
+	/*
+	 * If our I/O server does not support punching a hole, fake success 
+	 * and go ahead mark the bmap as invalid. Note that PFLERR_NOTSUP
+	 * is not the same as EOPNOTSUPP.
+	 */
 	if (error == -PFLERR_NOTSUP) {
-		struct resprof_mds_info *rpmi;
-
+		error = 0;
 		rpmi = res2rpmi(bsp->bsp_res);
 		RPMI_LOCK(rpmi);
 		res2iosinfo(bsp->bsp_res)->si_flags |=
 		    SIF_PRECLAIM_NOTSUP;
 		RPMI_ULOCK(rpmi);
 	}
-	repl.bs_id = bsp->bsp_res->res_id;
-
-	brepls_init(tract, -1);
-	tract[BREPLST_GARBAGE_SCHED] = error ?
-	    BREPLST_GARBAGE_QUEUED : BREPLST_INVALID;
-
 	rc = slm_fcmh_get(&q->fg, &f);
 	if (rc)
 		goto out;
@@ -530,6 +531,15 @@ slm_batch_preclaim_cb(void *req, void *rep, void *scratch, int error)
 	if (rc)
 		goto out;
 
+	repl.bs_id = bsp->bsp_res->res_id;
+
+	brepls_init(tract, -1);
+	tract[BREPLST_GARBAGE_SCHED] = error ?
+	    BREPLST_GARBAGE_QUEUED : BREPLST_INVALID;
+
+	/*
+ 	 * Map I/O ID to index into the table and then modify the bmap.
+ 	 */
 	rc = mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f), &repl,
 	    &idx, 1);
 	if (rc >= 0) {
@@ -587,7 +597,8 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	brepls_init_idx(retifset);
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 	if (rc != BREPLST_GARBAGE_QUEUED) {
-		DEBUG_BMAPOD(PLL_DEBUG, b, "consistency error; expected "
+		OPSTAT_INCR("msl.preclaim-bmap-bail");
+		DEBUG_BMAPOD(PLL_DEBUG, b, "bmap inconsistency: expected "
 		    "state=GARBAGE at off %d", off);
 		PFL_GOTOERR(out, rc = EINVAL);
 	}
@@ -600,8 +611,11 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	rc = mds_bmap_write_logrepls(b);
-	psc_assert(rc == 0);
-
+	if (rc) {
+		OPSTAT_INCR("msl.bmap-write-err");
+		psclog_warnx("bmap write: fid="SLPRI_FID", bno = %d, rc = %d", 
+		    fcmh_2_fid(f), b->bcm_bmapno, rc);
+	}
 	return (1);
 
  out:
@@ -1069,6 +1083,9 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
 	r = libsl_id2res(resid);
 	if (r == NULL)
 		return (ESRCH);
+	/*
+	 * Constraints of the table: UNIQUE(resid, fid, bno).
+	 */
 	rc = dbdo(NULL, NULL,
 	    " INSERT INTO upsch ("
 	    "	resid,"						/* 1 */

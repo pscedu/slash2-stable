@@ -696,7 +696,7 @@ struct srm_replst_master_req {
 	sl_replica_t		repls[SL_MAX_REPLICAS];
 	 int32_t		id;		/* user-provided passback value */
 	 int32_t		rc;		/* or EOF */
-	uint32_t		newreplpol;	/* default replication policy */
+	uint32_t		newreplpol;	/* default replication policy for new data */
 	uint32_t		nrepls;		/* # of I/O systems in 'repls' */
 	unsigned char		data[48];	/* slave data here if it fits, really used? */
 } __packed;
@@ -963,8 +963,8 @@ struct srm_replrq_req {
 	uint32_t		nrepls;
 	uint32_t		usr_prio;	/* priority */
 	uint32_t		sys_prio;
-	sl_bmapno_t		bmapno;		/* bmap to access or -1 for all */
-	sl_bmapno_t		nbmaps;		/* length */
+	sl_bmapno_t		bmapno;		/* the first bmap */
+	sl_bmapno_t		nbmaps;		/* length or -1 for all */
 	 int32_t		_pad;
 } __packed;
 
