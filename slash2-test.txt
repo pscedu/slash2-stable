@@ -311,3 +311,4 @@ real	16m30.672s
 user	0m3.337s
 sys	0m16.350s
 
+I wonder if silly name slows down the unlink path a bit.
