@@ -302,3 +302,12 @@ real    15m33.789s
 user    0m3.465s
 sys     0m15.197s
 
+07/05/2017
+----------
+
+iozone -a results on yuzu:
+
+real	16m30.672s
+user	0m3.337s
+sys	0m16.350s
+
