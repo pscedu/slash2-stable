@@ -387,7 +387,6 @@ psc_pool_try_shrink(struct psc_poolmgr *m, int n)
 	for (i = 0; i < n; i++) {
 		if (m->ppm_total > m->ppm_min) {
 			p = POOL_TRYGETOBJ(m);
-			/* XXX Hit NULL p case below, don't know why */
 			if (!p) {
 				/*
 				 * 09/23/2016: hit this message with pool bmpce. Need
@@ -400,7 +399,7 @@ psc_pool_try_shrink(struct psc_poolmgr *m, int n)
 				    "min = %d, name = %s.\n", 
 				    m, m->ppm_total, m->ppm_min, 
 				    m->ppm_master->pms_name);
-				return (i);
+				break;
 			}
 			_psc_pool_destroy_obj(m, p);
 			m->ppm_total--;
