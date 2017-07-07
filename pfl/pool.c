@@ -688,6 +688,10 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 		    &m->ppm_lc.plc_lock, 100);
 		psc_atomic32_dec(&m->ppm_nwaiters);
 
+		/*
+ 		 * We only get by this because no pool uses an external lock
+ 		 * So m->ppm_lc.plc_lock is the same as POOL_LOCK(m).
+ 		 */
 		POOL_LOCK(m);
 		p = POOL_TRYGETOBJ(m);
 		if (p)
