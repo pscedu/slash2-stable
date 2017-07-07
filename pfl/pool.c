@@ -383,6 +383,7 @@ psc_pool_try_shrink(struct psc_poolmgr *m, int n)
 	int i;
 	void *p;
 
+	POOL_LOCK(m);
 	for (i = 0; i < n; i++) {
 		if (m->ppm_total > m->ppm_min) {
 			p = POOL_TRYGETOBJ(m);
@@ -391,6 +392,9 @@ psc_pool_try_shrink(struct psc_poolmgr *m, int n)
 				/*
 				 * 09/23/2016: hit this message with pool bmpce. Need
 				 * to double check locking.
+				 *
+				 * 07/07/2017: When lock rework, the following message
+				 * should never appear again.
 				 */
 				fprintf(stderr, "pool corrupt? m = %p, total = %d, "
 				    "min = %d, name = %s.\n", 
@@ -405,6 +409,7 @@ psc_pool_try_shrink(struct psc_poolmgr *m, int n)
 			break;
 		}
 	}
+	POOL_ULOCK(m);
 	return (i);
 }
 
