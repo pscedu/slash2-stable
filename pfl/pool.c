@@ -240,7 +240,7 @@ _psc_poolmaster_initmgr(struct psc_poolmaster *p, struct psc_poolmgr *m)
 	pll_add_sorted(&psc_pools, m, psc_pool_cmp);
 
 	if (n)
-		n = psc_pool_grow(m, n);
+		n = psc_pool_try_grow(m, n);
 	return (n);
 }
 
@@ -321,7 +321,7 @@ _psc_pool_destroy_obj(struct psc_poolmgr *m, void *p)
  * @n: #items to add to pool.
  */
 int
-psc_pool_grow(struct psc_poolmgr *m, int n)
+psc_pool_try_grow(struct psc_poolmgr *m, int n)
 {
 	void *p;
 	int i, flags;
@@ -434,7 +434,7 @@ psc_pool_settotal(struct psc_poolmgr *m, int total)
 	if (adj < 0)
 		adj = psc_pool_try_shrink(m, -adj);
 	else if (adj)
-		adj = psc_pool_grow(m, adj);
+		adj = psc_pool_try_grow(m, adj);
 	return (adj);
 }
 
@@ -460,7 +460,7 @@ psc_pool_resize(struct psc_poolmgr *m)
 	if (adj < 0)
 		psc_pool_try_shrink(m, -adj);
 	else if (adj)
-		psc_pool_grow(m, adj);
+		psc_pool_try_grow(m, adj);
 }
 
 /*
@@ -596,7 +596,7 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 	n = m->ppm_min - m->ppm_total;
 	if (n > 0) {
 		POOL_ULOCK(m);
-		psc_pool_grow(m, n);
+		psc_pool_try_grow(m, n);
 		POOL_LOCK(m);
 
 		p = POOL_TRYGETOBJ(m);
@@ -618,7 +618,7 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 		 * will fail if we have aleady reached our limit.
 		 */
 		POOL_ULOCK(m);
-		n = psc_pool_grow(m, 2); // MAX(1, m->ppm_total / 20)
+		n = psc_pool_try_grow(m, 2); // MAX(1, m->ppm_total / 20)
 		POOL_LOCK(m);
 
 		p = POOL_TRYGETOBJ(m);
@@ -642,7 +642,7 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 			    m->ppm_entsize);
 		ureqlock(&m->ppm_master->pms_lock, locked);
 		if (n) {
-			psc_pool_grow(m, 2);
+			psc_pool_try_grow(m, 2);
 
 			POOL_LOCK(m);
 			p = POOL_TRYGETOBJ(m);

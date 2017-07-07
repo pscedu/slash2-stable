@@ -190,6 +190,13 @@ struct psc_poolmgr {
 
 #define psc_poolmaster_getmgr(p)	_psc_poolmaster_getmgr((p), psc_memnode_getid())
 
+
+/*
+ * Increase #items in a pool.
+ * @m: the pool manager.
+ * @i: #items to add to pool.
+ */
+int psc_pool_try_grow(struct psc_poolmgr *, int);
 /*
  * Decrease #items in a pool.
  * @m: the pool manager.
@@ -245,7 +252,6 @@ struct psc_poolmgr *
 	  psc_pool_lookup(const char *);
 void	*_psc_pool_get(struct psc_poolmgr *, int);
 int	  psc_pool_gettotal(struct psc_poolmgr *);
-int	  psc_pool_grow(struct psc_poolmgr *, int);
 int	  psc_pool_inuse(struct psc_poolmgr *);
 int	  psc_pool_nfree(struct psc_poolmgr *);
 void	  psc_pool_reap(struct psc_poolmgr *, int);
