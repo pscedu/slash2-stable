@@ -324,17 +324,17 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 
 	psc_assert(n > 0);
 
+	POOL_LOCK(m);
+	POOL_CHECK(m);
 	if (m->ppm_max) {
-		locked = POOL_RLOCK(m);
-		POOL_CHECK(m);
 		if (m->ppm_total == m->ppm_max) {
-			POOL_URLOCK(m, locked);
+			POOL_ULOCK(m);
 			return (0);
 		}
 		/* Bound number to add to ppm_max. */
 		n = MIN(n, m->ppm_max - m->ppm_total);
-		POOL_URLOCK(m, locked);
 	}
+	POOL_ULOCK(m);
 
 	flags = PAF_CANFAIL;
 	if (m->ppm_flags & PPMF_PIN)
