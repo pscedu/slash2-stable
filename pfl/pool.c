@@ -319,8 +319,8 @@ _psc_pool_destroy_obj(struct psc_poolmgr *m, void *p)
 int
 psc_pool_grow(struct psc_poolmgr *m, int n)
 {
-	int i, flags, locked;
 	void *p;
+	int i, flags;
 
 	psc_assert(n > 0);
 
@@ -358,11 +358,11 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 		/*
  		 * Add unconditionally, we might go overboard occasionally.
  		 */
-		locked = POOL_RLOCK(m);
+		POOL_LOCK(m);
 		m->ppm_total++;
 		pfl_opstat_incr(m->ppm_opst_grows);
 		POOL_ADD_ITEM(m, p);
-		POOL_URLOCK(m, locked);
+		POOL_ULOCK(m);
 	}
 	return (i);
 }
