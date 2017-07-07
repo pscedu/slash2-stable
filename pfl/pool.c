@@ -344,6 +344,8 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 	for (i = 0; i < n; i++) {
 		p = psc_alloc(m->ppm_entsize, flags);
 		if (p == NULL) {
+			fprintf(stderr, "ENOMEM: m = %p, name = %s, n = %d\n", 
+				p, m->ppm_master->pms_name, n); 
 			errno = ENOMEM;
 			return (i);
 		}
