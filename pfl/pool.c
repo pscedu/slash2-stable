@@ -394,6 +394,9 @@ psc_pool_try_shrink(struct psc_poolmgr *m, int n)
 				 *
 				 * 07/07/2017: When lock rework, the following message
 				 * should never appear again.
+				 *
+				 * On a second thought, it is still possible because
+				 * a different task might grab an item off the list.
 				 */
 				fprintf(stderr, "pool corrupt? m = %p, total = %d, "
 				    "min = %d, name = %s.\n", 
