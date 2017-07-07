@@ -432,15 +432,15 @@ psc_pool_settotal(struct psc_poolmgr *m, int total)
 void
 psc_pool_resize(struct psc_poolmgr *m)
 {
-	int adj, locked;
+	int adj;
 
 	adj = 0;
-	locked = POOL_RLOCK(m);
+	POOL_LOCK(m);
 	if (m->ppm_max && m->ppm_total > m->ppm_max)
 		adj = m->ppm_max - m->ppm_total;
 	else if (m->ppm_total < m->ppm_min)
 		adj = m->ppm_min - m->ppm_total;
-	POOL_URLOCK(m, locked);
+	POOL_ULOCK(m);
 
 	if (adj < 0)
 		psc_pool_try_shrink(m, -adj);
