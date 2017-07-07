@@ -81,9 +81,8 @@
 #  define POOL_TRYGETOBJ(m)						\
 	_PFL_RVSTART {							\
 		void *_p, *_next;					\
-		int _locked;						\
 									\
-		_locked = POOL_RLOCK(m);				\
+		POOL_LOCK_ENSURE(m);					\
 		_p = pll_peekhead(&(m)->ppm_pll);			\
 		if (_p) {						\
 			_POOL_PROTRDWR(_p, (m));			\
@@ -96,7 +95,6 @@
 			if (_next)					\
 				_POOL_PROTNONE(_next, (m));		\
 		}							\
-		POOL_URLOCK((m), _locked);				\
 		_p;							\
 	} _PFL_RVEND
 #else
@@ -109,8 +107,14 @@
 	} while (0)
 
 #  define POOL_TRYGETOBJ(m)						\
-	(POOL_IS_MLIST(m) ? pfl_mlist_tryget(&(m)->ppm_ml) :		\
-	    lc_getnb(&(m)->ppm_lc))
+	_PFL_RVSTART {							\
+		void *_p;						\
+		POOL_LOCK_ENSURE(m);					\
+		_p = (POOL_IS_MLIST(m) ? 				\
+			pfl_mlist_tryget(&(m)->ppm_ml) :		\
+			lc_getnb(&(m)->ppm_lc));			\
+		_p;							\
+	} _PFL_RVEND
 #endif
 
 __static struct psc_poolset psc_poolset_main = PSC_POOLSET_INIT;

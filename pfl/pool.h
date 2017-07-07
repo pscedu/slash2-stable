@@ -140,6 +140,7 @@ struct psc_poolmgr {
 #define PPMF_PREEMPTQ		(1 << 7)	/* queued for preemptive reaping */
 
 #define POOL_LOCK(m)		PLL_LOCK(&(m)->ppm_pll)
+#define POOL_LOCK_ENSURE(m)	PLL_LOCK_ENSURE(&(m)->ppm_pll)
 #define POOL_TRYLOCK(m)		PLL_TRYLOCK(&(m)->ppm_pll)
 #define POOL_TRYRLOCK(m, lkd)	PLL_TRYRLOCK(&(m)->ppm_pll, (lkd))
 #define POOL_ULOCK(m)		PLL_ULOCK(&(m)->ppm_pll)
