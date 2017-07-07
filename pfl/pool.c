@@ -518,17 +518,6 @@ psc_pool_reapmem(size_t size)
 	_psc_poolset_reap(&psc_poolset_main, NULL, size);
 }
 
-/*
- * Try to grab an item from a pool, failing if none are immediately
- * available.
- * @m: the pool manager.
- */
-void *
-_psc_pool_tryget(struct psc_poolmgr *m)
-{
-	return (POOL_TRYGETOBJ(m));
-}
-
 void
 psc_pool_reap(struct psc_poolmgr *m, int desperate)
 {
