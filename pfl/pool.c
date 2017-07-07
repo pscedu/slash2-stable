@@ -473,7 +473,7 @@ _psc_poolset_reap(struct psc_poolset *s,
 	struct psc_poolmgr *m, *culprit;
 	struct psc_poolmaster *p;
 	size_t tmx, culpritmx;
-	int i, nobj, locked;
+	int i, nobj;
 
 	nobj = 0;
 	culprit = NULL;
@@ -484,11 +484,11 @@ _psc_poolset_reap(struct psc_poolset *s,
 			continue;
 		m = psc_poolmaster_getmgr(p);
 
-		if (!POOL_TRYRLOCK(m, &locked))
+		if (!POOL_TRYLOCK(m))
 			continue;
 		tmx = m->ppm_entsize * m->ppm_nfree;
 		nobj = MAX(size / m->ppm_entsize, 1);
-		POOL_URLOCK(m, locked);
+		POOL_ULOCK(m);
 
 		if (tmx > culpritmx) {
 			culprit = m;
