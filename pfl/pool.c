@@ -342,6 +342,10 @@ psc_pool_grow(struct psc_poolmgr *m, int n)
 	if (m->ppm_flags & PPMF_ALIGN)
 		flags |= PAF_PAGEALIGN;
 	for (i = 0; i < n; i++) {
+		/*
+ 		 * Do not hold any locks because we might call psc_pool_reapmem()
+ 		 * when memory is low.
+ 		 */
 		p = psc_alloc(m->ppm_entsize, flags);
 		if (p == NULL) {
 			fprintf(stderr, "ENOMEM: m = %p, name = %s, n = %d\n", 
