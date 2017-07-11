@@ -55,14 +55,21 @@ struct pfl_odt_receipt;
 #define ODT_ITEM_START		0x1000
 #define ODT_ITEM_COUNT		(1024 * 128)
 
-/* on-disk, a CRC immediately follows this structure */
+/* 
+ *  Layout of the on-disk table.  Each slot is 128 bytes and contains one item:
+ *
+ *    +-----------------+-----+-----+-----+-----+              +-----+
+ *    |  header         |     |     |     |     |  .....       |     |
+ *    +-----------------+-----+-----+-----+-----+              +-----+
+ *    0               0x1000
+ */
 struct pfl_odt_hdr {
 	uint32_t		 odth_nitems;
 	uint32_t		 odth_itemsz;	/* does not include pfl_odt_slotftr */
 	uint32_t		 odth_slotsz;	/* does include pfl_odt_slotftr */
 	uint32_t		 odth_options;	/* see ODTBL_OPT_* below */
-	off_t			 odth_start;
-	uint64_t		 odth_crc;
+	off_t			 odth_start;	/* offset of the first item */
+	uint64_t		 odth_crc;	/* CRC of the header */
 } __packed;
 
 /* odth_options */
@@ -73,7 +80,7 @@ struct pfl_odt_hdr {
 struct pfl_odt_slotftr {
 	uint32_t		 odtf_flags;
 	uint32_t		 odtf_slotno;
-	uint64_t		 odtf_crc;
+	uint64_t		 odtf_crc;	/* CRC of the footer */
 };
 
 /* odtf_flags values */
