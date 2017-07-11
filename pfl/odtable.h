@@ -90,7 +90,7 @@ struct pfl_odt_slotftr {
 
 /* pfl_odtops_mmap and slm_odtops */
 struct pfl_odt_ops {
-	void	(*odtop_create)(struct pfl_odt *, const char *, int);
+	void	(*odtop_new)(struct pfl_odt *, const char *, int);
 	void	(*odtop_open)(struct pfl_odt *, const char *, int);
 	void	(*odtop_close)(struct pfl_odt *);
 	void	(*odtop_read)(struct pfl_odt *,

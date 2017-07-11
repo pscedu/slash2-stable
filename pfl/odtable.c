@@ -73,7 +73,7 @@ pfl_odt_sync(struct pfl_odt *t, size_t item)
 }
 
 void
-pfl_odt_create(struct pfl_odt *t, const char *fn, int overwrite)
+pfl_odt_new(struct pfl_odt *t, const char *fn, int overwrite)
 {
 	struct pfl_odt_hdr *h;
 
@@ -114,7 +114,7 @@ pfl_odt_close(struct pfl_odt *t)
 }
 
 struct pfl_odt_ops pfl_odtops_mmap = {
-	pfl_odt_create,		/* odtop_create() */
+	pfl_odt_new,		/* odtop_new() */
 	pfl_odt_open,		/* odtop_open() */
 	pfl_odt_close,		/* odtop_close() */
 	NULL,			/* odtop_read() */
@@ -326,7 +326,7 @@ pfl_odt_create(const char *fn, size_t nitems, size_t itemsz,
 	psc_crc64_calc(&h->odth_crc, h, sizeof(*h) -
 	    sizeof(h->odth_crc));
 
-	t->odt_ops.odtop_create(t, fn, overwrite);
+	t->odt_ops.odtop_new(t, fn, overwrite);
 
 	for (r.odtr_item = 0; r.odtr_item < nitems; r.odtr_item++) {
 		pfl_odt_mapslot(t, r.odtr_item, NULL, &f);
