@@ -62,6 +62,8 @@ struct pfl_odt_receipt;
  *    |  header         |     |     |     |     |  .....       |     |
  *    +-----------------+-----+-----+-----+-----+              +-----+
  *    0               0x1000
+ *
+ *  The initial file size is 1024 * 128 * 128 + 0x1000 = 16781312 bytes.
  */
 struct pfl_odt_hdr {
 	uint32_t		 odth_nitems;
@@ -80,7 +82,7 @@ struct pfl_odt_hdr {
 struct pfl_odt_slotftr {
 	uint32_t		 odtf_flags;
 	uint32_t		 odtf_slotno;
-	uint64_t		 odtf_crc;	/* CRC of the footer */
+	uint64_t		 odtf_crc;	/* CRC of the footer itself */
 };
 
 /* odtf_flags values */
