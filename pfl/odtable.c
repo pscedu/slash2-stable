@@ -69,8 +69,6 @@ pfl_odt_getitemoff(const struct pfl_odt *t, size_t item)
 #define GETADDR(t, item)						\
 	PSC_AGP((t)->odt_base, pfl_odt_getitemoff((t), (item)))
 
-#define MMAPSZ(t)	((t)->odt_hdr->odth_nitems * (t)->odt_hdr->odth_slotsz)
-
 void
 pfl_odt_mmap_sync(struct pfl_odt *t, size_t item)
 {
@@ -109,15 +107,7 @@ pfl_odt_mmap_mapslot(struct pfl_odt *t, size_t item, void **pp,
 }
 
 void
-pfl_odt_mmap_resize(__unusedx struct pfl_odt *t)
-{
-	psc_fatalx("not supported");
-	// munmap
-	// mmap
-}
-
-void
-pfl_odt_mmap_create(struct pfl_odt *t, const char *fn, int overwrite)
+pfl_odt_create(struct pfl_odt *t, const char *fn, int overwrite)
 {
 	struct pfl_odt_hdr *h;
 
@@ -126,18 +116,12 @@ pfl_odt_mmap_create(struct pfl_odt *t, const char *fn, int overwrite)
 	    (overwrite ? O_TRUNC : O_EXCL), 0600);
 	if (t->odt_fd == -1)
 		psc_fatal("open %s", fn);
-	if (ftruncate(t->odt_fd, h->odth_start + MMAPSZ(t)) == -1)
-		psc_fatal("truncate %s", fn);
 	if (pwrite(t->odt_fd, h, sizeof(*h), 0) != sizeof(*h))
 		psc_fatal("write %s", fn);
-	t->odt_base = mmap(NULL, MMAPSZ(t),  PROT_WRITE, MAP_SHARED,
-	    t->odt_fd, h->odth_start);
-	if (t->odt_base == MAP_FAILED)
-		PFLOG_ODT(PLL_FATAL, t, "mmap %s; rc=%d", fn, errno);
 }
 
 void
-pfl_odt_mmap_open(struct pfl_odt *t, const char *fn, int oflg)
+pfl_odt_open(struct pfl_odt *t, const char *fn, int oflg)
 {
 	struct pfl_odt_hdr *h;
 	int prot = PROT_READ;
@@ -154,29 +138,23 @@ pfl_odt_mmap_open(struct pfl_odt *t, const char *fn, int oflg)
 		    rc, errno);
 	if ((oflg & ODTBL_FLG_RDONLY) == 0)
 		prot |= PROT_WRITE;
-	t->odt_base = mmap(NULL, MMAPSZ(t), prot, MAP_SHARED, t->odt_fd,
-	    h->odth_start);
-	if (t->odt_base == MAP_FAILED)
-		PFLOG_ODT(PLL_FATAL, t, "mmap %s", fn);
 }
 
 void
-pfl_odt_mmap_close(struct pfl_odt *t)
+pfl_odt_close(struct pfl_odt *t)
 {
-	if (t->odt_base && munmap(t->odt_base, MMAPSZ(t)) == -1)
-		PFLOG_ODT(PLL_ERROR, t, "munmap: rc=%d", errno);
 	if (t->odt_fd != -1 && close(t->odt_fd) == -1)
 		PFLOG_ODT(PLL_ERROR, t, "close: rc=%d %d", errno, t->odt_fd);
 }
 
 struct pfl_odt_ops pfl_odtops_mmap = {
-	pfl_odt_mmap_create,	/* odtop_create() */
-	pfl_odt_mmap_open,	/* odtop_open() */
-	pfl_odt_mmap_close,	/* odtop_close() */
+	pfl_odt_create,		/* odtop_create() */
+	pfl_odt_open,		/* odtop_open() */
+	pfl_odt_close,		/* odtop_close() */
 	NULL,			/* odtop_read() */
 	NULL,			/* odtop_write() */
-	pfl_odt_mmap_mapslot,	/* odtop_mapslot() */
-	pfl_odt_mmap_resize,	/* odtop_resize() */
+	NULL,			/* odtop_mapslot() */
+	NULL,			/* odtop_resize() */
 	pfl_odt_mmap_sync	/* odtop_sync() */
 };
 

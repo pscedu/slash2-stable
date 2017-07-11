@@ -127,14 +127,10 @@ struct pfl_odt {
 	psc_spinlock_t		 odt_lock;
 	struct pfl_odt_ops	 odt_ops;
 	union {
-		struct {
-			void	*odtum_base;
-			int	 odtum_fd;
-		} m;
+		int	 	 odtu_fd;
 		void		*odtu_mfh;		/* need this for odtable in ZFS */
 	} u;
-#define odt_base	u.m.odtum_base
-#define odt_fd		u.m.odtum_fd
+#define odt_fd		u.odtum_fd
 #define odt_mfh		u.odtu_mfh
 	char			 odt_name[ODT_NAME_MAX];
 	struct psclist_head	 odt_lentry;
