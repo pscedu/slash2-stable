@@ -113,7 +113,7 @@ pfl_odt_close(struct pfl_odt *t)
 		PFLOG_ODT(PLL_ERROR, t, "close: rc=%d %d", errno, t->odt_fd);
 }
 
-struct pfl_odt_ops pfl_odtops_mmap = {
+struct pfl_odt_ops pfl_odtops = {
 	pfl_odt_new,		/* odtop_new() */
 	pfl_odt_open,		/* odtop_open() */
 	pfl_odt_close,		/* odtop_close() */
@@ -197,14 +197,10 @@ pfl_odt_mapslot(struct pfl_odt *t, size_t n, void *pp,
 	void **p = (void **)pp;
 
 	h = t->odt_hdr;
-	if (t->odt_ops.odtop_mapslot)
-		t->odt_ops.odtop_mapslot(t, n, p, fp);
-	else {
-		if (p)
-			*p = PSCALLOC(h->odth_itemsz);
-		if (fp)
-			*fp = PSCALLOC(sizeof(**fp));
-	}
+	if (p)
+		*p = PSCALLOC(h->odth_itemsz);
+	if (fp)
+		*fp = PSCALLOC(sizeof(**fp));
 }
 
 /*
@@ -307,7 +303,7 @@ pfl_odt_create(const char *fn, size_t nitems, size_t itemsz,
 	struct pfl_odt *t;
 
 	t = PSCALLOC(sizeof(*t));
-	t->odt_ops = pfl_odtops_mmap;
+	t->odt_ops = pfl_odtops;
 	INIT_SPINLOCK(&t->odt_lock);
 	snprintf(t->odt_name, sizeof(t->odt_name), "%s",
 	    pfl_basename(fn));
