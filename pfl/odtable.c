@@ -66,44 +66,10 @@ pfl_odt_getitemoff(const struct pfl_odt *t, size_t item)
 	return (item * h->odth_slotsz);
 }
 
-#define GETADDR(t, item)						\
-	PSC_AGP((t)->odt_base, pfl_odt_getitemoff((t), (item)))
-
 void
-pfl_odt_mmap_sync(struct pfl_odt *t, size_t item)
+pfl_odt_sync(struct pfl_odt *t, size_t item)
 {
-	int rc, flags;
-	size_t len;
-	void *p;
 
-	flags = t->odt_hdr->odth_options & ODTBL_OPT_SYNC ?
-	    MS_SYNC : MS_ASYNC;
-
-	if (item == (size_t)-1) {
-		p = t->odt_base;
-		len = MMAPSZ(t);
-	} else {
-		p = GETADDR(t, item);
-		len = t->odt_hdr->odth_slotsz;
-	}
-
-	rc = msync(p, len, flags);
-	if (rc)
-		PFLOG_ODT(PLL_ERROR, t, "msync: %d", errno);
-}
-
-void
-pfl_odt_mmap_mapslot(struct pfl_odt *t, size_t item, void **pp,
-    struct pfl_odt_slotftr **fp)
-{
-	void *p;
-
-	p = GETADDR(t, item);
-	if (pp)
-		*pp = p;
-	if (fp)
-		*fp = PSC_AGP(p, t->odt_hdr->odth_slotsz -
-		    sizeof(**fp));
 }
 
 void
@@ -155,7 +121,7 @@ struct pfl_odt_ops pfl_odtops_mmap = {
 	NULL,			/* odtop_write() */
 	NULL,			/* odtop_mapslot() */
 	NULL,			/* odtop_resize() */
-	pfl_odt_mmap_sync	/* odtop_sync() */
+	pfl_odt_sync		/* odtop_sync() */
 };
 
 void
