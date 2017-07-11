@@ -428,11 +428,11 @@ psc_vbitmap_next(struct psc_vbitmap *vb, size_t *elem)
 			} else if (pos && *pos != ~(char)(0x100 -
 			    (1 << vb->vb_lastsize)))
 				goto found;
-			pos = vb->vb_start;	/* byte is full, advance */
+			pos = vb->vb_start;	/* last byte is full, wrap around */
 		} else {
 			if (*pos != 0xff)
 				goto found;
-			pos++;			/* byte is full, advance */
+			pos++;			/* current byte is full, advance */
 		}
 	} while (pos != start);
 
