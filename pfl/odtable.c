@@ -229,6 +229,11 @@ pfl_odt_allocslot(struct pfl_odt *t)
 	if (item >= h->odth_nitems) {
 		ODT_STAT_INCR(t, extend);
 		OPSTAT_INCR("pfl.odtable-resize");
+		/*
+		 * psc_vbitmap_next() has enlarged the bitmap. Update
+		 * the number of items accordingly and write to the
+		 * disk.
+		 */
 		h->odth_nitems = psc_vbitmap_getsize(t->odt_bitmap);
 
 		t->odt_ops.odtop_resize(t);	/* slm_odt_resize() */
