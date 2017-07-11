@@ -130,7 +130,7 @@ struct pfl_odt {
 		int	 	 odtu_fd;
 		void		*odtu_mfh;		/* need this for odtable in ZFS */
 	} u;
-#define odt_fd		u.odtum_fd
+#define odt_fd		u.odtu_fd
 #define odt_mfh		u.odtu_mfh
 	char			 odt_name[ODT_NAME_MAX];
 	struct psclist_head	 odt_lentry;
