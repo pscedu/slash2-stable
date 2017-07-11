@@ -82,24 +82,6 @@ psc_vbitmap_newf(size_t nelems, int flags)
 	return (vb);
 }
 
-/*
- * Initialize a variable bitmap from a chunk of memory.
- * @buf: memory where to read bitmap from.
- * @size: length of memory buffer.
- */
-struct psc_vbitmap *
-psc_vbitmap_attach(unsigned char *buf, size_t size)
-{
-	struct psc_vbitmap *vb;
-
-	vb = PSCALLOC(sizeof(*vb));
-	vb->vb_flags |= PVBF_EXTALLOC;
-	vb->vb_pos = vb->vb_start = buf;
-	vb->vb_end = buf + (size - 1); /* XXX does not handle 0 */
-	vb->vb_lastsize = NBBY;
-	return (vb);
-}
-
 void
 _psc_vbitmap_free(struct psc_vbitmap *vb)
 {
