@@ -88,7 +88,7 @@ struct pfl_odt_slotftr {
 /* odtf_flags values */
 #define ODT_FTRF_INUSE		(1 << 0)
 
-/* pfl_odtops_mmap and slm_odtops */
+/* pfl_odtops and slm_odtops */
 struct pfl_odt_ops {
 	void	(*odtop_new)(struct pfl_odt *, const char *, int);
 	void	(*odtop_open)(struct pfl_odt *, const char *, int);
@@ -98,12 +98,6 @@ struct pfl_odt_ops {
 		    struct pfl_odt_slotftr *);
 	void	(*odtop_write)(struct pfl_odt *, const void *,
 		    struct pfl_odt_slotftr *, size_t);
-	/*
-	 * Allow the use of mmap() interface to work on the table.
-	 * Currently only used by the odtable (not by slashd).
-	 */
-	void	(*odtop_mapslot)(struct pfl_odt *, size_t, void **,
-		    struct pfl_odt_slotftr **);
 	void	(*odtop_resize)(struct pfl_odt *);
 	void	(*odtop_sync)(struct pfl_odt *, size_t);
 };

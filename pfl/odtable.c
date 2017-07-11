@@ -119,7 +119,6 @@ struct pfl_odt_ops pfl_odtops = {
 	pfl_odt_close,		/* odtop_close() */
 	NULL,			/* odtop_read() */
 	NULL,			/* odtop_write() */
-	NULL,			/* odtop_mapslot() */
 	NULL,			/* odtop_resize() */
 	pfl_odt_sync		/* odtop_sync() */
 };
@@ -225,10 +224,8 @@ pfl_odt_putitemf(struct pfl_odt *t, size_t n, void *p, int inuse)
 void
 pfl_odt_freebuf(struct pfl_odt *t, void *p, struct pfl_odt_slotftr *f)
 {
-	if (t->odt_ops.odtop_mapslot == NULL) {
-		PSCFREE(p);
-		PSCFREE(f);
-	}
+	PSCFREE(p);
+	PSCFREE(f);
 }
 
 void
