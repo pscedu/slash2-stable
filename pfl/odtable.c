@@ -328,6 +328,11 @@ pfl_odt_getslot(struct pfl_odt *t, const struct pfl_odt_receipt *r,
 	h = t->odt_hdr;
 	psc_assert(r->odtr_item <= h->odth_nitems - 1);
 
+	if (p)
+		*p = PSCALLOC(h->odth_itemsz);
+	if (fp)
+		*fp = PSCALLOC(sizeof(**fp));
+		
 	pfl_odt_mapslot(t, r->odtr_item, p, fp);
 
 	t->odt_ops.odtop_read(t, r, p ? *p : NULL, fp ? *fp : NULL);
