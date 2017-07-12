@@ -300,16 +300,14 @@ pfl_odt_mapslot(struct pfl_odt *t, size_t n, void *pp,
 struct pfl_odt_receipt *
 pfl_odt_putitemf(struct pfl_odt *t, size_t n, void *p, int inuse)
 {
+	struct pfl_odt_slotftr f;
 	struct pfl_odt_receipt *r;
-	struct pfl_odt_slotftr *f;
 
 	/* Setup and return the receipt. */
 	r = PSCALLOC(sizeof(*r));
 	r->odtr_item = n;
 
-	pfl_odt_mapslot(t, n, NULL, &f);
-	_pfl_odt_doput(t, r, p, f, inuse);
-	pfl_odt_freebuf(t, NULL, f);
+	_pfl_odt_doput(t, r, p, &f, inuse);
 	return (r);
 }
 
