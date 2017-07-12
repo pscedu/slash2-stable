@@ -67,12 +67,6 @@ pfl_odt_getitemoff(const struct pfl_odt *t, size_t item)
 }
 
 void
-pfl_odt_sync(struct pfl_odt *t, size_t item)
-{
-
-}
-
-void
 pfl_odt_new(struct pfl_odt *t, const char *fn, int overwrite)
 {
 	struct pfl_odt_hdr *h;
@@ -113,13 +107,36 @@ pfl_odt_close(struct pfl_odt *t)
 		PFLOG_ODT(PLL_ERROR, t, "close: rc=%d %d", errno, t->odt_fd);
 }
 
+void
+pfl_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
+    void *p, struct pfl_odt_slotftr *f)
+{
+
+
+}
+
+void
+pfl_odt_write(struct pfl_odt *t, const void *p,
+    struct pfl_odt_slotftr *f, size_t item)
+{
+
+
+}
+
+void
+pfl_odt_sync(struct pfl_odt *t, size_t item)
+{
+
+}
+
+
+/* compare to slm_odtops */
 struct pfl_odt_ops pfl_odtops = {
 	pfl_odt_new,		/* odtop_new() */
 	pfl_odt_open,		/* odtop_open() */
 	pfl_odt_close,		/* odtop_close() */
-	NULL,			/* odtop_read() */
-	NULL,			/* odtop_write() */
-	NULL,			/* odtop_resize() */
+	pfl_odt_read,		/* odtop_read() */
+	pfl_odt_write,		/* odtop_write() */
 	pfl_odt_sync		/* odtop_sync() */
 };
 
@@ -240,9 +257,7 @@ pfl_odt_getslot(struct pfl_odt *t, const struct pfl_odt_receipt *r,
 
 	pfl_odt_mapslot(t, r->odtr_item, p, fp);
 
-	if (t->odt_ops.odtop_read)
-		t->odt_ops.odtop_read(t, r, p ? *p : NULL,
-		    fp ? *fp : NULL);
+	t->odt_ops.odtop_read(t, r, p ? *p : NULL, fp ? *fp : NULL);
 
 	pfl_opstat_add(t->odt_iostats.rd, h->odth_slotsz);
 
