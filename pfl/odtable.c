@@ -209,10 +209,11 @@ pfl_odt_sync(struct pfl_odt *t, __unusedx size_t item)
 struct pfl_odt_ops pfl_odtops = {
 	pfl_odt_new,		/* odtop_new() */
 	pfl_odt_open,		/* odtop_open() */
-	pfl_odt_close,		/* odtop_close() */
 	pfl_odt_read,		/* odtop_read() */
 	pfl_odt_write,		/* odtop_write() */
-	pfl_odt_sync		/* odtop_sync() */
+	NULL,			/* odtop_resize() */
+	pfl_odt_sync,		/* odtop_sync() */
+	pfl_odt_close		/* odtop_close() */
 };
 
 void
