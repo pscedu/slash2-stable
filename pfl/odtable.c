@@ -362,11 +362,9 @@ pfl_odt_replaceitem(struct pfl_odt *t, struct pfl_odt_receipt *r,
 void
 pfl_odt_freeitem(struct pfl_odt *t, struct pfl_odt_receipt *r)
 {
-	struct pfl_odt_slotftr *f;
+	struct pfl_odt_slotftr f;
 
-	pfl_odt_mapslot(t, r->odtr_item, NULL, &f);
-	_pfl_odt_doput(t, r, NULL, f, 0);
-	pfl_odt_freebuf(t, NULL, f);
+	_pfl_odt_doput(t, r, NULL, &f, 0);
 
 	spinlock(&t->odt_lock);
 	psc_vbitmap_unset(t->odt_bitmap, r->odtr_item);
