@@ -308,13 +308,6 @@ pfl_odt_putitem(struct pfl_odt *t, size_t n, void *p, int inuse)
 }
 
 void
-pfl_odt_freebuf(struct pfl_odt *t, void *p, struct pfl_odt_slotftr *f)
-{
-	PSCFREE(p);
-	PSCFREE(f);
-}
-
-void
 pfl_odt_getslot(struct pfl_odt *t, const struct pfl_odt_receipt *r,
     void *pp, struct pfl_odt_slotftr **fp)
 {

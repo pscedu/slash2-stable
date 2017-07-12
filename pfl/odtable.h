@@ -167,8 +167,6 @@ void	 pfl_odt_create(const char *, size_t, size_t, int, size_t,
 void	 pfl_odt_mapslot(struct pfl_odt *, size_t, void *,
 	    struct pfl_odt_slotftr **);
 void	 pfl_odt_freeitem(struct pfl_odt *, struct pfl_odt_receipt *);
-void	 pfl_odt_freebuf(struct pfl_odt *, void *,
-	    struct pfl_odt_slotftr *);
 void	 pfl_odt_getslot(struct pfl_odt *,
 	    const struct pfl_odt_receipt *, void *,
 	    struct pfl_odt_slotftr **);
