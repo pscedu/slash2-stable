@@ -204,10 +204,10 @@ main(int argc, char *argv[])
 		size_t elem;
 
 		elem = pfl_odt_allocslot(t);
-		pfl_odt_mapitem(t, elem, &p);
+		pfl_odt_allocitem(t, &p);
 		snprintf(p, item_size, "... put_number=%d ...", i);
 		pfl_odt_putitem(t, elem, p, 1);
-		pfl_odt_freebuf(t, p, NULL);
+		PSCFREE(p);
 	}
 
 	DYNARRAY_FOREACH(r, i, &rcpts)

@@ -509,8 +509,8 @@ pfl_odt_check(struct pfl_odt *t,
 			if (cbf)
 				cbf(p, &r, arg); // need r?
 		}
-
-		pfl_odt_freebuf(t, p, f);
+		PSCFREE(p);
+		PSCFREE(f);
 	}
 #undef i
 
