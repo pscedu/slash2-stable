@@ -179,7 +179,6 @@ void	 pfl_odt_replaceitem(struct pfl_odt *, struct pfl_odt_receipt *,
 	    void *);
 
 #define pfl_odt_getitem(t, r, p)	pfl_odt_getslot((t), (r), (p), NULL)
-#define pfl_odt_mapitem(t, n, p)	pfl_odt_mapslot((t), (n), (p), NULL)
 
 void	pfl_odt_allocitem(struct pfl_odt *, void **);
 
