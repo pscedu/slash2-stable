@@ -343,11 +343,9 @@ void
 pfl_odt_replaceitem(struct pfl_odt *t, struct pfl_odt_receipt *r,
     void *p)
 {
-	struct pfl_odt_slotftr *f;
+	struct pfl_odt_slotftr f;
 
-	pfl_odt_mapslot(t, r->odtr_item, NULL, &f);
 	_pfl_odt_doput(t, r, p, f, 1);
-	pfl_odt_freebuf(t, NULL, f);
 
 	PFLOG_ODT(PLL_DIAG, t, "rcpt=%p slot=%"PRId64,
 	    r, r->odtr_item);
