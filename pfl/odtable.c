@@ -52,6 +52,33 @@
 struct psc_lockedlist	 pfl_odtables =
     PLL_INIT(&pfl_odtables, struct pfl_odt, odt_lentry);
 
+void *slm_odt_zerobuf;
+
+void
+_slm_odt_zerobuf_ensurelen(size_t len)
+{
+	static psc_spinlock_t zerobuf_lock = SPINLOCK_INIT;
+	static size_t zerobuf_len;
+
+	if (len <= zerobuf_len)
+		return;
+
+	spinlock(&zerobuf_lock);
+	if (len > zerobuf_len) {
+		slm_odt_zerobuf = psc_realloc(slm_odt_zerobuf, len, 0);
+		zerobuf_len = len;
+	}
+	freelock(&zerobuf_lock);
+}
+
+#define PACK_IOV(p, len)						\
+	do {								\
+		iov[nio].iov_base = (void *)(p);			\
+		iov[nio].iov_len = (len);				\
+		expect += (len);					\
+		nio++;							\
+	} while (0)
+
 /*
  * Get offset of a table entry, which is relative
  * to either the disk file or start of base memory-mapped address.
@@ -108,25 +135,86 @@ pfl_odt_close(struct pfl_odt *t)
 }
 
 void
-pfl_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
-    void *p, struct pfl_odt_slotftr *f)
-{
-
-
-}
-
-void
 pfl_odt_write(struct pfl_odt *t, const void *p,
     struct pfl_odt_slotftr *f, size_t item)
 {
+	ssize_t expect = 0;
+	struct pfl_odt_hdr *h;
+	struct iovec iov[3];
+	ssize_t rc, pad;
+	int nio = 0;
+	off_t off;
 
+	memset(iov, 0, sizeof(iov));
 
+	h = t->odt_hdr;
+
+	pad = h->odth_slotsz - h->odth_itemsz - sizeof(*f);
+	psc_assert(!pad);
+
+	_slm_odt_zerobuf_ensurelen(pad);
+
+	off = item * h->odth_slotsz + h->odth_start;
+
+	if (p)
+		PACK_IOV(p, h->odth_itemsz);
+	else
+		off += h->odth_itemsz;
+
+	if (p && f)
+		PACK_IOV(slm_odt_zerobuf, pad);
+	else
+		off += pad;
+
+	if (f)
+		PACK_IOV(f, sizeof(*f));
+
+	rc = pwritev(t->odt_fd, iov, nio, off);
+	psc_assert(rc == expect);
 }
 
 void
-pfl_odt_sync(struct pfl_odt *t, size_t item)
+pfl_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
+    void *p, struct pfl_odt_slotftr *f)
 {
+	ssize_t expect = 0;
+	struct pfl_odt_hdr *h;
+	struct iovec iov[3];
+	ssize_t rc, pad;
+	int nio = 0;
+	off_t off;
 
+	memset(iov, 0, sizeof(iov));
+
+	h = t->odt_hdr;
+	pad = h->odth_slotsz - h->odth_itemsz - sizeof(*f);
+	psc_assert(!pad);
+
+	_slm_odt_zerobuf_ensurelen(pad);
+
+	off = h->odth_start + r->odtr_item * h->odth_slotsz;
+
+	if (p)
+		PACK_IOV(p, h->odth_itemsz);
+	else
+		off += h->odth_itemsz;
+
+	if (p && f)
+		PACK_IOV(slm_odt_zerobuf, pad);
+	else
+		off += pad;
+
+	if (f)
+		PACK_IOV(f, sizeof(*f));
+
+	rc = preadv(t->odt_fd, iov, nio, off);
+	psc_assert(rc == expect);
+}
+
+void
+pfl_odt_sync(struct pfl_odt *t, __unusedx size_t item)
+{
+	fsync(t->odt_fd);
 }
 
 
