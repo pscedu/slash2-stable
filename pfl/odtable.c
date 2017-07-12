@@ -345,7 +345,7 @@ pfl_odt_replaceitem(struct pfl_odt *t, struct pfl_odt_receipt *r,
 {
 	struct pfl_odt_slotftr f;
 
-	_pfl_odt_doput(t, r, p, f, 1);
+	_pfl_odt_doput(t, r, p, &f, 1);
 
 	PFLOG_ODT(PLL_DIAG, t, "rcpt=%p slot=%"PRId64,
 	    r, r->odtr_item);
@@ -380,7 +380,7 @@ void
 pfl_odt_create(const char *fn, size_t nitems, size_t itemsz,
     int overwrite, size_t startoff, size_t pad, int tflg)
 {
-	struct pfl_odt_slotftr *f;
+	struct pfl_odt_slotftr f;
 	struct pfl_odt_receipt r;
 	struct pfl_odt_hdr *h;
 	struct pfl_odt *t;
@@ -398,7 +398,7 @@ pfl_odt_create(const char *fn, size_t nitems, size_t itemsz,
 	memset(h, 0, sizeof(*h));
 	h->odth_nitems = nitems;
 	h->odth_itemsz = itemsz;
-	h->odth_slotsz = itemsz + pad + sizeof(*f);
+	h->odth_slotsz = itemsz + pad + sizeof(f);
 	h->odth_options = tflg;
 	h->odth_start = startoff;
 	t->odt_hdr = h;
@@ -407,11 +407,8 @@ pfl_odt_create(const char *fn, size_t nitems, size_t itemsz,
 
 	t->odt_ops.odtop_new(t, fn, overwrite);
 
-	for (r.odtr_item = 0; r.odtr_item < nitems; r.odtr_item++) {
-		pfl_odt_mapslot(t, r.odtr_item, NULL, &f);
-		_pfl_odt_doput(t, &r, NULL, f, 0);
-		pfl_odt_freebuf(t, NULL, f);
-	}
+	for (r.odtr_item = 0; r.odtr_item < nitems; r.odtr_item++)
+		_pfl_odt_doput(t, &r, NULL, &f, 0);
 
 	PFLOG_ODT(PLL_DIAG, t, "created");
 
