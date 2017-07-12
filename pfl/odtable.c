@@ -333,8 +333,6 @@ pfl_odt_getslot(struct pfl_odt *t, const struct pfl_odt_receipt *r,
 	if (fp)
 		*fp = PSCALLOC(sizeof(**fp));
 		
-	pfl_odt_mapslot(t, r->odtr_item, p, fp);
-
 	t->odt_ops.odtop_read(t, r, p ? *p : NULL, fp ? *fp : NULL);
 
 	pfl_opstat_add(t->odt_iostats.rd, h->odth_slotsz);
