@@ -281,6 +281,16 @@ pfl_odt_allocslot(struct pfl_odt *t)
 }
 
 void
+pfl_odt_allocitem(struct pfl_odt *t, void **pp)
+{
+	struct pfl_odt_hdr *h;
+	void **p = (void **)pp;
+
+	h = t->odt_hdr;
+	*p = PSCALLOC(h->odth_itemsz);
+}
+
+void
 pfl_odt_mapslot(struct pfl_odt *t, size_t n, void *pp,
     struct pfl_odt_slotftr **fp)
 {
