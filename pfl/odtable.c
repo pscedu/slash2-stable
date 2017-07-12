@@ -290,20 +290,6 @@ pfl_odt_allocitem(struct pfl_odt *t, void **pp)
 	*p = PSCALLOC(h->odth_itemsz);
 }
 
-void
-pfl_odt_mapslot(struct pfl_odt *t, size_t n, void *pp,
-    struct pfl_odt_slotftr **fp)
-{
-	struct pfl_odt_hdr *h;
-	void **p = (void **)pp;
-
-	h = t->odt_hdr;
-	if (p)
-		*p = PSCALLOC(h->odth_itemsz);
-	if (fp)
-		*fp = PSCALLOC(sizeof(**fp));
-}
-
 /*
  * Store an item into an odtable.
  */
