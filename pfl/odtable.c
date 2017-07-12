@@ -52,9 +52,9 @@
 struct psc_lockedlist	 pfl_odtables =
     PLL_INIT(&pfl_odtables, struct pfl_odt, odt_lentry);
 
-void *slm_odt_zerobuf;
+static void *slm_odt_zerobuf;
 
-void
+static void
 _slm_odt_zerobuf_ensurelen(size_t len)
 {
 	static psc_spinlock_t zerobuf_lock = SPINLOCK_INIT;
@@ -79,19 +79,6 @@ _slm_odt_zerobuf_ensurelen(size_t len)
 		nio++;							\
 	} while (0)
 
-/*
- * Get offset of a table entry, which is relative
- * to either the disk file or start of base memory-mapped address.
- */
-static __inline size_t
-pfl_odt_getitemoff(const struct pfl_odt *t, size_t item)
-{
-	const struct pfl_odt_hdr *h;
-
-	h = t->odt_hdr;
-	psc_assert(item < h->odth_nitems);
-	return (item * h->odth_slotsz);
-}
 
 void
 pfl_odt_new(struct pfl_odt *t, const char *fn, int overwrite)

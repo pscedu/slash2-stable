@@ -208,6 +208,6 @@ extern struct psc_lockedlist pfl_odtables;
 		_rc;							\
 	} _PFL_RVEND
 
-extern struct pfl_odt_ops pfl_odtops_mmap;
+extern struct pfl_odt_ops pfl_odtops;
 
 #endif
