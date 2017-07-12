@@ -175,12 +175,11 @@ void	 pfl_odt_getslot(struct pfl_odt *,
 void	 pfl_odt_load(struct pfl_odt **, struct pfl_odt_ops *, int,
 	    const char *, const char *, ...);
 struct pfl_odt_receipt *
-	 pfl_odt_putitemf(struct pfl_odt *, size_t, void *, int);
+	 pfl_odt_putitem(struct pfl_odt *, size_t, void *, int);
 void	 pfl_odt_release(struct pfl_odt *);
 void	 pfl_odt_replaceitem(struct pfl_odt *, struct pfl_odt_receipt *,
 	    void *);
 
-#define pfl_odt_putitem(t, n, p)	pfl_odt_putitemf((t), (n), (p), 1)
 #define pfl_odt_getitem(t, r, p)	pfl_odt_getslot((t), (r), (p), NULL)
 #define pfl_odt_mapitem(t, n, p)	pfl_odt_mapslot((t), (n), (p), NULL)
 

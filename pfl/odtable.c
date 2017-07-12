@@ -298,7 +298,7 @@ pfl_odt_mapslot(struct pfl_odt *t, size_t n, void *pp,
  * Store an item into an odtable.
  */
 struct pfl_odt_receipt *
-pfl_odt_putitemf(struct pfl_odt *t, size_t n, void *p, int inuse)
+pfl_odt_putitem(struct pfl_odt *t, size_t n, void *p, int inuse)
 {
 	struct pfl_odt_slotftr f;
 	struct pfl_odt_receipt *r;

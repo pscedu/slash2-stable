@@ -206,7 +206,7 @@ main(int argc, char *argv[])
 		elem = pfl_odt_allocslot(t);
 		pfl_odt_mapitem(t, elem, &p);
 		snprintf(p, item_size, "... put_number=%d ...", i);
-		pfl_odt_putitem(t, elem, p);
+		pfl_odt_putitem(t, elem, p, 1);
 		pfl_odt_freebuf(t, p, NULL);
 	}
 
