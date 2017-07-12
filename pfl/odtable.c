@@ -158,8 +158,7 @@ _pfl_odt_doput(struct pfl_odt *t, struct pfl_odt_receipt *r,
 	psc_crc64_fini(&f->odtf_crc);
 	r->odtr_crc = f->odtf_crc;
 
-	if (t->odt_ops.odtop_write)
-		t->odt_ops.odtop_write(t, p, f, r->odtr_item);
+	t->odt_ops.odtop_write(t, p, f, r->odtr_item);
 
 	pfl_opstat_add(t->odt_iostats.wr, h->odth_slotsz);
 
