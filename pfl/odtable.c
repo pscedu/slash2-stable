@@ -462,8 +462,8 @@ pfl_odt_check(struct pfl_odt *t,
 		r.odtr_item = i;
 		pfl_odt_getslot(t, &r, &p, &f);
 
-		if (pfl_odt_footercheck(t, f, &r))
-			PFLOG_ODT(PLL_FATAL, t, "footercheck");
+		if (f->odtf_slotno != i)
+			PFLOG_ODT(PLL_FATAL, t, "footercheck: i = %lu", i);
 
 		if (h->odth_options & ODTBL_OPT_CRC) {
 			psc_crc64_init(&crc);
@@ -484,7 +484,7 @@ pfl_odt_check(struct pfl_odt *t,
 		if (f->odtf_flags & ODT_FTRF_INUSE) {
 			psc_vbitmap_set(t->odt_bitmap, i);
 			if (cbf)
-				cbf(p, &r, arg); // need r?
+				cbf(p, i, arg); // need r?
 		}
 		PSCFREE(p);
 		PSCFREE(f);
