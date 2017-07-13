@@ -199,7 +199,7 @@ pfl_odt_read(struct pfl_odt *t, int64_t n,
 }
 
 void
-pfl_odt_sync(struct pfl_odt *t, __unusedx size_t item)
+pfl_odt_sync(struct pfl_odt *t, __unusedx int64_t item)
 {
 	fsync(t->odt_fd);
 }
@@ -233,12 +233,12 @@ _pfl_odt_doput(struct pfl_odt *t, int64_t item,
 	    sizeof(f->odtf_crc));
 	psc_crc64_fini(&f->odtf_crc);
 
-	t->odt_ops.odtop_write(t, p, f, n);
+	t->odt_ops.odtop_write(t, p, f, item);
 
 	pfl_opstat_add(t->odt_iostats.wr, h->odth_slotsz);
 
 	if (h->odth_options & ODTBL_OPT_SYNC)
-		t->odt_ops.odtop_sync(t, r->odtr_item);
+		t->odt_ops.odtop_sync(t, item);
 
 	PFLOG_ODT(PLL_DIAG, t,
 	    "slot=%"PRId64" item crc=%"PSCPRIxCRC64" ",
