@@ -338,8 +338,7 @@ pfl_odt_replaceitem(struct pfl_odt *t, struct pfl_odt_receipt *r,
 
 	_pfl_odt_doput(t, r, p, &f, 1);
 
-	PFLOG_ODT(PLL_DIAG, t, "rcpt=%p slot=%"PRId64,
-	    r, r->odtr_item);
+	PFLOG_ODT(PLL_DIAG, t, "rcpt=%p slot=%"PRId64, r, r->odtr_item);
 
 	ODT_STAT_INCR(t, replace);
 }
