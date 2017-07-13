@@ -123,7 +123,7 @@ pfl_odt_close(struct pfl_odt *t)
 
 void
 pfl_odt_write(struct pfl_odt *t, const void *p,
-    struct pfl_odt_slotftr *f, size_t item)
+    struct pfl_odt_slotftr *f, int64_t item)
 {
 	ssize_t expect = 0;
 	struct pfl_odt_hdr *h;
@@ -324,14 +324,14 @@ pfl_odt_getslot(struct pfl_odt *t, int64_t n,
 }
 
 void
-pfl_odt_replaceitem(struct pfl_odt *t, struct pfl_odt_receipt *r,
+pfl_odt_replaceitem(struct pfl_odt *t, int64_t item,
     void *p)
 {
 	struct pfl_odt_slotftr f;
 
-	_pfl_odt_doput(t, r, p, &f, 1);
+	_pfl_odt_doput(t, item, p, &f, 1);
 
-	PFLOG_ODT(PLL_DIAG, t, "rcpt=%p slot=%"PRId64, r, r->odtr_item);
+	PFLOG_ODT(PLL_DIAG, t, "slot=%"PRId64, item);
 
 	ODT_STAT_INCR(t, replace);
 }
@@ -341,18 +341,17 @@ pfl_odt_replaceitem(struct pfl_odt *t, struct pfl_odt_receipt *r,
  * Note: r is freed here.
  */
 void
-pfl_odt_freeitem(struct pfl_odt *t, struct pfl_odt_receipt *r)
+pfl_odt_freeitem(struct pfl_odt *t, int64_t item)
 {
 	struct pfl_odt_slotftr f;
 
-	_pfl_odt_doput(t, r, NULL, &f, 0);
+	_pfl_odt_doput(t, item, NULL, &f, 0);
 
 	spinlock(&t->odt_lock);
-	psc_vbitmap_unset(t->odt_bitmap, r->odtr_item);
+	psc_vbitmap_unset(t->odt_bitmap, item);
 	freelock(&t->odt_lock);
 
-	PFLOG_ODT(PLL_DIAG, t, "freeitem r=%p slot=%"PRId64,
-	    r, r->odtr_item);
+	PFLOG_ODT(PLL_DIAG, t, "slot=%"PRId64, item);
 
 	ODT_STAT_INCR(t, free);
 
@@ -363,8 +362,8 @@ void
 pfl_odt_create(const char *fn, size_t nitems, size_t itemsz,
     int overwrite, size_t startoff, size_t pad, int tflg)
 {
+	int64_t	item;
 	struct pfl_odt_slotftr f;
-	struct pfl_odt_receipt r;
 	struct pfl_odt_hdr *h;
 	struct pfl_odt *t;
 
@@ -390,8 +389,8 @@ pfl_odt_create(const char *fn, size_t nitems, size_t itemsz,
 
 	t->odt_ops.odtop_new(t, fn, overwrite);
 
-	for (r.odtr_item = 0; r.odtr_item < nitems; r.odtr_item++)
-		_pfl_odt_doput(t, &r, NULL, &f, 0);
+	for (item = 0; item < nitems; item++)
+		_pfl_odt_doput(t, item, NULL, &f, 0);
 
 	PFLOG_ODT(PLL_DIAG, t, "created");
 
