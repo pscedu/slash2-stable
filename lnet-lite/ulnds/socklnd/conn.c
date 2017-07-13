@@ -684,6 +684,10 @@ usocklnd_destroy_conn(usock_conn_t *conn)
         LASSERT (conn->uc_peer == NULL || conn->uc_ni == NULL);
 
         if (conn->uc_rx_state == UC_RX_LNET_PAYLOAD) {
+		/*
+		 * 07/13/2017: Hit NULL assert below, called 
+		 * from usocklnd_poll_thread().
+		 */
                 LASSERT (conn->uc_peer != NULL);
                 lnet_finalize(conn->uc_peer->up_ni, conn->uc_rx_lnetmsg, -EIO);
         }
