@@ -354,8 +354,6 @@ pfl_odt_freeitem(struct pfl_odt *t, int64_t item)
 	PFLOG_ODT(PLL_DIAG, t, "slot=%"PRId64, item);
 
 	ODT_STAT_INCR(t, free);
-
-	PSCFREE(r);
 }
 
 void
