@@ -232,7 +232,6 @@ _pfl_odt_doput(struct pfl_odt *t, struct pfl_odt_receipt *r,
 	psc_crc64_add(&f->odtf_crc, f, sizeof(*f) -
 	    sizeof(f->odtf_crc));
 	psc_crc64_fini(&f->odtf_crc);
-	r->odtr_crc = f->odtf_crc;
 
 	t->odt_ops.odtop_write(t, p, f, r->odtr_item);
 
@@ -444,7 +443,7 @@ pfl_odt_load(struct pfl_odt **tp, struct pfl_odt_ops *odtops, int oflg,
 
 void
 pfl_odt_check(struct pfl_odt *t,
-    void (*cbf)(void *, struct pfl_odt_receipt *, void *), void *arg)
+    void (*cbf)(void *, int64_t, void *), void *arg)
 {
 	struct pfl_odt_receipt r = { 0, 0 };
 	struct pfl_odt_slotftr *f;
