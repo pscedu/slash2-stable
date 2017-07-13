@@ -484,7 +484,7 @@ pfl_odt_check(struct pfl_odt *t,
 		if (f->odtf_flags & ODT_FTRF_INUSE) {
 			psc_vbitmap_set(t->odt_bitmap, i);
 			if (cbf)
-				cbf(p, i, arg); // need r?
+				cbf(p, i, arg);
 		}
 		PSCFREE(p);
 		PSCFREE(f);
