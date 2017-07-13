@@ -189,9 +189,6 @@ extern struct psc_lockedlist pfl_odtables;
 		if ((f)->odtf_slotno != (r)->odtr_item)			\
 			_rc = PFLERR_NOKEY;				\
 									\
-		else if ((f)->odtf_crc != (r)->odtr_crc)		\
-			_rc = PFLERR_BADCRC;				\
-									\
 		if (_rc)						\
 			PFLOG_ODT(PLL_ERROR, t,				\
 			    "slot=%zd (%u) has error %d; "		\

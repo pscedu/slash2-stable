@@ -462,7 +462,6 @@ pfl_odt_check(struct pfl_odt *t,
 	for (i = 0; i < h->odth_nitems; i++) {
 		r.odtr_item = i;
 		pfl_odt_getslot(t, &r, &p, &f);
-		r.odtr_crc = f->odtf_crc;
 
 		if (pfl_odt_footercheck(t, f, &r))
 			PFLOG_ODT(PLL_FATAL, t, "footercheck");
