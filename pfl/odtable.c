@@ -361,6 +361,7 @@ void
 pfl_odt_create(const char *fn, size_t nitems, size_t itemsz,
     int overwrite, size_t startoff, size_t pad, int tflg)
 {
+	int inuse;
 	int64_t	item;
 	struct pfl_odt_slotftr f;
 	struct pfl_odt_hdr *h;
@@ -383,13 +384,18 @@ pfl_odt_create(const char *fn, size_t nitems, size_t itemsz,
 	h->odth_options = tflg;
 	h->odth_start = startoff;
 	t->odt_hdr = h;
-	psc_crc64_calc(&h->odth_crc, h, sizeof(*h) -
-	    sizeof(h->odth_crc));
+	psc_crc64_calc(&h->odth_crc, h, sizeof(*h) - sizeof(h->odth_crc));
 
+	/* pfl_odt_new() and slm_odt_new() */
 	t->odt_ops.odtop_new(t, fn, overwrite);
 
-	for (item = 0; item < nitems; item++)
-		_pfl_odt_doput(t, item, NULL, &f, 0);
+	for (item = 0; item < nitems; item++) {
+		if (item == 0)
+			inuse = 1;
+		else
+			inuse = 0;
+		_pfl_odt_doput(t, item, NULL, &f, inuse);
+	}
 
 	PFLOG_ODT(PLL_DIAG, t, "created");
 
