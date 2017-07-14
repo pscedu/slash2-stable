@@ -65,15 +65,6 @@ visit(__unusedx void *data, int64_t item,
 	} u;
 	size_t i;
 
-	if (num_free) {
-		struct pfl_odt_receipt *rdup;
-
-		rdup = PSCALLOC(sizeof(*rdup));
-		memcpy(rdup, r, sizeof(*r));
-		psc_dynarray_add(&rcpts, rdup);
-		num_free--;
-	}
-
 	if (!dump)
 		return;
 
@@ -210,10 +201,9 @@ main(int argc, char *argv[])
 		PSCFREE(p);
 	}
 
-	DYNARRAY_FOREACH(r, i, &rcpts)
-		pfl_odt_freeitem(t, r);
+	for (i = 0; i < num_free; i++) {
+		pfl_odt_freeitem(t, i);
 
 	pfl_odt_release(t);
-	psc_dynarray_free(&rcpts);
 	exit(0);
 }
