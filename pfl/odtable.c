@@ -358,7 +358,7 @@ pfl_odt_freeitem(struct pfl_odt *t, int64_t item)
 }
 
 void
-pfl_odt_create(const char *fn, size_t nitems, size_t itemsz,
+pfl_odt_create(const char *fn, int64_t nitems, size_t itemsz,
     int overwrite, size_t startoff, size_t pad, int tflg)
 {
 	int inuse;
