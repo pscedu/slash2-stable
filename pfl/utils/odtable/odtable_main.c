@@ -194,7 +194,7 @@ main(int argc, char *argv[])
 		size_t elem;
 
 		elem = pfl_odt_allocslot(t);
-		pfl_odt_allocitem(t, &p);
+		pfl_odt_allocitem(t, (void **)&p);
 		snprintf(p, item_size, "... put_number=%d ...", i);
 		pfl_odt_putitem(t, elem, p, 1);
 		PSCFREE(p);

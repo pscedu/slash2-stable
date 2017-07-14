@@ -233,6 +233,7 @@ _pfl_odt_doput(struct pfl_odt *t, int64_t item,
 	    sizeof(f->odtf_crc));
 	psc_crc64_fini(&f->odtf_crc);
 
+	/* pfl_odt_write() and slm_odt_write() */
 	t->odt_ops.odtop_write(t, p, f, item);
 
 	pfl_opstat_add(t->odt_iostats.wr, h->odth_slotsz);
@@ -293,11 +294,11 @@ pfl_odt_allocitem(struct pfl_odt *t, void **pp)
  * Store an item into an odtable.
  */
 void
-pfl_odt_putitem(struct pfl_odt *t, int64_t n, void *p, int inuse)
+pfl_odt_putitem(struct pfl_odt *t, int64_t item, void *p, int inuse)
 {
 	struct pfl_odt_slotftr f;
 
-	_pfl_odt_doput(t, n, p, &f, inuse);
+	_pfl_odt_doput(t, item, p, &f, inuse);
 }
 
 void
