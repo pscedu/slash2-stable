@@ -370,8 +370,7 @@ pfl_odt_create(const char *fn, int64_t nitems, size_t itemsz,
 	t = PSCALLOC(sizeof(*t));
 	t->odt_ops = pfl_odtops;
 	INIT_SPINLOCK(&t->odt_lock);
-	snprintf(t->odt_name, sizeof(t->odt_name), "%s",
-	    pfl_basename(fn));
+	snprintf(t->odt_name, sizeof(t->odt_name), "%s", pfl_basename(fn));
 
 	t->odt_iostats.rd = pfl_opstat_init("odt-%s-rd", t->odt_name);
 	t->odt_iostats.wr = pfl_opstat_init("odt-%s-wr", t->odt_name);
