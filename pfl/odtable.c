@@ -425,6 +425,7 @@ pfl_odt_load(struct pfl_odt **tp, struct pfl_odt_ops *odtops, int oflg,
 
 	h = t->odt_hdr = PSCALLOC(sizeof(*h));
 
+	/* pfl_odt_open() and slm_odt_open() */
 	odtops->odtop_open(t, fn, oflg);
 
 	psc_crc64_calc(&crc, t->odt_hdr, sizeof(*t->odt_hdr) -
@@ -500,10 +501,9 @@ pfl_odt_release(struct pfl_odt *t)
 
 	t->odt_ops.odtop_close(t);
 
-	PSCFREE(t->odt_hdr);
-
 	pfl_opstat_destroy(t->odt_iostats.rd);
 	pfl_opstat_destroy(t->odt_iostats.wr);
 
+	PSCFREE(t->odt_hdr);
 	PSCFREE(t);
 }
