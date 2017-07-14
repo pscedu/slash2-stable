@@ -200,7 +200,7 @@ main(int argc, char *argv[])
 		PSCFREE(p);
 	}
 
-	for (i = 0; i < num_free; i++) {
+	for (i = 0; i < num_free; i++)
 		pfl_odt_freeitem(t, i);
 
 	pfl_odt_release(t);
