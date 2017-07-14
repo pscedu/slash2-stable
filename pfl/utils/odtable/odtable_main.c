@@ -125,8 +125,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	int c, i, verbose = 0, oflg = ODTBL_FLG_RDONLY,
-	    tflg = ODTBL_OPT_CRC;
+	int c, i, verbose = 0, oflg = ODTBL_FLG_RDONLY, tflg = ODTBL_OPT_CRC;
 	struct pfl_odt *t;
 	char *p, *fn;
 
