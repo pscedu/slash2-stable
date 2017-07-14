@@ -40,6 +40,7 @@
 #include "pfl/log.h"
 #include "pfl/odtable.h"
 #include "pfl/pfl.h"
+#include "pfl/thread.h"
 
 const char		*fmt;
 int			 create_table;
@@ -129,7 +130,6 @@ main(int argc, char *argv[])
 	struct pfl_odt *t;
 	char *p, *fn;
 
-	pfl_init();
 	while ((c = getopt(argc, argv, "CcdF:n:osvX:Zz:")) != -1)
 		switch (c) {
 		case 'C':
@@ -170,11 +170,15 @@ main(int argc, char *argv[])
 		default:
 			usage();
 		}
+
+	fn = argv[0];
 	argc -= optind;
 	argv += optind;
 	if (argc != 1)
 		usage();
-	fn = argv[0];
+
+	pfl_init();
+	pscthr_init(0, NULL, 0, "odtable");
 
 	if (create_table) {
 		pfl_odt_create(fn, nitems, item_size, overwrite,
