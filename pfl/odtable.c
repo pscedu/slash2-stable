@@ -205,7 +205,7 @@ pfl_odt_sync(struct pfl_odt *t, __unusedx int64_t item)
 }
 
 
-/* compare to slm_odtops */
+/* See also slm_odtops */
 struct pfl_odt_ops pfl_odtops = {
 	pfl_odt_new,		/* odtop_new() */
 	pfl_odt_open,		/* odtop_open() */
