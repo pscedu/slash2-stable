@@ -435,6 +435,11 @@ pfl_odt_load(struct pfl_odt **tp, struct pfl_odt_ops *odtops, int oflg,
 
 	t->odt_bitmap = psc_vbitmap_newf(h->odth_nitems, PVBF_AUTO);
 	psc_assert(t->odt_bitmap);
+	/*
+ 	 * Skip the first slot, so that we can detect whether we have
+ 	 * assigned a lease easily.
+ 	 */
+	psc_vbitmap_set(t->odt_bitmap, 0);
 
 	PFLOG_ODT(PLL_DIAG, t, "loaded");
 
