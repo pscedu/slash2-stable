@@ -88,10 +88,12 @@ pfl_odt_new(struct pfl_odt *t, const char *fn, int overwrite)
 	h = t->odt_hdr;
 	t->odt_fd = open(fn, O_CREAT | O_RDWR |
 	    (overwrite ? O_TRUNC : O_EXCL), 0600);
-	if (t->odt_fd == -1)
-		psc_fatal("open %s", fn);
+	if (t->odt_fd == -1) {
+		psclog_warn("open %s", fn);
+		return;
+	}
 	if (pwrite(t->odt_fd, h, sizeof(*h), 0) != sizeof(*h))
-		psc_fatal("write %s", fn);
+		psclog_warn("write %s", fn);
 }
 
 void
