@@ -126,7 +126,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	int c, i, verbose = 0, oflg = ODTBL_FLG_RDONLY, tflg = ODTBL_OPT_CRC;
+	int c, i, rc, verbose = 0, oflg = ODTBL_FLG_RDONLY, tflg = ODTBL_OPT_CRC;
 	struct pfl_odt *t;
 	char *p, *fn;
 
@@ -182,9 +182,9 @@ main(int argc, char *argv[])
 	fn = argv[0];
 
 	if (create_table) {
-		pfl_odt_create(fn, nitems, item_size, overwrite,
+		rc = pfl_odt_create(fn, nitems, item_size, overwrite,
 		    ODT_ITEM_START, 0, tflg);
-		if (verbose)
+		if (!rc && verbose)
 			warnx("created od-table %s "
 			    "(elemsize=%zu, nitems=%zu)",
 			    fn, item_size, nitems);

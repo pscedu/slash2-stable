@@ -80,7 +80,7 @@ _slm_odt_zerobuf_ensurelen(size_t len)
 	} while (0)
 
 
-void
+int
 pfl_odt_new(struct pfl_odt *t, const char *fn, int overwrite)
 {
 	struct pfl_odt_hdr *h;
@@ -90,10 +90,13 @@ pfl_odt_new(struct pfl_odt *t, const char *fn, int overwrite)
 	    (overwrite ? O_TRUNC : O_EXCL), 0600);
 	if (t->odt_fd == -1) {
 		psclog_warn("open %s", fn);
-		return;
+		return (-1);
 	}
-	if (pwrite(t->odt_fd, h, sizeof(*h), 0) != sizeof(*h))
+	if (pwrite(t->odt_fd, h, sizeof(*h), 0) != sizeof(*h)) {
 		psclog_warn("write %s", fn);
+		return (-1);
+	}
+	return (0);
 }
 
 void
@@ -361,11 +364,10 @@ pfl_odt_freeitem(struct pfl_odt *t, int64_t item)
 	ODT_STAT_INCR(t, free);
 }
 
-void
+int
 pfl_odt_create(const char *fn, int64_t nitems, size_t itemsz,
     int overwrite, size_t startoff, size_t pad, int tflg)
 {
-	int inuse;
 	int64_t	item;
 	struct pfl_odt_slotftr f;
 	struct pfl_odt_hdr *h;
@@ -392,17 +394,13 @@ pfl_odt_create(const char *fn, int64_t nitems, size_t itemsz,
 	/* pfl_odt_new() and slm_odt_new() */
 	t->odt_ops.odtop_new(t, fn, overwrite);
 
-	for (item = 0; item < nitems; item++) {
-		if (item == 0)
-			inuse = 1;
-		else
-			inuse = 0;
-		_pfl_odt_doput(t, item, NULL, &f, inuse);
-	}
+	for (item = 0; item < nitems; item++)
+		_pfl_odt_doput(t, item, NULL, &f, 0);
 
 	PFLOG_ODT(PLL_DIAG, t, "created");
 
 	pfl_odt_release(t);
+	return (0);
 }
 
 void

@@ -94,7 +94,7 @@ struct pfl_odt_slotftr {
 
 /* pfl_odtops and slm_odtops */
 struct pfl_odt_ops {
-	void	(*odtop_new)(struct pfl_odt *, const char *, int);
+	int	(*odtop_new)(struct pfl_odt *, const char *, int);
 	void	(*odtop_open)(struct pfl_odt *, const char *, int);
 	void	(*odtop_read)(struct pfl_odt *, int64_t, void *,
 		    struct pfl_odt_slotftr *);
@@ -164,7 +164,7 @@ void	 pfl_odt_allocitem(struct pfl_odt *, void **);
 size_t	 pfl_odt_allocslot(struct pfl_odt *);
 void	 pfl_odt_check(struct pfl_odt *, void (*)(void *, int64_t, void *), 
 	    void *);
-void	 pfl_odt_create(const char *, int64_t, size_t, int, size_t,
+int	 pfl_odt_create(const char *, int64_t, size_t, int, size_t,
 	    size_t, int);
 void	 pfl_odt_freeitem(struct pfl_odt *, int64_t);
 void	 pfl_odt_getslot(struct pfl_odt *,
