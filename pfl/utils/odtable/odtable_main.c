@@ -130,6 +130,9 @@ main(int argc, char *argv[])
 	struct pfl_odt *t;
 	char *p, *fn;
 
+	pfl_init();
+	pscthr_init(0, NULL, 0, "odtable");
+
 	while ((c = getopt(argc, argv, "CcdF:n:osvX:Zz:")) != -1)
 		switch (c) {
 		case 'C':
@@ -177,8 +180,6 @@ main(int argc, char *argv[])
 		usage();
 
 	fn = argv[0];
-	pfl_init();
-	pscthr_init(0, NULL, 0, "odtable");
 
 	if (create_table) {
 		pfl_odt_create(fn, nitems, item_size, overwrite,
