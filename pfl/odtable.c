@@ -356,6 +356,7 @@ int
 pfl_odt_create(const char *fn, int64_t nitems, size_t itemsz,
     int overwrite, size_t startoff, size_t pad, int tflg)
 {
+	int rc;
 	int64_t	item;
 	struct pfl_odt_slotftr f;
 	struct pfl_odt_hdr *h;
@@ -380,7 +381,9 @@ pfl_odt_create(const char *fn, int64_t nitems, size_t itemsz,
 	psc_crc64_calc(&h->odth_crc, h, sizeof(*h) - sizeof(h->odth_crc));
 
 	/* pfl_odt_new() and slm_odt_new() */
-	t->odt_ops.odtop_new(t, fn, overwrite);
+	rc = t->odt_ops.odtop_new(t, fn, overwrite);
+	if (rc)
+		return (rc);
 
 	for (item = 0; item < nitems; item++)
 		_pfl_odt_doput(t, item, NULL, &f, 0);
