@@ -228,8 +228,7 @@ _pfl_odt_doput(struct pfl_odt *t, int64_t item,
 		psc_assert(p);
 		psc_crc64_add(&f->odtf_crc, p, h->odth_itemsz);
 	}
-	psc_crc64_add(&f->odtf_crc, f, sizeof(*f) -
-	    sizeof(f->odtf_crc));
+	psc_crc64_add(&f->odtf_crc, f, sizeof(*f) - sizeof(f->odtf_crc));
 	psc_crc64_fini(&f->odtf_crc);
 
 	/* pfl_odt_write() and slm_odt_write() */

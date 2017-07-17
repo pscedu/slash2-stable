@@ -201,6 +201,7 @@ main(int argc, char *argv[])
 		PSCFREE(p);
 	}
 
+	/* XXX find in-use slot to free */
 	for (i = 0; i < num_free; i++)
 		pfl_odt_freeitem(t, i);
 
