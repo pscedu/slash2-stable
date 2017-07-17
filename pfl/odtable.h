@@ -76,7 +76,6 @@ struct pfl_odt_hdr {
 
 /* odth_options */
 #define ODTBL_OPT_CRC		(1 << 0)
-#define ODTBL_OPT_SYNC		(1 << 1)
 
 /* slot footer */
 struct pfl_odt_slotftr {
@@ -101,7 +100,6 @@ struct pfl_odt_ops {
 	void	(*odtop_write)(struct pfl_odt *, const void *,
 		    struct pfl_odt_slotftr *, int64_t);
 	void	(*odtop_resize)(struct pfl_odt *);
-	void	(*odtop_sync)(struct pfl_odt *, int64_t);
 	void	(*odtop_close)(struct pfl_odt *);
 };
 

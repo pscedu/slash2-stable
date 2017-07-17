@@ -203,13 +203,6 @@ pfl_odt_read(struct pfl_odt *t, int64_t n,
 	psc_assert(rc == expect);
 }
 
-void
-pfl_odt_sync(struct pfl_odt *t, __unusedx int64_t item)
-{
-	fsync(t->odt_fd);
-}
-
-
 /* See also slm_odtops */
 struct pfl_odt_ops pfl_odtops = {
 	pfl_odt_new,		/* odtop_new() */
@@ -217,7 +210,6 @@ struct pfl_odt_ops pfl_odtops = {
 	pfl_odt_read,		/* odtop_read() */
 	pfl_odt_write,		/* odtop_write() */
 	NULL,			/* odtop_resize() */
-	pfl_odt_sync,		/* odtop_sync() */
 	pfl_odt_close		/* odtop_close() */
 };
 
@@ -244,9 +236,6 @@ _pfl_odt_doput(struct pfl_odt *t, int64_t item,
 	t->odt_ops.odtop_write(t, p, f, item);
 
 	pfl_opstat_add(t->odt_iostats.wr, h->odth_slotsz);
-
-	if (h->odth_options & ODTBL_OPT_SYNC)
-		t->odt_ops.odtop_sync(t, item);
 
 	PFLOG_ODT(PLL_DIAG, t,
 	    "slot=%"PRId64" item crc=%"PSCPRIxCRC64" ",
@@ -500,8 +489,6 @@ pfl_odt_check(struct pfl_odt *t,
 void
 pfl_odt_release(struct pfl_odt *t)
 {
-	t->odt_ops.odtop_sync(t, (size_t)-1);
-
 	if (t->odt_bitmap)
 		psc_vbitmap_free(t->odt_bitmap);
 

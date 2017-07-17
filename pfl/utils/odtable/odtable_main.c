@@ -118,7 +118,7 @@ usage(void)
 	extern const char *__progname;
 
 	fprintf(stderr,
-	    "usage: %s [-CcdosvZ] [-F #frees] [-n #puts]\n"
+	    "usage: %s [-Ccdosv] [-F #frees] [-n #puts]\n"
 	    "\t[-s item_size] [-X fmt] [-z table_size] file\n", __progname);
 	exit(1);
 }
@@ -133,7 +133,7 @@ main(int argc, char *argv[])
 	pfl_init();
 	pscthr_init(0, NULL, 0, "odtable");
 
-	while ((c = getopt(argc, argv, "CcdF:n:osvX:Zz:")) != -1)
+	while ((c = getopt(argc, argv, "CcdF:n:osvX:z:")) != -1)
 		switch (c) {
 		case 'C':
 			create_table = 1;
@@ -163,9 +163,6 @@ main(int argc, char *argv[])
 			break;
 		case 'X':
 			fmt = optarg;
-			break;
-		case 'Z':
-			tflg |= ODTBL_OPT_SYNC;
 			break;
 		case 'z':
 			nitems = atoi(optarg);
