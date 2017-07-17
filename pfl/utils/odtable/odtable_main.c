@@ -171,12 +171,12 @@ main(int argc, char *argv[])
 			usage();
 		}
 
-	fn = argv[0];
 	argc -= optind;
 	argv += optind;
 	if (argc != 1)
 		usage();
 
+	fn = argv[0];
 	pfl_init();
 	pscthr_init(0, NULL, 0, "odtable");
 
