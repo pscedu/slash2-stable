@@ -82,7 +82,11 @@ struct pfl_odt_hdr {
 struct pfl_odt_slotftr {
 	uint32_t		 odtf_flags;
 	uint32_t		 odtf_slotno;
-	uint64_t		 odtf_crc;	/* CRC of the footer itself */
+	/*
+	 * CRC of the footer itself if the slot is not use. Otherwise, 
+	 * the CRC also covers the item stored in the slot.
+	 */
+	uint64_t		 odtf_crc;	
 };
 
 /* odtf_flags values */

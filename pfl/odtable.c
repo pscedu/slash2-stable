@@ -229,8 +229,10 @@ _pfl_odt_doput(struct pfl_odt *t, int64_t item,
 	f->odtf_flags = inuse ? ODT_FTRF_INUSE : 0;
 	f->odtf_slotno = item;
 	psc_crc64_init(&f->odtf_crc);
-	if (inuse)
+	if (inuse) {
+		psc_assert(p);
 		psc_crc64_add(&f->odtf_crc, p, h->odth_itemsz);
+	}
 	psc_crc64_add(&f->odtf_crc, f, sizeof(*f) -
 	    sizeof(f->odtf_crc));
 	psc_crc64_fini(&f->odtf_crc);
