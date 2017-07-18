@@ -52,10 +52,10 @@
 struct psc_lockedlist	 pfl_odtables =
     PLL_INIT(&pfl_odtables, struct pfl_odt, odt_lentry);
 
-static void *slm_odt_zerobuf;
+static void *pfl_odt_zerobuf;
 
 static void
-_slm_odt_zerobuf_ensurelen(size_t len)
+pfl_odt_zerobuf_ensurelen(size_t len)
 {
 	static psc_spinlock_t zerobuf_lock = SPINLOCK_INIT;
 	static size_t zerobuf_len;
@@ -65,7 +65,7 @@ _slm_odt_zerobuf_ensurelen(size_t len)
 
 	spinlock(&zerobuf_lock);
 	if (len > zerobuf_len) {
-		slm_odt_zerobuf = psc_realloc(slm_odt_zerobuf, len, 0);
+		pfl_odt_zerobuf = psc_realloc(pfl_odt_zerobuf, len, 0);
 		zerobuf_len = len;
 	}
 	freelock(&zerobuf_lock);
@@ -144,7 +144,7 @@ pfl_odt_write(struct pfl_odt *t, const void *p,
 	pad = h->odth_slotsz - h->odth_itemsz - sizeof(*f);
 	psc_assert(!pad);
 
-	_slm_odt_zerobuf_ensurelen(pad);
+	pfl_odt_zerobuf_ensurelen(pad);
 
 	off = item * h->odth_slotsz + h->odth_start;
 
@@ -154,7 +154,7 @@ pfl_odt_write(struct pfl_odt *t, const void *p,
 		off += h->odth_itemsz;
 
 	if (p && f)
-		PACK_IOV(slm_odt_zerobuf, pad);
+		PACK_IOV(pfl_odt_zerobuf, pad);
 	else
 		off += pad;
 
@@ -182,7 +182,7 @@ pfl_odt_read(struct pfl_odt *t, int64_t n,
 	pad = h->odth_slotsz - h->odth_itemsz - sizeof(*f);
 	psc_assert(!pad);
 
-	_slm_odt_zerobuf_ensurelen(pad);
+	pfl_odt_zerobuf_ensurelen(pad);
 
 	off = h->odth_start + n * h->odth_slotsz;
 
@@ -192,7 +192,7 @@ pfl_odt_read(struct pfl_odt *t, int64_t n,
 		off += h->odth_itemsz;
 
 	if (p && f)
-		PACK_IOV(slm_odt_zerobuf, pad);
+		PACK_IOV(pfl_odt_zerobuf, pad);
 	else
 		off += pad;
 
