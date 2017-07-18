@@ -91,7 +91,7 @@ struct pfl_odt_slotftr {
 /* odtf_flags values */
 #define ODT_FTRF_INUSE		(1 << 0)
 
-/* pfl_odtops and slm_odtops */
+/* two implementations: pfl_odtops and slm_odtops */
 struct pfl_odt_ops {
 
 	/* called by pfl_odt_create() */
