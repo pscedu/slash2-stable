@@ -93,8 +93,13 @@ struct pfl_odt_slotftr {
 
 /* pfl_odtops and slm_odtops */
 struct pfl_odt_ops {
+
+	/* called by pfl_odt_create() */
 	int	(*odtop_new)(struct pfl_odt *, const char *, int);
+
+	/* called by pfl_odt_load() */
 	void	(*odtop_open)(struct pfl_odt *, const char *, int);
+
 	void	(*odtop_read)(struct pfl_odt *, int64_t, void *,
 		    struct pfl_odt_slotftr *);
 	void	(*odtop_write)(struct pfl_odt *, const void *,
