@@ -34,9 +34,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <sys/uio.h>
 
 #include <errno.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <inttypes.h>
 
 #include "pfl/crc.h"
