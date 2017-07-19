@@ -639,7 +639,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	sjba->sjba_start = bia->bia_start;
 	sjba->sjba_flags = bia->bia_flags;
 	sjar->sjar_flags |= SLJ_ASSIGN_REP_BMAP;
-	sjar->sjar_item = bmap_2_bmi(b)->bmi_assign->odtr_item;
+	sjar->sjar_item = bmap_2_bmi(b)->bmi_assign;
 
 	pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_ASSIGN, 0, sjar,
 	    sizeof(*sjar));
@@ -700,7 +700,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 		return (-ENOMEM);
 	}
 
-	pfl_odt_mapitem(slm_bia_odt, item, &bia);
+	pfl_odt_allocitem(slm_bia_odt, (void **)&bia);
 
 	bia->bia_ios = bml->bml_ios = rmmi2resm(rmmi)->resm_res_id;
 	bia->bia_lastcli = bml->bml_cli_nidpid;
@@ -710,24 +710,25 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t iosid)
 	bia->bia_start = time(NULL);
 	bia->bia_flags = (b->bcm_flags & BMAPF_DIO) ? BIAF_DIO : 0;
 
-	bmi->bmi_assign = pfl_odt_putitem(slm_bia_odt, item, bia);
+	bmi->bmi_assign = item;
+	pfl_odt_putitem(slm_bia_odt, item, bia, 1);
 
+	/* journalling happens in the following function */
 	rc = mds_bmap_add_repl(b, bia);
 	if (rc) {
-		pfl_odt_freebuf(slm_bia_odt, bia, NULL);
-		// release odt ent?
+		PSCFREE(bia);
+		pfl_odt_freeitem(slm_bia_odt, item);
 		return (rc);
 	}
 
 	bml->bml_seq = bia->bia_seq;
 
 	DEBUG_FCMH(PLL_DIAG, b->bcm_fcmh, "bmap assign, item=%zd",
-	    bmi->bmi_assign->odtr_item);
+	    bmi->bmi_assign);
 	DEBUG_BMAP(PLL_DIAG, b, "using res(%s) "
-	    "rmmi(%p) bia(%p)", resm->resm_res->res_name,
-	    bmi->bmi_wr_ion, bmi->bmi_assign);
+	    "rmmi(%p)", resm->resm_res->res_name, bmi->bmi_wr_ion);
 
-	pfl_odt_freebuf(slm_bia_odt, bia, NULL);
+	PSCFREE(bia);
 
 	return (0);
 }
@@ -749,13 +750,14 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 
 	pfl_odt_getitem(slm_bia_odt, bmi->bmi_assign, &bia);
 	if (bia->bia_fid != fcmh_2_fid(b->bcm_fcmh)) {
-		/* XXX release bia? */
 		DEBUG_BMAP(PLL_ERROR, b, "different fid="SLPRI_FID,
 		   bia->bia_fid);
-		pfl_odt_freebuf(slm_bia_odt, bia, NULL);
+		PSCFREE(bia);
 		return (-1); // errno
 	}
-
+	/*
+ 	 * 07/11/2017: Crash due to bmi->bmi_seq = -1.
+ 	 */
 	psc_assert(bia->bia_seq == bmi->bmi_seq);
 	bia->bia_start = time(NULL);
 	bia->bia_seq = bmi->bmi_seq = mds_bmap_timeotbl_mdsi(bml,
@@ -768,12 +770,13 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	bml->bml_ios = bia->bia_ios;
 
 	rc = mds_bmap_add_repl(b, bia);
-	pfl_odt_freebuf(slm_bia_odt, bia, NULL);
+	PSCFREE(bia);
+
 	if (rc)
 		return (rc);
 
 	DEBUG_FCMH(PLL_DIAG, b->bcm_fcmh, "bmap update, item=%zd",
-	    bmi->bmi_assign->odtr_item);
+	    bmi->bmi_assign);
 
 	return (0);
 }
@@ -1174,9 +1177,8 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 {
 	struct bmap *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bml->bml_bmi;
-	struct pfl_odt_receipt *odtr = NULL;
 	struct fidc_membh *f = b->bcm_fcmh;
-	size_t item;
+	int64_t item = 0;
 	int rc = 0;
 
 	/* On the last release, BML_FREEING must be set. */
@@ -1240,8 +1242,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		if (bmi->bmi_assign) {
 			struct bmap_ios_assign *bia;
 
-			pfl_odt_getitem(slm_bia_odt,
-			    bmi->bmi_assign, &bia);
+			pfl_odt_getitem(slm_bia_odt, bmi->bmi_assign, &bia);
 
 			psc_assert(bia->bia_bmapno == b->bcm_bmapno);
 			/*
@@ -1255,11 +1256,11 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 				     b->bcm_bmapno, fcmh_2_fid(f)); 
 			}
 
-			pfl_odt_freebuf(slm_bia_odt, bia, NULL);
+			PSCFREE(bia);
 
 			/* End sanity checks. */
-			odtr = bmi->bmi_assign;
-			bmi->bmi_assign = NULL;
+			item = bmi->bmi_assign;
+			bmi->bmi_assign = 0;
 		}
 		if (bmi->bmi_wr_ion) {
 			psc_atomic32_dec(&bmi->bmi_wr_ion->rmmi_refcnt);
@@ -1279,14 +1280,11 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 
 	psc_pool_return(slm_bml_pool, bml);
 
-	if (odtr) {
+	if (item) {
 		struct slmds_jent_assign_rep *sjar;
 
-		item = odtr->odtr_item;
-
 		mds_reserve_slot(1);
-		sjar = pjournal_get_buf(slm_journal,
-		    sizeof(*sjar));
+		sjar = pjournal_get_buf(slm_journal, sizeof(*sjar));
 		sjar->sjar_item = item;
 		sjar->sjar_flags = SLJ_ASSIGN_REP_FREE;
 		pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_ASSIGN,
@@ -1294,7 +1292,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		pjournal_put_buf(slm_journal, sjar);
 		mds_unreserve_slot(1);
 
-		pfl_odt_freeitem(slm_bia_odt, odtr);
+		pfl_odt_freeitem(slm_bia_odt, item);
 	}
 
 	return (rc);
@@ -1396,11 +1394,10 @@ mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
 }
 
 void
-mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
+mds_bia_odtable_startup_cb(void *data, int64_t item,
     __unusedx void *arg)
 {
 	struct bmap_ios_assign *bia = data;
-	struct pfl_odt_receipt *r = NULL;
 	struct fidc_membh *f = NULL;
 	struct bmap_mds_lease *bml;
 	struct sl_fidgen fg;
@@ -1409,8 +1406,8 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 
 	OPSTAT_INCR("bmap-restart-check");
 
-	r = PSCALLOC(sizeof(*r));
-	memcpy(r, odtr, sizeof(*r));
+	if (item == 0)
+		return;
 
 	psclog_debug("fid="SLPRI_FID" seq=%"PRId64" res=(%s) bmapno=%u",
 	    bia->bia_fid, bia->bia_seq,
@@ -1432,7 +1429,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc) {
 		psclog_errorx("failed to load: item=%zd, fid="SLPRI_FID,
-		    r->odtr_item, fg.fg_fid);
+		    item, fg.fg_fid);
 		PFL_GOTOERR(out, rc);
 	}
 
@@ -1447,8 +1444,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
  	 * So we only put a write lease into the odtable.
  	 */
 	BMAP_ULOCK(b);
-	bml = mds_bml_new(b, NULL, BML_WRITE | BML_RECOVER,
-	    &bia->bia_lastcli);
+	bml = mds_bml_new(b, NULL, BML_WRITE|BML_RECOVER, &bia->bia_lastcli);
 	BMAP_LOCK(b);
 
 	bml->bml_seq = bia->bia_seq;
@@ -1467,7 +1463,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 		// XXX BMAP_LOCK(b)
 		b->bcm_flags |= BMAPF_DIO;
 
-	bmap_2_bmi(b)->bmi_assign = r;
+	bmap_2_bmi(b)->bmi_assign = item;
 
 	rc = mds_bmap_bml_add(bml, SL_WRITE, IOS_ID_ANY);
 	psc_assert(!rc);
@@ -1491,7 +1487,7 @@ mds_bia_odtable_startup_cb(void *data, struct pfl_odt_receipt *odtr,
 		 * However, it should be able to work because our cursor
 		 * thread (i.e. slmjcursorthr_main() has already started.
 		 */
-		pfl_odt_freeitem(slm_bia_odt, r);
+		pfl_odt_freeitem(slm_bia_odt, item);
 	if (b)
 		bmap_op_done(b);
 	if (f)
@@ -1740,10 +1736,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 	 * lease.
 	 */
 	sbd->sbd_seq = bml->bml_seq;
-
-	/* Stash the odtable key if this is a write lease. */
-	sbd->sbd_key = (rw == SL_WRITE) ?
-	    bml->bml_bmi->bmi_assign->odtr_crc : BMAPSEQ_ANY;
+	sbd->sbd_key = BMAPSEQ_ANY;
 
 	/*
 	 * Store the nid/pid of the client interface in the bmapdesc to
@@ -1850,12 +1843,13 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	sbd_out->sbd_seq = obml->bml_seq;
 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
-	sbd_out->sbd_key = obml->bml_bmi->bmi_assign->odtr_crc;
+	sbd_out->sbd_key = BMAPSEQ_ANY;
 	sbd_out->sbd_ios = obml->bml_ios;
 
  out1:
 	if (bia)
-		pfl_odt_freebuf(slm_bia_odt, bia, NULL);
+		PSCFREE(bia);
+
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAPF_IOSASSIGNED);
 	b->bcm_flags &= ~BMAPF_IOSASSIGNED;
@@ -1917,7 +1911,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 		psc_assert(bmi->bmi_wr_ion);
 
-		sbd_out->sbd_key = bml->bml_bmi->bmi_assign->odtr_crc;
+		sbd_out->sbd_key = BMAPSEQ_ANY;
 		sbd_out->sbd_ios = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
 	} else {
 		sbd_out->sbd_key = BMAPSEQ_ANY;
@@ -2303,30 +2297,4 @@ _dbdo(const struct pfl_callerinfo *pci,
 	sqlite3_finalize(sth);
 	freelock(&slm_upsch_lock);
 	return (rc == SQLITE_DONE ? 0 : rc);
-}
-
-void
-slm_ptrunc_odt_startup_cb(void *data, __unusedx struct pfl_odt_receipt *odtr,
-    __unusedx void *arg)
-{
-	struct {
-		struct sl_fidgen fg;
-	} *pt = data;
-	struct fidc_membh *f;
-//	sl_bmapno_t bno;
-	int rc;
-
-	rc = slm_fcmh_get(&pt->fg, &f);
-	if (rc == 0) {
-//		bno = howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE) - 1;
-		/* XXX do something */
-		fcmh_op_done(f);
-	}
-
-//	brepls_init(tract, -1);
-//	tract[BREPLST_TRUNC_SCHED] = BREPLST_TRUNC_QUEUED;
-
-//	brepls_init(retifset, 0);
-//	retifset[BREPLST_TRUNC_SCHED] = 1;
-//	wr = mds_repl_bmap_walk_all(b, tract, retifset, 0);
 }

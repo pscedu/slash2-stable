@@ -40,10 +40,10 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-void *slm_odt_zerobuf;
+static void *slm_odt_zerobuf;
 
-void
-_slm_odt_zerobuf_ensurelen(size_t len)
+static void
+slm_odt_zerobuf_ensurelen(size_t len)
 {
 	static psc_spinlock_t zerobuf_lock = SPINLOCK_INIT;
 	static size_t zerobuf_len;
@@ -69,7 +69,7 @@ _slm_odt_zerobuf_ensurelen(size_t len)
 
 void
 slm_odt_write(struct pfl_odt *t, const void *p,
-    struct pfl_odt_slotftr *f, size_t item)
+    struct pfl_odt_slotftr *f, int64_t item)
 {
 	size_t nb, expect = 0;
 	struct pfl_odt_hdr *h;
@@ -85,7 +85,7 @@ slm_odt_write(struct pfl_odt *t, const void *p,
 	pad = h->odth_slotsz - h->odth_itemsz - sizeof(*f);
 	psc_assert(!pad);
 
-	_slm_odt_zerobuf_ensurelen(pad);
+	slm_odt_zerobuf_ensurelen(pad);
 
 	off = item * h->odth_slotsz + h->odth_start;
 
@@ -108,7 +108,7 @@ slm_odt_write(struct pfl_odt *t, const void *p,
 }
 
 void
-slm_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
+slm_odt_read(struct pfl_odt *t, int64_t item,
     void *p, struct pfl_odt_slotftr *f)
 {
 	size_t nb, expect = 0;
@@ -124,9 +124,9 @@ slm_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
 	pad = h->odth_slotsz - h->odth_itemsz - sizeof(*f);
 	psc_assert(!pad);
 
-	_slm_odt_zerobuf_ensurelen(pad);
+	slm_odt_zerobuf_ensurelen(pad);
 
-	off = h->odth_start + r->odtr_item * h->odth_slotsz;
+	off = h->odth_start + item * h->odth_slotsz;
 
 	if (p)
 		PACK_IOV(p, h->odth_itemsz);
@@ -147,7 +147,7 @@ slm_odt_read(struct pfl_odt *t, const struct pfl_odt_receipt *r,
 }
 
 void
-slm_odt_sync(struct pfl_odt *t, __unusedx size_t item)
+slm_odt_sync(struct pfl_odt *t, __unusedx int64_t item)
 {
 	mdsio_fsync(current_vfsid, &rootcreds, 0, t->odt_mfh);
 }
@@ -165,10 +165,6 @@ slm_odt_resize(struct pfl_odt *t)
 	size_t nb;
 	int rc;
 
-	/*
-	 * XXX either trust the bitmap or initialize the footer
-	 * of new items
-	 */
 	h = t->odt_hdr;
 	psc_crc64_calc(&h->odth_crc, h, sizeof(*h) - sizeof(h->odth_crc));
 	rc = mdsio_write(current_vfsid, &rootcreds, h, sizeof(*h), &nb,
@@ -202,21 +198,22 @@ slm_odt_open(struct pfl_odt *t, const char *fn, __unusedx int oflg)
 			    fn, rc);
 		return;
 	}
-	if (rc == 2 && strcmp(fn, SL_FN_BMAP_ODTAB) == 0) {
-		t->odt_ops.odtop_create(t, fn, -1);
-		return;
-	}
-	psc_fatalx("failed to lookup odtable %s, rc=%d", fn, rc);
+	if (rc == 2 && strcmp(fn, SL_FN_BMAP_ODTAB) == 0)
+		rc = t->odt_ops.odtop_new(t, fn, -1);
+
+	if (rc)
+		psc_fatalx("failed to lookup/create odtable %s, rc=%d", 
+		    fn, rc);
 }
 
 /*
  * Create a default on-disk table if no one is found.
  */
-void
-slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
+int
+slm_odt_new(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 {
+	int64_t item;
 	struct pfl_odt_slotftr f;
-	struct pfl_odt_receipt r;
 	struct pfl_odt_hdr *h;
 	size_t nb;
 	int rc;
@@ -243,28 +240,29 @@ slm_odt_create(struct pfl_odt *t, const char *fn, __unusedx int overwrite)
 	if (rc || nb != sizeof(*h))
 		psc_fatalx("failed to write odtable %s, rc=%d", fn, rc);
 
-	for (r.odtr_item = 0; r.odtr_item < h->odth_nitems;
-	    r.odtr_item++) {
+	for (item = 0; item < h->odth_nitems; item++) {
 		f.odtf_flags = 0;
-		f.odtf_slotno = r.odtr_item;
+		f.odtf_slotno = item;
+
+		/* CRC only cover the footer for an unused slot. */
 		psc_crc64_init(&f.odtf_crc);
-		psc_crc64_add(&f.odtf_crc, &f, sizeof(f) -
-		    sizeof(f.odtf_crc));
+		psc_crc64_add(&f.odtf_crc, &f, sizeof(f) - sizeof(f.odtf_crc));
 		psc_crc64_fini(&f.odtf_crc);
-		t->odt_ops.odtop_write(t, NULL, &f, r.odtr_item);
+
+		t->odt_ops.odtop_write(t, NULL, &f, item);
 	}
-	t->odt_ops.odtop_sync(t, -1);
+	mdsio_fsync(current_vfsid, &rootcreds, 0, t->odt_mfh);
 	zfsslash2_wait_synced(0);
-	psclog_max("Default bmap lease on-disk table %s has been created successfully!", fn);
+	psclog_max("On-disk table %s has been created successfully!", fn);
+	return (0);
 }
 
+/* See also to pfl_odtops */
 struct pfl_odt_ops slm_odtops = {
-	slm_odt_create,		/* odtop_create() */
+	slm_odt_new,		/* odtop_new() */
 	slm_odt_open,		/* odtop_open() */
-	slm_odt_close,		/* odtop_close() */
 	slm_odt_read,		/* odtop_read() */
 	slm_odt_write,		/* odtop_write() */
-	NULL,			/* odtop_mapslot() */
 	slm_odt_resize,		/* odtop_resize() */
-	slm_odt_sync		/* odtop_sync() */
+	slm_odt_close		/* odtop_close() */
 };
