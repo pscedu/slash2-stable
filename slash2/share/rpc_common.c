@@ -728,10 +728,10 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	switch (peertype) {
 	case SLCONNT_CLI:
 		/*
-		 * From Lustre document: An import is the client side of 
-		 * the connection to a target. An export is the server 
-		 * side. A client has one import for every target. A 
-		 * service has one export for every client.
+		 * From Lustre document: An import is the client side 
+		 * of the connection to a target. An export is the server 
+		 * side. A client has one import for every target.
+		 * A service has one export for every client.
 		 *
 		 * This is the case when a client connects to MDS or IOS.
 		 *
