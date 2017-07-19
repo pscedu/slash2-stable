@@ -1,3 +1,9 @@
+07/19/2017
+----------
+
+Odtable cleanup/unification/simplification (get rid of receipt allocation). Fix
+a bmap sequence number invalid corner case.  Some pool locking clean up.
+
 07/03/2017
 ----------
 
