@@ -684,12 +684,22 @@ usocklnd_destroy_conn(usock_conn_t *conn)
         LASSERT (conn->uc_peer == NULL || conn->uc_ni == NULL);
 
         if (conn->uc_rx_state == UC_RX_LNET_PAYLOAD) {
+		/*
+		 * 07/13/2017: Hit NULL assert below, called 
+		 * from usocklnd_poll_thread().
+		 */
                 LASSERT (conn->uc_peer != NULL);
                 lnet_finalize(conn->uc_peer->up_ni, conn->uc_rx_lnetmsg, -EIO);
         }
 
         if (!list_empty(&conn->uc_tx_list)) {
-		/* 04/04/2017: Hit NULL crash below */
+		/*
+		 * 04/04/2017: Hit NULL assert below.
+		 *
+		 * 07/13/2017: Hit NULL assert again: 
+		 *
+		 * uc_peerid = { 10.4.108.85@sdp5, 54321 }
+		 */
                 LASSERT (conn->uc_peer != NULL);                
                 usocklnd_destroy_txlist(conn->uc_peer->up_ni, &conn->uc_tx_list);
         }

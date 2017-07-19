@@ -1005,11 +1005,10 @@ psc_ctlmsg_odtable_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	char buf[PSCFMT_RATIO_BUFSIZ];
 
 	pfl_fmt_ratio(buf, pco->pco_inuse, pco->pco_total);
-	printf("%-46s  %c%c "
+	printf("%-46s  %c "
 	    "%6d %7d %7d %6s\n",
 	    pco->pco_name,
 	    pco->pco_opts & ODTBL_OPT_CRC	? 'c' : '-',
-	    pco->pco_opts & ODTBL_OPT_SYNC	? 's' : '-',
 	    pco->pco_elemsz, pco->pco_inuse, pco->pco_total, buf);
 }
 
