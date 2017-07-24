@@ -47,8 +47,12 @@
 psc_spinlock_t				  psc_umask_lock = SPINLOCK_INIT;
 __threadx const struct pfl_callerinfo	*_pfl_callerinfo;
 __threadx int				 _pfl_callerinfo_lvl;
-struct timespec				  pfl_uptime;
 pid_t					  pfl_pid;
+
+struct timespec				  pfl_uptime;
+
+/* no functional usage, used to debug lease expiration time */
+time_t				  	  pfl_start_time;
 
 /* XXX does not work on FreeBSD 9.0, it returns -1 */
 pid_t
@@ -199,6 +203,7 @@ pfl_init(void)
 		psc_fatal("sigaction");
 
 	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &pfl_uptime);
+	pfl_start_time = time(NULL);
 
 	pfl_errno_init();
 }
