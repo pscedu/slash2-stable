@@ -3949,9 +3949,10 @@ msreapthr_main(struct psc_thread *thr)
 		curr = bmpce_pool->ppm_nfree;
 		POOL_ULOCK(bmpce_pool);
 
-		POOL_LOCK(bmpce_pool);
 		if (last && curr >= last)
 			psc_pool_try_shrink(bmpce_pool, curr);
+
+		POOL_LOCK(bmpce_pool);
 		last = bmpce_pool->ppm_nfree;
 		POOL_ULOCK(bmpce_pool);
 

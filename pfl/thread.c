@@ -184,7 +184,6 @@ pscthr_get(void)
 	struct psc_thread *thr;
 
 	thr = pscthr_get_canfail();
-	psc_assert(thr);
 	return (thr);
 }
 

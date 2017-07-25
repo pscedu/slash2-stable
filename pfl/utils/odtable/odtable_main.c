@@ -3,7 +3,7 @@
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015, Google, Inc.
- * Copyright (c) 2009-2015, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2009-2017, Pittsburgh Supercomputing Center (PSC).
  * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -40,6 +40,7 @@
 #include "pfl/log.h"
 #include "pfl/odtable.h"
 #include "pfl/pfl.h"
+#include "pfl/thread.h"
 
 const char		*fmt;
 int			 create_table;
@@ -52,7 +53,7 @@ size_t			 item_size = ODT_ITEM_SIZE;
 size_t			 nitems = ODT_ITEM_COUNT;
 
 void
-visit(__unusedx void *data, struct pfl_odt_receipt *r,
+visit(__unusedx void *data, int64_t item,
     void *arg)
 {
 	char buf[LINE_MAX], *p = data;
@@ -64,15 +65,6 @@ visit(__unusedx void *data, struct pfl_odt_receipt *r,
 		void	*p;
 	} u;
 	size_t i;
-
-	if (num_free) {
-		struct pfl_odt_receipt *rdup;
-
-		rdup = PSCALLOC(sizeof(*rdup));
-		memcpy(rdup, r, sizeof(*r));
-		psc_dynarray_add(&rcpts, rdup);
-		num_free--;
-	}
 
 	if (!dump)
 		return;
@@ -87,7 +79,7 @@ visit(__unusedx void *data, struct pfl_odt_receipt *r,
 		dump_hdr = 1;
 	}
 
-	printf("%7zd %16"PRIx64" ", r->odtr_item, r->odtr_crc);
+	printf("item: %7zd", item);
 
 	if (fmt) {
 		(void)FMTSTR(buf, sizeof(buf), fmt,
@@ -126,7 +118,7 @@ usage(void)
 	extern const char *__progname;
 
 	fprintf(stderr,
-	    "usage: %s [-CcdosvZ] [-F #frees] [-n #puts]\n"
+	    "usage: %s [-Ccdosv] [-F #frees] [-n #puts]\n"
 	    "\t[-s item_size] [-X fmt] [-z table_size] file\n", __progname);
 	exit(1);
 }
@@ -134,14 +126,14 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	int c, i, verbose = 0, oflg = ODTBL_FLG_RDONLY,
-	    tflg = ODTBL_OPT_CRC;
-	struct pfl_odt_receipt *r;
+	int c, i, rc, verbose = 0, oflg = ODTBL_FLG_RDONLY, tflg = ODTBL_OPT_CRC;
 	struct pfl_odt *t;
 	char *p, *fn;
 
 	pfl_init();
-	while ((c = getopt(argc, argv, "CcdF:n:osvX:Zz:")) != -1)
+	pscthr_init(0, NULL, 0, "odtable");
+
+	while ((c = getopt(argc, argv, "CcdF:n:osvX:z:")) != -1)
 		switch (c) {
 		case 'C':
 			create_table = 1;
@@ -172,48 +164,47 @@ main(int argc, char *argv[])
 		case 'X':
 			fmt = optarg;
 			break;
-		case 'Z':
-			tflg |= ODTBL_OPT_SYNC;
-			break;
 		case 'z':
 			nitems = atoi(optarg);
 			break;
 		default:
 			usage();
 		}
+
 	argc -= optind;
 	argv += optind;
 	if (argc != 1)
 		usage();
+
 	fn = argv[0];
 
 	if (create_table) {
-		pfl_odt_create(fn, nitems, item_size, overwrite,
+		rc = pfl_odt_create(fn, nitems, item_size, overwrite,
 		    ODT_ITEM_START, 0, tflg);
-		if (verbose)
+		if (!rc && verbose)
 			warnx("created od-table %s "
 			    "(elemsize=%zu, nitems=%zu)",
 			    fn, item_size, nitems);
 		exit(0);
 	}
 
-	pfl_odt_load(&t, &pfl_odtops_mmap, oflg, fn, "%s", fn);
+	pfl_odt_load(&t, &pfl_odtops, oflg, fn, "%s", fn);
 	pfl_odt_check(t, visit, &t);
 
 	for (i = 0; i < num_puts; i++) {
 		size_t elem;
 
 		elem = pfl_odt_allocslot(t);
-		pfl_odt_mapitem(t, elem, &p);
+		pfl_odt_allocitem(t, (void **)&p);
 		snprintf(p, item_size, "... put_number=%d ...", i);
-		pfl_odt_putitem(t, elem, p);
-		pfl_odt_freebuf(t, p, NULL);
+		pfl_odt_putitem(t, elem, p, 1);
+		PSCFREE(p);
 	}
 
-	DYNARRAY_FOREACH(r, i, &rcpts)
-		pfl_odt_freeitem(t, r);
+	/* XXX find in-use slot to free */
+	for (i = 0; i < num_free; i++)
+		pfl_odt_freeitem(t, i);
 
 	pfl_odt_release(t);
-	psc_dynarray_free(&rcpts);
 	exit(0);
 }

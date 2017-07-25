@@ -404,7 +404,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != magic || mq->version != version)
-		mp->rc = -EINVAL;
+		mp->rc = -EPERM;
 
 	/* stkvers and uptime are returned in slctlrep_getconn() */
 	tv1.tv_sec = mq->uptime;
@@ -438,8 +438,10 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 			mp->rc = -SLERR_ION_UNKNOWN;
 			break;
 		}
-		if (!RES_ISFS(m->resm_res))
+		if (!RES_ISFS(m->resm_res)) {
 			mp->rc = -SLERR_RES_BADTYPE;
+			break;
+		}
 		m->resm_res->res_stkvers = mq->stkvers;
 		m->resm_res->res_uptime = tv1.tv_sec;
 		break;
@@ -449,8 +451,10 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 			mp->rc = -SLERR_RES_UNKNOWN;
 			break;
 		}
-		if (m->resm_type != SLREST_MDS)
+		if (m->resm_type != SLREST_MDS) {
 			mp->rc = -SLERR_RES_BADTYPE;
+			break;
+		}
 		m->resm_res->res_stkvers = mq->stkvers;
 		m->resm_res->res_uptime = tv1.tv_sec;
 		break;
@@ -522,7 +526,12 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 	psc_assert(!(csvc->csvc_flags & CSVCF_TOFREE));
 	csvc->csvc_flags |= CSVCF_TOFREE;
 
-	/* Drop lock before potentially grabbing the list lock */
+	/*
+	 * Drop lock before potentially grabbing the list lock.
+	 * This is different from the locking order we use in
+	 * instantiation. However, I have not found any reason
+	 * why this causes the crash.
+	 */
 	CSVC_ULOCK(csvc);
 
 	if (csvc->csvc_peertype == SLCONNT_CLI) {
@@ -531,9 +540,8 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 	}
 
 	/*
-	 * Due to the nature of non-blocking CONNECT,
-	 * the import may or may not actually be
-	 * present.
+	 * Due to the nature of non-blocking CONNECT, the import 
+	 * may or may not actually be present.
 	 */
 	imp = csvc->csvc_import;
 	if (imp)
@@ -930,6 +938,14 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
  	 * In theory, a client csvc should go away once it is not online.
  	 * Apparently, there is a race condition somewhere that has caused
  	 * trouble on our production system. Hence CSVCF_ONLIST.
+ 	 *
+ 	 * To examine csvc_flags, use the following:
+ 	 *
+ 	 * (gdb) p csvc->csvc_params.scp_flags
+ 	 *
+ 	 * 07/10/2017: Hit a crash with flag 11000010, this indicates that 
+ 	 * there is a code path that can reach the csvc after its reference 
+ 	 * count is zero and marked to free.
  	 */
 	if (peertype == SLCONNT_CLI && !(csvc->csvc_flags & CSVCF_ONLIST)) {
 		csvc->csvc_flags |= CSVCF_ONLIST;
@@ -1103,6 +1119,17 @@ slconnthr_watch(struct psc_thread *thr, struct slrpc_cservice *csvc,
 	if (rc)
 		return;
 
+	/*
+	 * 07/10/2017:
+	 *
+	 * Odd output from slmctl -sc from the MDS:
+	 *
+ 	 *  stor013s1  ...    -O--       0    8     2  201d22h18m
+ 	 *
+ 	 * We should have a W flag, and the uptime is bogus as well.
+ 	 * The sliod is otherwise functional though. This is fixed 
+ 	 * by restarting the corresponding sliod.
+ 	 */
 	CSVC_LOCK(csvc);
 	scp->scp_flags |= flags | CSVCF_WATCH;
 	scp->scp_useablef = useablef;
@@ -1182,6 +1209,9 @@ sl_exp_hldrop_resm(struct pscrpc_export *exp)
 /*
  * Get pscrpc_export private data specific to CLIENT peer.
  * @exp: RPC export to CLI peer.
+ *
+ * populate is only true when we handles a connection request.
+ * See slrpc_handle_connect().
  */
 void *
 sl_exp_getpri_cli(struct pscrpc_export *exp, int populate)
@@ -1194,6 +1224,11 @@ sl_exp_getpri_cli(struct pscrpc_export *exp, int populate)
 	if (exp->exp_private == NULL && populate) {
 		/* mexpc_allocpri() or iexpc_allocpri() */
 		csvc = sl_expcli_ops.secop_allocpri(exp);
+		/*
+		 * This is probably Okay because we re-use the 
+		 * connection from the client that has already 
+		 * been established. See comments in _sl_csvc_get().
+		 */
 		psc_assert(csvc);
 		exp->exp_hldropf = sl_exp_hldrop_cli;
 	}

@@ -109,9 +109,6 @@ struct psc_vbitmap {
 struct psc_vbitmap *
 	 psc_vbitmap_newf(size_t, int);
 
-struct psc_vbitmap *
-	 psc_vbitmap_attach(unsigned char *, size_t);
-
 void	_psc_vbitmap_free(struct psc_vbitmap *);
 void	 psc_vbitmap_clearall(struct psc_vbitmap *);
 int	 psc_vbitmap_get(const struct psc_vbitmap *, size_t);

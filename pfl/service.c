@@ -391,6 +391,10 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 
 	DEBUG_REQ(PLL_DEBUG, request, buf, "handling RPC");
 
+	/*
+ 	 * 07/07/2017: We have already registered the connection into the
+ 	 * pscrpc_conn_hashtbl hash table before handling the RPC.
+ 	 */
 	rc = svc->srv_handler(request);
 
 	request->rq_phase = PSCRPC_RQ_PHASE_COMPLETE;

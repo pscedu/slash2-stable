@@ -715,7 +715,6 @@ main(int argc, char *argv[])
 	time(&now);
 	psclog_max("SLASH2 utility slmctl is now ready at %s", ctime(&now));
 
-
 	pfl_odt_check(slm_bia_odt, mds_bia_odtable_startup_cb, NULL);
 
 	/*
