@@ -77,8 +77,6 @@ struct pscfs		 pscfs;
 struct psc_thread	*slmconnthr;
 uint32_t		 sl_sys_upnonce;
 
-struct pfl_odt		*slm_ptrunc_odt;
-
 /* this table is immutable, at least for now */
 struct psc_hashtbl	 slm_roots;
 
@@ -595,8 +593,6 @@ main(int argc, char *argv[])
 
 	pfl_odt_load(&slm_bia_odt, &slm_odtops, 0, SL_FN_BMAP_ODTAB,
 	    "bmapassign");
-	pfl_odt_load(&slm_ptrunc_odt, &slm_odtops, 0,
-	    SL_FN_PTRUNC_ODTAB, "ptrunc");
 
 	mds_bmap_timeotbl_init();
 
@@ -721,7 +717,6 @@ main(int argc, char *argv[])
 
 
 	pfl_odt_check(slm_bia_odt, mds_bia_odtable_startup_cb, NULL);
-	pfl_odt_check(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);
 
 	/*
 	 * As soon as log replay is over, we should be able to set the

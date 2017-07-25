@@ -313,7 +313,6 @@ slfid_t	slm_get_curr_slashfid(void);
 void	slm_set_curr_slashfid(slfid_t);
 int	slm_get_next_slashfid(slfid_t *);
 
-void	slm_ptrunc_odt_startup_cb(void *, struct pfl_odt_receipt *, void *);
 int	slm_ptrunc_prepare(struct fidc_membh *, struct srt_stat *, int);
 
 int	mdscoh_req(struct bmap_mds_lease *);
@@ -329,7 +328,6 @@ int	 _dbdo(const struct pfl_callerinfo *,
 
 extern struct slash_creds	 rootcreds;
 extern struct pfl_odt		*slm_bia_odt;
-extern struct pfl_odt		*slm_ptrunc_odt;
 extern struct slm_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
 extern struct psc_listcache	 slm_db_hipri_workq;
 extern struct psc_listcache	 slm_db_lopri_workq;
