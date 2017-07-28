@@ -133,6 +133,8 @@ pfl_bitstr_nset(const void *val, int len)
  *
  * XXX 32-bit architectures should use 32-bit values instead of 64-bit
  * since the wordsize will be faster.
+ * 
+ * Called by fnstat_prdat().
  */
 static __inline void
 pfl_bitstr_copy(void *dst, int doff, const void *src, int soff, int nbits)
