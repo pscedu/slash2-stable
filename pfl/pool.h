@@ -254,7 +254,7 @@ void	*_psc_pool_get(struct psc_poolmgr *, int);
 int	  psc_pool_gettotal(struct psc_poolmgr *);
 int	  psc_pool_inuse(struct psc_poolmgr *);
 int	  psc_pool_nfree(struct psc_poolmgr *);
-void	  psc_pool_reap(struct psc_poolmgr *, int);
+int	  psc_pool_reap(struct psc_poolmgr *, int);
 void	  psc_pool_reapmem(size_t);
 void	  psc_pool_resize(struct psc_poolmgr *);
 void	 _psc_pool_return(struct psc_poolmgr *, void *);
