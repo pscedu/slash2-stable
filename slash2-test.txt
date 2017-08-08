@@ -279,6 +279,8 @@ Unit tests
 
 15. Use slmctl/slictl/msctl to change the min/max sizes of a pool.
 
+16. Verify silly-rename works by unlinking an opened file.
+
 05/30/2017
 ----------
 
