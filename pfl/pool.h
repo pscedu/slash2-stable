@@ -138,6 +138,7 @@ struct psc_poolmgr {
 #define PPMF_ALIGN		(1 << 5)	/* align to system page boundaries */
 #define PPMF_NOPREEMPT		(1 << 6)	/* do reactive reaping */
 #define PPMF_PREEMPTQ		(1 << 7)	/* queued for preemptive reaping */
+#define PPMF_IDLEREAP		(1 << 8)	/* idle reaping */
 
 #define POOL_LOCK(m)		PLL_LOCK(&(m)->ppm_pll)
 #define POOL_LOCK_ENSURE(m)	PLL_LOCK_ENSURE(&(m)->ppm_pll)
