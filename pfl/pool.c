@@ -49,6 +49,8 @@
 #include "pfl/waitq.h"
 #include "pfl/workthr.h"
 
+/* See psc_ctlmsg_pool_prdat() on how to print out pool statistics */
+
 #if PFL_DEBUG > 1
 #  define _POOL_SETPROT(p, m, prot)					\
 	psc_mprotect((void *)(((uintptr_t)(p)) &			\
