@@ -1082,7 +1082,7 @@ slab_cache_reap(struct psc_poolmgr *m)
 
 	DYNARRAY_FOREACH(s, i, &a)
 		slvr_remove(s);
-	psc_dynarray_reset(&a);
+	psc_dynarray_free(&a);
 
 	return (0);
 }
