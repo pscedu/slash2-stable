@@ -1477,7 +1477,6 @@ psc_ctlparam_pool(int fd, struct psc_ctlmsghdr *mh,
 			    "invalid pool: %s", levels[1]));
 		rc = psc_ctlparam_pool_handle(fd, mh, pcp, levels,
 		    nlevels, m, val);
-		POOL_ULOCK(m);
 	}
 	return (rc);
 }
