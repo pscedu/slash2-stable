@@ -809,10 +809,8 @@ psc_pool_lookup(const char *name)
 
 	PLL_LOCK(&psc_pools);
 	PLL_FOREACH(m, &psc_pools)
-		if (strcmp(name, m->ppm_name) == 0) {
-			POOL_LOCK(m);
+		if (strcmp(name, m->ppm_name) == 0)
 			break;
-		}
 	PLL_ULOCK(&psc_pools);
 	return (m);
 }
