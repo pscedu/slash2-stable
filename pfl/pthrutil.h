@@ -99,10 +99,7 @@ struct pfl_rwlock {
 #endif
 
 #define pfl_rwlock_rdlock(rw)		_pfl_rwlock_rdlock(PFL_CALLERINFO(), (rw))
-#define pfl_rwlock_reqrdlock(rw)	_pfl_rwlock_reqrdlock(PFL_CALLERINFO(), (rw))
-#define pfl_rwlock_reqwrlock(rw)	_pfl_rwlock_reqwrlock(PFL_CALLERINFO(), (rw))
 #define pfl_rwlock_unlock(rw)		_pfl_rwlock_unlock(PFL_CALLERINFO(), (rw))
-#define pfl_rwlock_ureqlock(rw, lk)	_pfl_rwlock_ureqlock(PFL_CALLERINFO(), (rw), (lk))
 #define pfl_rwlock_wrlock(rw)		_pfl_rwlock_wrlock(PFL_CALLERINFO(), (rw))
 
 void	 pfl_rwlock_destroy(struct pfl_rwlock *);
