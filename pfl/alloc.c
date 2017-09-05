@@ -283,6 +283,7 @@ _psc_realloc(void *oldp, size_t size, int flags)
 			psclog_error("malloc/realloc");
 			return (NULL);
 		}
+		/* 09/05/2017: Hit this on sliod */
 		err(1, "malloc/realloc");
 	}
 
