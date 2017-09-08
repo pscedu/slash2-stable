@@ -183,12 +183,6 @@ struct psc_poolmgr {
 	    (flags), (total), (min), (max),				\
 	    (reclaimcb), NULL, (namefmt), ## __VA_ARGS__)
 
-#define psc_poolmaster_initml(p, type, member, flags, total, min, max,	\
-	    reclaimcb, mlcarg, namefmt, ...)				\
-	_psc_poolmaster_init((p), sizeof(type), offsetof(type, member),	\
-	    (flags) | PPMF_MLIST, (total), (min), (max),		\
-	    (reclaimcb), (mlcarg), (namefmt), ## __VA_ARGS__)
-
 #define psc_poolmaster_getmgr(p)	_psc_poolmaster_getmgr((p), psc_memnode_getid())
 
 
