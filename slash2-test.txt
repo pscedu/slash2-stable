@@ -807,3 +807,108 @@ as above, it takes 23 minutes:
 
 
 iozone test complete.
+
+
+09/10/2017
+----------
+
+Three way bigfile.sh test result on two clients:
+
+On zebes:
+
+All tests have passed successfully! Total elapsed time: 86881.68781030 seconds.
+
+bash-4.2# ./msctl -p sys.pref_ios
+parameter                                               value
+================================================================================
+sys.pref_ios                                            lemon@PSC
+
+
+bash-4.2# mdadm --detail /dev/md127
+/dev/md127:
+        Version : 1.2
+  Creation Time : Thu Sep  4 13:02:29 2014
+     Raid Level : raid0
+     Array Size : 8302537728 (7917.92 GiB 8501.80 GB)
+   Raid Devices : 14
+  Total Devices : 14
+    Persistence : Superblock is persistent
+
+    Update Time : Thu Sep  4 13:02:29 2014
+          State : clean 
+ Active Devices : 14
+Working Devices : 14
+ Failed Devices : 0
+  Spare Devices : 0
+
+     Chunk Size : 512K
+
+           Name : lemon:0
+           UUID : 16eb0f75:dec6fbe6:90585f8e:aecf91d1
+         Events : 0
+
+    Number   Major   Minor   RaidDevice State
+       0       8       48        0      active sync   /dev/sdd
+       1       8       64        1      active sync   /dev/sde
+       2       8       80        2      active sync   /dev/sdf
+       3       8       96        3      active sync   /dev/sdg
+       4       8      112        4      active sync   /dev/sdh
+       5       8      128        5      active sync   /dev/sdi
+       6       8      144        6      active sync   /dev/sdj
+       7       8      160        7      active sync   /dev/sdk
+       8       8      176        8      active sync   /dev/sdl
+       9       8      192        9      active sync   /dev/sdm
+      10       8      208       10      active sync   /dev/sdn
+      11       8      224       11      active sync   /dev/sdo
+      12       8      240       12      active sync   /dev/sdp
+      13      65        0       13      active sync   /dev/sdq
+
+In the log:
+
+pool corrupt? m = 0x7fffe42e9620, total = 15937, min = 512, name = bmpce.
+pool corrupt? m = 0x7fffe42e9620, total = 16383, min = 512, name = bmpce.
+pool corrupt? m = 0x7fffe42e9620, total = 16384, min = 512, name = bmpce.
+
+
+On yuzu:
+
+All tests have passed successfully! Total elapsed time: 146702.28400432 seconds.
+
+bash-4.2# ./msctl -p sys.pref_ios
+parameter                                               value
+================================================================================
+sys.pref_ios                                            lime@PSC
+
+ssh-4.2# mdadm --detail /dev/md0
+/dev/md0:
+        Version : 1.2
+  Creation Time : Sat Jul  1 08:36:06 2017
+     Raid Level : raid0
+     Array Size : 1464886272 (1397.02 GiB 1500.04 GB)
+   Raid Devices : 2
+  Total Devices : 2
+    Persistence : Superblock is persistent
+
+    Update Time : Sat Jul  1 08:36:06 2017
+          State : clean 
+ Active Devices : 2
+Working Devices : 2
+ Failed Devices : 0
+  Spare Devices : 0
+
+     Chunk Size : 512K
+
+           Name : lime.psc.edu:0  (local to host lime.psc.edu)
+           UUID : a0d268c8:c0aebca2:5f0523bb:87a277ce
+         Events : 0
+
+    Number   Major   Minor   RaidDevice State
+       0       8        0        0      active sync   /dev/sda
+       1       8       16        1      active sync   /dev/sdb
+
+In the log:
+
+
+[1504982458.53610500 msnbrqthr12:7ffebb3fc700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe6809ece0 x41358242/t0 cb=0x7fffd7afb53d c0 o42->@54321-128.182.99.27@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1504982456 :: type == PSCRPC_MSG_ERR, rc == -501
+[1504982458.54361100 msnbrqthr3:7ffefdbf6700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe70074410 x41358251/t0 cb=0x7fffd7afb53d c0 o42->@54321-128.182.99.27@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1504982456 :: type == PSCRPC_MSG_ERR, rc == -501
+
