@@ -49,8 +49,6 @@
 #include "pfl/waitq.h"
 #include "pfl/workthr.h"
 
-/* See psc_ctlmsg_pool_prdat() on how to print out pool statistics */
-
 #if PFL_DEBUG > 1
 #  define _POOL_SETPROT(p, m, prot)					\
 	psc_mprotect((void *)(((uintptr_t)(p)) &			\
@@ -531,13 +529,29 @@ psc_pool_reapmem(size_t size)
 	_psc_poolset_reap(&psc_poolset_main, NULL, size);
 }
 
-int
+void
 psc_pool_reap(struct psc_poolmgr *m, int desperate)
 {
-	int reaped;
+	int need;
 
-	reaped = m->ppm_reclaimcb(m);
-	return (reaped);
+	/*
+	 * We use atomics to register additional waiters while one
+	 * thread is already reaping, lessening the expense of "deep"
+	 * reap processing.
+	 */
+	need = psc_atomic32_inc_getnew(&m->ppm_nwaiters);
+	if (need == 1)
+		psc_atomic32_inc(&m->ppm_nwaiters);
+	psc_mutex_lock(&m->ppm_reclaim_mutex);
+	if (desperate)
+		m->ppm_flags |= PPMF_DESPERATE;
+	m->ppm_reclaimcb(m);
+	if (desperate)
+		m->ppm_flags &= ~PPMF_DESPERATE;
+	psc_atomic32_dec(&m->ppm_nwaiters);
+	if (need == 1)
+		psc_atomic32_dec(&m->ppm_nwaiters);
+	psc_mutex_unlock(&m->ppm_reclaim_mutex);
 }
 
 int
@@ -560,28 +574,28 @@ pfl_pool_reap_wkcb(void *arg)
 void *
 _psc_pool_get(struct psc_poolmgr *m, int flags)
 {
-	int desperate = 0, reaped = 0, locked, n;
+	int desperate = 0, locked, n;
 	void *p;
 
 	POOL_LOCK(m);
-	/* (gdb) p m.ppm_u.ppmu_explist.pexl_pll */
 	p = POOL_TRYGETOBJ(m);
 	if (p || (flags & PPGF_NONBLOCK))
 		PFL_GOTOERR(gotitem, 0);
 
-	n = 0;
+	/* If this pool has a reclaimer routine, try that. */
+	if (m->ppm_reclaimcb) {
+ tryreclaim:
+		POOL_ULOCK(m);
+		psc_pool_reap(m, desperate);
+		POOL_LOCK(m);
+
+		p = POOL_TRYGETOBJ(m);
+		if (p)
+			PFL_GOTOERR(gotitem, 0);
+	}
 
 	/* If total < min, try to grow the pool. */
-	if (m->ppm_min > m->ppm_total) {
-		n = m->ppm_min - m->ppm_total;
-		goto grow;
-	}
-	if (m->ppm_max) {
-		n = MIN(2, m->ppm_max - m->ppm_total);
-		goto grow;
-	}
-
- grow:
+	n = m->ppm_min - m->ppm_total;
 	if (n > 0) {
 		POOL_ULOCK(m);
 		psc_pool_try_grow(m, n);
@@ -591,21 +605,6 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 		if (p)
 			PFL_GOTOERR(gotitem, 0);
 	}
-
- reclaim:
-
-	/* If this pool has a reclaimer routine, try that. */
-	if (m->ppm_reclaimcb) {
-
-		POOL_ULOCK(m);
-		reaped = psc_pool_reap(m, desperate);
-		POOL_LOCK(m);
-
-		p = POOL_TRYGETOBJ(m);
-		if (p)
-			PFL_GOTOERR(gotitem, 0);
-	}
-
 
 	/* If autoresizable, try to grow the pool. */
 	while (m->ppm_flags & PPMF_AUTO) {
@@ -667,15 +666,53 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 		PFL_GOTOERR(gotitem, 0);
 	}
 
-	if (reaped && !m->ppm_nfree) {
-		reaped = 0;
-		goto reclaim;
+	/*
+	 * If there is a reclaimer routine, invoke it consecutively
+	 * until at least one item is reclaimed and available for us.
+	 */
+	if (m->ppm_reclaimcb) {
+		if (flags & PPGF_SHALLOW) {
+			/*
+			 * Best effort service: we tried a bunch of
+			 * stuff and nothing worked so give up.
+			 */
+			p = POOL_TRYGETOBJ(m);
+			PFL_GOTOERR(gotitem, 0);
+		}
+
+		if (!desperate) {
+			desperate = 1;
+			goto tryreclaim;
+		}
+
+		p = POOL_TRYGETOBJ(m);
+		if (p)
+			PFL_GOTOERR(gotitem, 0);
+
+		/*
+		 * Before blindly retrying reclaim, sleep to reduce busy
+		 * waiting (unless someone returns a pool item during
+		 * our sleep).
+		 */
+		psc_atomic32_inc(&m->ppm_nwaiters);
+		psc_waitq_waitrel_us(&m->ppm_lc.plc_wq_empty,
+		    &m->ppm_lc.plc_lock, 100);
+		psc_atomic32_dec(&m->ppm_nwaiters);
+
+		/*
+ 		 * We only get by this because no pool uses an external lock
+ 		 * So m->ppm_lc.plc_lock is the same as POOL_LOCK(m).
+ 		 */
+		POOL_LOCK(m);
+		p = POOL_TRYGETOBJ(m);
+		if (p)
+			PFL_GOTOERR(gotitem, 0);
+
+		goto tryreclaim;
 	}
 
 	/* Nothing else we can do; wait for an item to return. */
-	psc_atomic32_inc(&m->ppm_nwaiters);
 	p = lc_getwait(&m->ppm_lc);
-	psc_atomic32_dec(&m->ppm_nwaiters);
 	POOL_ULOCK(m);
 	return (p);
 

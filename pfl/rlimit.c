@@ -65,8 +65,6 @@ psc_getrlimit(int field, rlim_t *soft, rlim_t *hard)
 	return (rc);
 }
 
-#ifdef NOT_USED
-
 int
 psc_rlim_adj(int field, int adjv)
 {
@@ -86,5 +84,3 @@ psc_rlim_adj(int field, int adjv)
 	freelock(&psc_rlimit_lock);
 	return (rc == 0);
 }
-
-#endif
