@@ -36,6 +36,8 @@ real	70m38.089s
 user	149m42.010s
 sys	11m58.926s
 
+	<-- 09/11/2017: Failed due to ENOSPC to /tmp, will try TMPDIR next time.
+
 
 01/06/2017
 ----------
