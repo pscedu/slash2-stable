@@ -674,6 +674,10 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 
 	/* Nothing else we can do; wait for an item to return. */
 	psc_atomic32_inc(&m->ppm_nwaiters);
+	/*
+ 	 * (gdb) p m->ppm_u.ppmu_lc.plc_explist.pexl_pll.pll_nitems
+ 	 * (gdb) p m->ppm_u.ppmu_lc.plc_explist.pexl_name
+ 	 */
 	p = lc_getwait(&m->ppm_lc);
 	psc_atomic32_dec(&m->ppm_nwaiters);
 	POOL_ULOCK(m);
