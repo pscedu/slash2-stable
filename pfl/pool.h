@@ -138,7 +138,7 @@ struct psc_poolmgr {
 #define PPMF_ALIGN		(1 << 5)	/* align to system page boundaries */
 #define PPMF_NOPREEMPT		(1 << 6)	/* do reactive reaping */
 #define PPMF_PREEMPTQ		(1 << 7)	/* queued for preemptive reaping */
-#define PPMF_IDLEREAP           (1 << 8)        /* idle reaping */
+#define PPMF_IDLEREAP		(1 << 8)	/* idle reaping */
 
 #define POOL_LOCK(m)		PLL_LOCK(&(m)->ppm_pll)
 #define POOL_LOCK_ENSURE(m)	PLL_LOCK_ENSURE(&(m)->ppm_pll)
@@ -182,12 +182,6 @@ struct psc_poolmgr {
 	_psc_poolmaster_init((p), sizeof(type), offsetof(type, member),	\
 	    (flags), (total), (min), (max),				\
 	    (reclaimcb), NULL, (namefmt), ## __VA_ARGS__)
-
-#define psc_poolmaster_initml(p, type, member, flags, total, min, max,	\
-	    reclaimcb, mlcarg, namefmt, ...)				\
-	_psc_poolmaster_init((p), sizeof(type), offsetof(type, member),	\
-	    (flags) | PPMF_MLIST, (total), (min), (max),		\
-	    (reclaimcb), (mlcarg), (namefmt), ## __VA_ARGS__)
 
 #define psc_poolmaster_getmgr(p)	_psc_poolmaster_getmgr((p), psc_memnode_getid())
 
@@ -255,7 +249,7 @@ void	*_psc_pool_get(struct psc_poolmgr *, int);
 int	  psc_pool_gettotal(struct psc_poolmgr *);
 int	  psc_pool_inuse(struct psc_poolmgr *);
 int	  psc_pool_nfree(struct psc_poolmgr *);
-void	  psc_pool_reap(struct psc_poolmgr *, int);
+int	  psc_pool_reap(struct psc_poolmgr *, int);
 void	  psc_pool_reapmem(size_t);
 void	  psc_pool_resize(struct psc_poolmgr *);
 void	 _psc_pool_return(struct psc_poolmgr *, void *);
