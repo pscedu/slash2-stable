@@ -197,6 +197,12 @@ psc_hashbkt_get(struct psc_hashtbl *t, const void *key)
  retry: 
 	b = GETBKT(t, t->pht_buckets, t->pht_nbuckets, key);
 
+	/*
+ 	 * 08/08/2017: Some unusual replication add/removal tests
+ 	 * shows we are stuck here with the original thread taking
+ 	 * the lock is gone. Time to get rid of recursive locking
+ 	 * in this area.
+ 	 */
 	psc_hashbkt_reqlock(b);
 	b->phb_refcnt++;
 	if (t->pht_gen != b->phb_gen) {
