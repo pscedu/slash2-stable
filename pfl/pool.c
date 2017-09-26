@@ -680,10 +680,9 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
  	 */
 	p = lc_getwait(&m->ppm_lc);
 	psc_atomic32_dec(&m->ppm_nwaiters);
-	POOL_ULOCK(m);
-	return (p);
 
  gotitem:
+
 	if (p && m->ppm_reclaimcb && !m->ppm_nfree &&
 	    (m->ppm_flags & (PPMF_NOPREEMPT | PPMF_PREEMPTQ)) == 0 &&
 	    m != pfl_workrq_pool && pfl_workrq_pool) {
