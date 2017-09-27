@@ -238,9 +238,9 @@ postproc()
 		} | sendmail -t
 		echo binary was $base/c/$prog.$id
 		echo log file was $base/log/$host.$name/$tm
-		rm $cmdfile
+		rm -f $cmdfile
 	else
-		rm c/$prog.$id
+		rm -f c/$prog.$id
 	fi
 }
 
@@ -276,8 +276,8 @@ preproc()
 	cd $base
 	mkdir -p c
 
-	find log/$host.$name/ -type f -mtime +30 -exec rm {} \;
-	find c/ -type f -size 0 -exec rm {} \;
+	find log/$host.$name/ -type f -mtime +30 -exec rm -f {} \;
+	find c/ -type f -size 0 -exec rm -f {} \;
 
 	# delete core files with no accompanying executable
 #	n=[0-9]
