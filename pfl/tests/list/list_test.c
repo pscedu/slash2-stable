@@ -154,6 +154,9 @@ lc_sort_test(void)
 	int sorted[] = {    0,  1,   2, 3, 4, 5, 9, 18,  27, 100, 156, 400 };
 	int unsorted[] = { 156, 5, 100, 3, 9, 2, 0, 400, 27,   4,   1,  18 };
 
+	int sorted2[] = { -44, -9, -1, 0, 7, 8, 9, 21, 72, 128, 999, 1234 };
+	int unsorted2[] = { -1, 128, 9, 72, -44, 999, 1234, 0, 7, 8, 21, -9 };
+
 	struct m *m;
 	struct psc_listcache lc;
 
@@ -182,6 +185,20 @@ lc_sort_test(void)
 	for (i = 0; i < (int) (sizeof(sorted) / sizeof (int)); i++) {
 		m = lc_getwait(&lc);
 		psc_assert(m->v == sorted[i]);
+		PSCFREE(m);
+	}
+
+	lc_init(&lc, "test 3", struct m, lentry);
+
+	for (i = 0; i < (int) (sizeof(sorted2) / sizeof (int)); i++) {
+		m = PSCALLOC(sizeof(*m));
+		INIT_PSC_LISTENTRY(&m->lentry);
+		m->v = unsorted2[i];
+		lc_add_sorted(&lc, m, m_cmp2);
+	}
+	for (i = 0; i < (int) (sizeof(sorted2) / sizeof (int)); i++) {
+		m = lc_getwait(&lc);
+		psc_assert(m->v == sorted2[i]);
 		PSCFREE(m);
 	}
 
