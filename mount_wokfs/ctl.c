@@ -77,7 +77,10 @@ wokctlcmd_insert(int fd, struct psc_ctlmsghdr *mh, void *msg)
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, NULL, "insert: %s",
 		    strerror(rc)));
-	if (pcr.pcr_uid)
+	/*
+ 	 * Allow a regular user to start slash2 mount using setuid.
+ 	 */
+	if (pcr.pcr_uid && geteuid())
 		return (psc_ctlsenderr(fd, mh, NULL, "insert: %s",
 		    strerror(EPERM)));
 
