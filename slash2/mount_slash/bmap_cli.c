@@ -65,15 +65,26 @@ void msl_bmap_reap_init(struct bmap *);
 
 int slc_bmap_max_cache = BMAP_CACHE_MAX;
 
-void
-msl_bmap_reap(void)
-{
-	/* XXX force expire and issue a wakeup */
+/*
+ * Easy debugging with separate lock/wait combo.
+ */
+int				 msl_bmap_low;
+psc_spinlock_t                   msl_bmap_lock = SPINLOCK_INIT;
+struct psc_waitq		 msl_bmap_waitq = PSC_WAITQ_INIT("bwait");
 
-	/* wake up the reaper if we are out of resources */
-	if (lc_nitems(&msl_bmaptimeoutq) > slc_bmap_max_cache)
-		psc_waitq_wakeall(&msl_bmaptimeoutq.plc_wq_empty);
+int
+msl_bmap_reap(__unusedx struct psc_poolmgr *m)
+{
+	spinlock(&msl_bmap_lock);
+	msl_bmap_low = 1;
+	psc_waitq_wakeall(&msl_bmap_waitq);
+	freelock(&msl_bmap_lock);
+
+	pscthr_yield();
+	OPSTAT_INCR("bmap-reap");
+	return 0;
 }
+
 
 /*
  * Initialize CLI-specific data of a bmap structure.
@@ -172,7 +183,7 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 	PFL_GETTIMESPEC(&bci->bci_etime);
 	timespecadd(&bci->bci_etime, &msl_bmap_max_lease,
 	    &bci->bci_etime);
-	b->bcm_flags &= ~BMAPF_LEASEEXPIRED;
+	b->bcm_flags &= ~BMAPF_LEASEEXPIRE;
 
 	*bmap_2_sbd(b) = *sbd;
 
@@ -227,6 +238,7 @@ msl_bmap_retrieve_cb(struct pscrpc_request *rq,
 		b->bcm_flags |= BMAPF_LOADED;
 	} else {
 		/* ignore all errors for this background operation */
+		msl_bmap_cache_rls(b);
 		BMAP_LOCK(b);
 	}
 
@@ -363,6 +375,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 	} else {
 		DEBUG_BMAP(PLL_WARN, b, "unable to retrieve bmap rc=%d",
 		    rc);
+		msl_bmap_cache_rls(b);
 		BMAP_LOCK(b);
 	}
 
@@ -381,17 +394,36 @@ msl_bmap_lease_extend_cb(struct pscrpc_request *rq,
 	struct slrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
 	struct srm_leasebmapext_rep *mp;
+	struct bmap_cli_info *bci = bmap_2_bci(b);
+
 	int rc;
 
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAPF_LEASEEXTREQ);
 
+	/*
+ 	 * To get the original request:
+ 	 *
+ 	 * (gdb) p &((struct pscrpc_msg *)0)->buflens[2]
+ 	 * $23 = (uint32_t *) 0x48
+ 	 * (gdb) p *(struct srm_leasebmapext_req *)((char *)rq->rq_reqmsg + 0x48)
+ 	 * $24 = {sbd = {sbd_fg = {fg_fid = 327636872892953958, fg_gen = 0}, \
+ 	 * sbd_bmapno = 0, sbd_seq = 10681986, sbd_nid = 562995062530997, \
+ 	 * sbd_pid = 2147503903, sbd_expire = 600, sbd_ios = 4294967295, \
+ 	 * sbd_flags = 4}}
+ 	 *
+ 	 */
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 
 	/* ignore all errors for this background operation */
 	if (!rc) {
 		OPSTAT_INCR("msl.extend-success-nonblocking");
 		msl_bmap_stash_lease(b, &mp->sbd, "extend");
+		lc_move2tail(&msl_bmaptimeoutq, bci);
+		OPSTAT_INCR("msl.bmap-extend-cb-ok");
+	} else {
+		msl_bmap_cache_rls(b);
+		OPSTAT_INCR("msl.bmap-extend-cb-err");
 	}
 
 	/*
@@ -435,7 +467,8 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	struct psc_thread *thr;
 	struct pfl_fsthr *pft;
 	struct timespec ts;
-	int secs, rc;
+	long secs;
+	int rc;
 
 	thr = pscthr_get();
 	if (thr->pscthr_type == PFL_THRT_FS) {
@@ -457,9 +490,9 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 
 	/* if we aren't in the expiry window, bail */
 	PFL_GETTIMESPEC(&ts);
-	secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
+	secs = bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec;
 	if (secs >= BMAP_CLI_EXTREQSECS &&
-	    !(b->bcm_flags & BMAPF_LEASEEXPIRED)) {
+	    !(b->bcm_flags & BMAPF_LEASEEXPIRE)) {
 		if (blocking)
 			OPSTAT_INCR("msl.bmap-lease-ext-hit");
 		BMAP_ULOCK(b);
@@ -515,7 +548,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 		 msl_bmap_stash_lease(b, &mp->sbd, "extend");
 	b->bcm_flags &= ~BMAPF_LEASEEXTREQ;
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
-	    "lease extension req (rc=%d) (secs=%d)", rc, secs);
+	    "lease extension req (rc=%d) (secs=%ld)", rc, secs);
 	bmap_wake_locked(b);
 	BMAP_ULOCK(b);
 
@@ -555,6 +588,10 @@ msl_bmap_modeset_cb(struct pscrpc_request *rq,
 			msl_bmap_cache_rls(b);
 			BMAP_LOCK(b);
 		}
+		OPSTAT_INCR("bmap-modeset-ok");
+	} else {
+		OPSTAT_INCR("bmap-modeset-err");
+		msl_bmap_cache_rls(b);
 	}
 
 	b->bcm_flags &= ~BMAPF_MODECHNG;
@@ -584,6 +621,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 	struct psc_thread *thr;
 	struct pfl_fsthr *pft;
 	struct fidc_membh *f;
+	struct bmap_cli_info *bci = bmap_2_bci(b);
 
 	thr = pscthr_get();
 	if (thr->pscthr_type == PFL_THRT_FS) {
@@ -683,7 +721,9 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 			BMAP_LOCK(b);
 		}
 	} else {
-		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap rc=%d", rc);
+		DEBUG_BMAP(PLL_WARN, b, "unable to modeset bmap, "
+			   "expire = %ld, rc=%d", 
+			    bci->bci_etime.tv_sec, rc);
 		BMAP_LOCK(b);
 	}
 
@@ -807,17 +847,43 @@ msl_bmap_lease_reassign(struct bmap *b)
 void
 msl_bmap_cache_rls(struct bmap *b)
 {
+	int i;
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct bmap_pagecache_entry *e;
+	struct psc_dynarray a = DYNARRAY_INIT;
 
+	/*
+ 	 * We need two loops because we don't have a safe version
+ 	 * of RB_FOREACH().
+ 	 */
 	pfl_rwlock_rdlock(&bci->bci_rwlock);
 	RB_FOREACH(e, bmap_pagecachetree, &bmpc->bmpc_tree) {
 		BMPCE_LOCK(e);
 		e->bmpce_flags |= BMPCEF_DISCARD;
+		if (e->bmpce_ref || e->bmpce_flags & BMPCEF_TOFREE) {
+			BMPCE_ULOCK(e);
+			continue;
+		}
+		psclog_diag("Mark page free %p at %d\n", e, __LINE__);
+		e->bmpce_flags |= BMPCEF_TOFREE;
+
+		psc_assert(e->bmpce_flags & BMPCEF_LRU);
+		pll_remove(&bmpc->bmpc_lru, e);
+		e->bmpce_flags &= ~BMPCEF_LRU;
 		BMPCE_ULOCK(e);
+
+		psc_dynarray_add(&a, e);
+		OPSTAT_INCR("msl.bmap-release-page");
 	}
 	pfl_rwlock_unlock(&bci->bci_rwlock);
+
+	DYNARRAY_FOREACH(e, i, &a) {
+		BMPCE_LOCK(e);
+		bmpce_free(e, bmpc);
+		bmap_op_done_type(b, BMAP_OPCNT_BMPCE);
+	}
+	psc_dynarray_free(&a);
 }
 
 void
@@ -832,7 +898,6 @@ msl_bmap_reap_init(struct bmap *b)
 	 * Take the reaper ref cnt early and place the bmap onto the
 	 * reap list.
 	 */
-	b->bcm_flags |= BMAPF_TIMEOQ;
 	if (sbd->sbd_flags & SRM_LEASEBMAPF_DIO)
 		b->bcm_flags |= BMAPF_DIO;
 
@@ -850,6 +915,16 @@ msl_bmap_reap_init(struct bmap *b)
 		if (r->res_type == SLREST_ARCHIVAL_FS)
 			b->bcm_flags |= BMAPF_DIO;
 	}
+	/*
+ 	 * This is needed because we retrieve the bmap after we
+ 	 * fail to change the bmap mode.
+ 	 */
+	if (b->bcm_flags & BMAPF_TIMEOQ) {
+		lc_move2tail(&msl_bmaptimeoutq, bci);
+		return;
+	}
+
+	b->bcm_flags |= BMAPF_TIMEOQ;
 
 	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 
@@ -940,6 +1015,105 @@ msl_bmap_release(struct sl_resm *resm)
 }
 
 void
+msbwatchthr_main(struct psc_thread *thr)
+{
+	struct psc_dynarray bmaps = DYNARRAY_INIT;
+	struct timespec nto, ts;
+	struct bmap_cli_info *bci, *tmp;
+	struct bmapc_memb *b;
+	int exiting, i;
+	struct bmap_pagecache *bmpc;
+
+	/*
+	 * XXX: just put the resm's in the dynarray.  When pushing out
+	 * the bid's, assume an ion unless resm == msl_rmc_resm.
+	 */
+	psc_dynarray_ensurelen(&bmaps, MAX_BMAP_RELEASE);
+
+	while (pscthr_run(thr)) {
+
+		LIST_CACHE_LOCK(&msl_bmaptimeoutq);
+		if (lc_peekheadwait(&msl_bmaptimeoutq) == NULL) {
+			LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
+			break;
+		}
+		OPSTAT_INCR("msl.release-wakeup");
+		PFL_GETTIMESPEC(&ts);
+		ts.tv_sec += BMAP_CLI_EXTREQSECS;
+
+		/*
+		 * We always check for lease before accessing cached pages.
+		 * So it is okay if we can't extend lease in time here.
+		 */
+		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
+		LIST_CACHE_FOREACH_SAFE(bci, tmp, &msl_bmaptimeoutq) {
+			b = bci_2_bmap(bci);
+			if (!BMAP_TRYLOCK(b))
+				continue;
+			if (b->bcm_flags & BMAPF_TOFREE ||
+			    b->bcm_flags & BMAPF_REASSIGNREQ ||
+			    b->bcm_flags & BMAPF_LEASEEXTEND) {
+				BMAP_ULOCK(b);
+				continue;
+			}
+
+			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
+			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
+
+			if (timespeccmp(&ts, &bci->bci_etime, <) &&
+			    !(b->bcm_flags & BMAPF_LEASEEXPIRE)) {
+				BMAP_ULOCK(b);
+				continue;
+			}
+
+			/*
+			 * Do not extend if we don't have any data.
+			 */
+			bmpc = bmap_2_bmpc(b);
+			if (RB_EMPTY(&bmpc->bmpc_tree)) {
+				BMAP_ULOCK(b);
+				continue;
+			}
+			b->bcm_flags |= BMAPF_LEASEEXTEND;
+			psc_dynarray_add(&bmaps, b);
+			bmap_op_start_type(b, BMAP_OPCNT_ASYNC);
+			BMAP_ULOCK(b);
+
+			if (psc_dynarray_len(&bmaps) >= MAX_BMAP_RELEASE)
+				break;
+		}
+		LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
+
+		DYNARRAY_FOREACH(b, i, &bmaps) {
+			BMAP_LOCK(b);
+			msl_bmap_lease_extend(b, 0);
+			BMAP_LOCK(b);
+			b->bcm_flags &= ~BMAPF_LEASEEXTEND;
+			bmap_op_done_type(b, BMAP_OPCNT_ASYNC);
+		}
+
+		if (psc_dynarray_len(&bmaps)) {
+			psc_dynarray_reset(&bmaps);
+			pscthr_yield();
+			continue;
+		}
+		psc_dynarray_reset(&bmaps);
+
+		PFL_GETTIMESPEC(&ts);
+		timespecadd(&ts, &msl_bmap_timeo_inc, &nto);
+		if (!exiting) {
+			LIST_CACHE_LOCK(&msl_bmaptimeoutq);
+			psc_waitq_waitabs(&msl_bmaptimeoutq.plc_wq_empty,
+			    &msl_bmaptimeoutq.plc_lock, &nto);
+		}
+	}
+	psc_dynarray_free(&bmaps);
+}
+
+/*
+ * Release bmap that are no longer needed.
+ */
+void
 msbreleasethr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray rels = DYNARRAY_INIT;
@@ -950,7 +1124,7 @@ msbreleasethr_main(struct psc_thread *thr)
 	struct fcmh_cli_info *fci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	int exiting, i, nitems;
+	int exiting, i, expire, nevict;
 
 	/*
 	 * XXX: just put the resm's in the dynarray.  When pushing out
@@ -958,22 +1132,29 @@ msbreleasethr_main(struct psc_thread *thr)
 	 */
 	psc_dynarray_ensurelen(&rels, MAX_BMAP_RELEASE);
 	psc_dynarray_ensurelen(&bcis, MAX_BMAP_RELEASE);
+
 	while (pscthr_run(thr)) {
+
+ again:
 		LIST_CACHE_LOCK(&msl_bmaptimeoutq);
 		if (lc_peekheadwait(&msl_bmaptimeoutq) == NULL) {
 			LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
 			break;
 		}
 		OPSTAT_INCR("msl.release-wakeup");
-		PFL_GETTIMESPEC(&curtime);
-		timespecadd(&curtime, &msl_bmap_max_lease, &nto);
 
-		nitems = lc_nitems(&msl_bmaptimeoutq);
+		expire = 0;
+		PFL_GETTIMESPEC(&curtime);
+
 		exiting = pfl_listcache_isdead(&msl_bmaptimeoutq);
 		LIST_CACHE_FOREACH(bci, &msl_bmaptimeoutq) {
 			b = bci_2_bmap(bci);
 			if (!BMAP_TRYLOCK(b))
 				continue;
+			if (b->bcm_flags & BMAPF_TOFREE) {
+				BMAP_ULOCK(b);
+				continue;
+			}
 
 			psc_assert(b->bcm_flags & BMAPF_TIMEOQ);
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
@@ -983,28 +1164,6 @@ msbreleasethr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				continue;
 			}
-			if (exiting)
-				goto evict;
-			if (timespeccmp(&curtime, &bci->bci_etime, >=))
-				goto evict;
-
-			/*
-			 * Evict bmaps that are not even expired if
-			 * # of bmaps on timeoutq exceeds 25% of max
-			 * allowed.
-			 */
-			if (nitems > slc_bmap_max_cache / 4)
-				goto evict;
-
-			if (timespeccmp(&bci->bci_etime, &nto, <)) {
-				nto.tv_sec = bci->bci_etime.tv_sec;
-				nto.tv_nsec = bci->bci_etime.tv_nsec;
-			}
-
-			DEBUG_BMAP(PLL_DEBUG, b, "skip due to not expire");
-			BMAP_ULOCK(b);
-			continue;
- evict:
 
 			/*
 			 * A bmap should be taken off the flush queue
@@ -1012,7 +1171,22 @@ msbreleasethr_main(struct psc_thread *thr)
 			 */
 			psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
 
-			nitems--;
+			if (timespeccmp(&curtime, &bci->bci_etime, >) ||
+			    b->bcm_flags & BMAPF_LEASEEXPIRE) {
+				expire++;
+				b->bcm_flags |= BMAPF_TOFREE;
+				BMAP_ULOCK(b);
+				goto evict;
+			}
+			if (msl_bmap_low) {
+				b->bcm_flags |= BMAPF_TOFREE;
+				BMAP_ULOCK(b);
+				goto evict;
+			}
+			BMAP_ULOCK(b);
+			continue;
+ evict:
+
 			psc_dynarray_add(&bcis, bci);
 			if (psc_dynarray_len(&bcis) >= MAX_BMAP_RELEASE)
 				break;
@@ -1021,6 +1195,7 @@ msbreleasethr_main(struct psc_thread *thr)
 
 		DYNARRAY_FOREACH(bci, i, &bcis) {
 			b = bci_2_bmap(bci);
+			BMAP_LOCK(b);
 			b->bcm_flags &= ~BMAPF_TIMEOQ;
 			lc_remove(&msl_bmaptimeoutq, bci);
 
@@ -1054,20 +1229,27 @@ msbreleasethr_main(struct psc_thread *thr)
 		DYNARRAY_FOREACH(resm, i, &rels)
 			msl_bmap_release(resm);
 
+		nevict = psc_dynarray_len(&bcis);
 		psc_dynarray_reset(&rels);
 		psc_dynarray_reset(&bcis);
 
-		PFL_GETTIMESPEC(&curtime);
-		if (timespeccmp(&curtime, &nto, <) && !exiting) {
-			LIST_CACHE_LOCK(&msl_bmaptimeoutq);
-			psc_waitq_waitabs(&msl_bmaptimeoutq.plc_wq_empty,
-			    &msl_bmaptimeoutq.plc_lock, &nto);
+		if (expire && nevict == expire)
+			goto again;
+
+		timespecadd(&curtime, &msl_bmap_timeo_inc, &nto);
+		if (!exiting) {
+			spinlock(&msl_bmap_lock);
+			msl_bmap_low = 0;
+			psc_waitq_waitabs(&msl_bmap_waitq, 
+			    &msl_bmap_lock, &nto);
 		}
 	}
 	psc_dynarray_free(&rels);
 	psc_dynarray_free(&bcis);
+
 }
 
+/*
 /*
  * Given a bmap, perform a series of lookups to locate the ION csvc.
  * The ION was chosen by the MDS and returned in the msl_bmap_retrieve
@@ -1200,23 +1382,33 @@ void
 msl_bmap_final_cleanup(struct bmap *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
+#if 0
+	struct bmpc_ioreq *r;
+	struct bmap_cli_info *bci = bmap_2_bci(b);
+	struct bmap_pagecache_entry *e, *next;
+#endif
 
 	psc_assert(!(b->bcm_flags & BMAPF_FLUSHQ));
 
-	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
+	psc_assert(RB_EMPTY(&bmpc->bmpc_tree));
 	psc_assert(RB_EMPTY(&bmpc->bmpc_biorqs));
+	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 
 	/*
-	 * Assert that this bmap can no longer be scheduled by the write
-	 * back cache thread.
+	 * Assert that this bmap can no longer be scheduled by the 
+	 * write back cache thread.
 	 */
 	psc_assert(psclist_disjoint(&b->bcm_lentry));
 
-	DEBUG_BMAP(PLL_DIAG, b, "start freeing");
+#if 0
+	/* DIO rq's are allowed since no cached pages are involved. */
+	if (!pll_empty(&bmpc->bmpc_pndg_biorqs)) {
+		PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
+			psc_assert(r->biorq_flags & BIORQ_DIO);
+	}
+#endif
 
-	bmpc_freeall(b);
-	psc_assert(RB_EMPTY(&bmpc->bmpc_tree));
-
+	lc_remove(&bmpcLru, bmpc);
 	DEBUG_BMAP(PLL_DIAG, b, "done freeing");
 }
 
@@ -1229,7 +1421,7 @@ dump_bmap_flags(uint32_t flags)
 	_dump_bmap_flags_common(&flags, &seq);
 	PFL_PRFLAG(BMAPF_LEASEEXTREQ, &flags, &seq);
 	PFL_PRFLAG(BMAPF_REASSIGNREQ, &flags, &seq);
-	PFL_PRFLAG(BMAPF_LEASEEXPIRED, &flags, &seq);
+	PFL_PRFLAG(BMAPF_LEASEEXPIRE, &flags, &seq);
 	PFL_PRFLAG(BMAPF_SCHED, &flags, &seq);
 	PFL_PRFLAG(BMAPF_BENCH, &flags, &seq);
 	PFL_PRFLAG(BMAPF_FLUSHQ, &flags, &seq);
@@ -1241,7 +1433,6 @@ dump_bmap_flags(uint32_t flags)
 #endif
 
 struct bmap_ops sl_bmap_ops = {
-	msl_bmap_reap,			/* bmo_reapf() */
 	msl_bmap_init,			/* bmo_init_privatef() */
 	msl_bmap_retrieve,		/* bmo_retrievef() */
 	msl_bmap_modeset,		/* bmo_mode_chngf() */

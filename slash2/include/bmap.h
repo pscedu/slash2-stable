@@ -41,6 +41,7 @@
 #include "pfl/crc.h"
 #include "pfl/list.h"
 #include "pfl/lock.h"
+#include "pfl/pool.h"
 #include "pfl/tree.h"
 
 #include "cache_params.h"
@@ -341,7 +342,7 @@ struct bmap {
 #define BMAPGETF_NODIO		(1 << 5)	/* cancel lease request if it would conjure DIO */
 
 int	 bmap_cmp(const void *, const void *);
-void	 bmap_cache_init(size_t, int);
+void	 bmap_cache_init(size_t, int, int (*)(struct psc_poolmgr *));
 void	 bmap_cache_destroy(void);
 void	 bmap_free_all_locked(struct fidc_membh *);
 void	 bmap_biorq_waitempty(struct bmap *);
@@ -376,6 +377,7 @@ enum bmap_opcnt_types {
 	BMAP_OPCNT_ASYNC,		/* all: asynchronous callback */
 	BMAP_OPCNT_BCRSCHED,		/* all: bmap CRC update list */
 	BMAP_OPCNT_BIORQ,		/* all: IO request */
+	BMAP_OPCNT_BMPCE,		/* CLI: page */
 	BMAP_OPCNT_FLUSH,		/* CLI: flusher queue */
 	BMAP_OPCNT_LEASE,		/* MDS: bmap_lease */
 	BMAP_OPCNT_LOOKUP,		/* all: bmap_get */
@@ -392,7 +394,6 @@ RB_HEAD(bmaptree, bmap);
 RB_PROTOTYPE(bmaptree, bmap, bcm_tentry, bmap_cmp);
 
 struct bmap_ops {
-	void	(*bmo_reapf)(void);
 	void	(*bmo_init_privatef)(struct bmap *);
 	int	(*bmo_retrievef)(struct bmap *, int);
 	int	(*bmo_mode_chngf)(struct bmap *, enum rw, int);

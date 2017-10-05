@@ -1231,6 +1231,8 @@ msl_remove_sillyname(struct fidc_membh *f)
 	struct srm_unlink_rep *mp = NULL;
 	struct srm_unlink_req *mq;
 	struct fcmh_cli_info *fci;
+	char *sillyname;
+	uint64_t pino;
 	int rc;
 
 	if (!msl_enable_sillyrename) {
@@ -1239,8 +1241,10 @@ msl_remove_sillyname(struct fidc_membh *f)
 	}
 
 	/*
-	 * What if the open is opened and closed quickly while the cleanup
-	 * is still in progress?  Perhaps adding a busy flag?
+ 	 * Note that at this point, we might still have references to the
+ 	 * fcmh. And this file can be opened/unlinked/closed while our
+ 	 * unlink RPC is in transit. So let us clean up our side first 
+ 	 * in an atomic way.
 	 */
 	fci = fcmh_2_fci(f);
 	psc_assert(fci->fci_nopen > 0);
@@ -1251,18 +1255,33 @@ msl_remove_sillyname(struct fidc_membh *f)
 	}
 	psc_assert(fci->fci_pino);
 	psc_assert(fci->fci_name);
+
+	pino = fci->fci_pino;
+	sillyname = fci->fci_name;
+
+	fci->fci_pino = 0;
+	fci->fci_name = NULL;
+	f->fcmh_flags &= ~FCMH_CLI_SILLY_RENAME;
+
 	FCMH_ULOCK(f);
 
-	rc = msl_load_fcmh(NULL, fci->fci_pino, &p);
+	/* 
+	 * It is Okay if the following fails, we just forget about the
+ 	 * old silly name.
+ 	 */
+	rc = msl_load_fcmh(NULL, pino, &p);
 	if (rc)
 		goto out;
+
+	msl_invalidate_readdir(p);
+	dircache_delete(p, sillyname);
 
 	MSL_RMC_NEWREQ(p, csvc, SRMT_UNLINK, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
-	mq->pfid = fci->fci_pino;
-	strlcpy(mq->name, fci->fci_name, sizeof(mq->name));
+	mq->pfid = pino;
+	strlcpy(mq->name, sillyname, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (!rc)
@@ -1274,22 +1293,14 @@ msl_remove_sillyname(struct fidc_membh *f)
 		 */
 		psclogs_warnx(SLCSS_FSOP, "Fail to remove sillyname: "
 		    "pfid="SLPRI_FID "name='%s' rc=%d", 
-		    fci->fci_pino, fci->fci_name, rc);
+		    pino, sillyname, rc);
 		OPSTAT_INCR("msl.sillyname-del-err");
 	} else
 		OPSTAT_INCR("msl.sillyname-del-ok");
 
-	msl_invalidate_readdir(p);
-	dircache_delete(p, fci->fci_name);
-
-	FCMH_LOCK(f);
-	PSCFREE(fci->fci_name);
-	fci->fci_pino = 0;
-	fci->fci_name = NULL;
-	f->fcmh_flags &= ~FCMH_CLI_SILLY_RENAME;
-	FCMH_ULOCK(f);
-
  out:
+
+	PSCFREE(sillyname);
 	if (p)
 		fcmh_op_done(p);
 
@@ -3136,6 +3147,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			}
 
 			DYNARRAY_FOREACH(b, i, &a) {
+				msl_bmap_cache_rls(b);
 				bmap_biorq_waitempty(b);
 				bmap_op_done_type(b, BMAP_OPCNT_TRUNCWAIT);
 			}
@@ -3422,7 +3434,6 @@ mslfsop_destroy(__unusedx struct pscfs_req *pfr)
 	pfl_listcache_destroy_registered(&msl_bmapflushq);
 	pfl_listcache_destroy_registered(&msl_bmaptimeoutq);
 	pfl_listcache_destroy_registered(&msl_readaheadq);
-	pfl_listcache_destroy_registered(&msl_idle_pages);
 	pfl_listcache_destroy_registered(&msl_readahead_pages);
 
 	pfl_opstats_grad_destroy(&slc_iosyscall_iostats_rd);
@@ -3941,25 +3952,20 @@ msattrflushthr_main(struct psc_thread *thr)
 void
 msreapthr_main(struct psc_thread *thr)
 {
-	int curr, last = 0;
+	int rc = 0;
+
 	while (pscthr_run(thr)) {
-		while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
 
-		POOL_LOCK(bmpce_pool);
-		curr = bmpce_pool->ppm_nfree;
-		POOL_ULOCK(bmpce_pool);
+		if (rc)
+			while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
 
-		if (last && curr >= last)
-			psc_pool_try_shrink(bmpce_pool, curr);
-
-		POOL_LOCK(bmpce_pool);
-		last = bmpce_pool->ppm_nfree;
-		POOL_ULOCK(bmpce_pool);
-
-		msl_pgcache_reap();
-
-		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 30);
-
+		msl_pgcache_reap(rc);
+		while (1) {
+			rc = psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 30);
+			if (rc)
+				break;
+			bmpce_reaper(bmpce_pool);
+		}
 	}
 }
 
@@ -4127,7 +4133,7 @@ msl_init(void)
 	libsl_init(4096);//2 * (SRCI_NBUFS + SRCM_NBUFS));
 	fidc_init(sizeof(struct fcmh_cli_info));
 	bmpc_global_init();
-	bmap_cache_init(sizeof(struct bmap_cli_info), MSL_BMAP_COUNT);
+	bmap_cache_init(sizeof(struct bmap_cli_info), MSL_BMAP_COUNT, msl_bmap_reap);
 	dircache_mgr_init();
 
 	psc_hashtbl_init(&msl_namecache_hashtbl, 0, struct dircache_ent,
@@ -4269,7 +4275,7 @@ msl_opt_lookup(const char *opt)
 		{ "mapfile",		LOOKUP_TYPE_BOOL,	&msl_has_mapfile },
 		{ "pagecache_maxsize",	LOOKUP_TYPE_UINT64,	&msl_pagecache_maxsize },
 		{ "predio_issue_maxpages",
-					LOOKUP_TYPE_INT,	&msl_predio_issue_maxpages},
+					LOOKUP_TYPE_INT,	&msl_predio_max_pages},
 		{ "root_squash",	LOOKUP_TYPE_BOOL,	&msl_root_squash },
 		{ "slcfg",		LOOKUP_TYPE_STR,	&msl_cfgfn },
 		{ NULL,			0,			NULL }

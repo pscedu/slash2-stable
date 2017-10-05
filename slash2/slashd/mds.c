@@ -335,6 +335,7 @@ slm_try_sliodresm(struct sl_resm *resm, int repls)
 	csvc = slm_geticsvc(resm, NULL, CSVCF_NONBLOCK | CSVCF_NORECON,
 	    NULL);
 	if (!csvc) {
+		OPSTAT_INCR("sliod-offline");
 		/* This sliod hasn't established a connection to us. */
 		psclog_diag("res=%s skipped due to NULL csvc",
 		    resm->resm_name);
@@ -1054,6 +1055,10 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 			/*
 			 * No duplicate lease detected and this client
 			 * is the first writer.
+			 *
+			 * Need to confirm that we can reach here in 
+			 * the case of extending a bmap lease. If so,
+			 * we can probably get rid of reassign RPC.
 			 */
 			psc_assert(!bmi->bmi_wr_ion);
 			BMAP_ULOCK(b);

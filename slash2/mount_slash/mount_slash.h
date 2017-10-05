@@ -89,6 +89,7 @@ struct msbwatch_thread {
 
 struct msflush_thread {
 	int				 mflt_failcnt;
+	int				 mflt_credits;
 	struct pfl_multiwait		 mflt_mw;
 };
 
@@ -160,8 +161,9 @@ struct msl_fhent {
 	int				 mfh_oflags;	/* open(2) flags */
 
 	/* offsets are file-wise */
-	off_t				 mfh_predio_lastoff;	/* last offset */
-	off_t				 mfh_predio_issued;	/* how far prediction mechanism has dealt */
+	off_t				 mfh_predio_lastoff;	/* last I/O offset */
+	off_t				 mfh_predio_lastsize;	/* last I/O size */
+	off_t				 mfh_predio_off;	/* next predio I/O offset */
 	int				 mfh_predio_nseq;	/* num sequential IOs */
 
 	/* stats */
@@ -230,6 +232,7 @@ struct resprof_cli_info {
 	int				 rpci_timeouts;
 	int				 rpci_saw_error;
 	int				 rpci_infl_rpcs;
+	int				 rpci_infl_credits;
 	int				 rpci_max_infl_rpcs;
 };
 
@@ -240,6 +243,8 @@ struct resprof_cli_info {
 #define RPCI_ULOCK(rpci)		freelock(&(rpci)->rpci_lock)
 #define RPCI_WAIT(rpci)			psc_waitq_wait(&(rpci)->rpci_waitq, \
 					    &(rpci)->rpci_lock)
+#define RPCI_WAITABS(rpci, ts)		psc_waitq_waitabs(&(rpci)->rpci_waitq, \
+					    &(rpci)->rpci_lock, &(ts))
 #define RPCI_WAKE(rpci)			psc_waitq_wakeall(&(rpci)->rpci_waitq)
 
 static __inline struct resprof_cli_info *
@@ -392,9 +397,10 @@ extern int			 msl_fuse_direct_io;
 extern int			 msl_ios_max_inflight_rpcs;
 extern int			 msl_mds_max_inflight_rpcs;
 extern int			 msl_max_nretries;
-extern int			 msl_predio_issue_maxpages;
-extern int			 msl_predio_issue_minpages;
-extern int			 msl_predio_window_size;
+
+extern int			 msl_predio_max_pages;
+extern int			 msl_predio_pipe_size;
+
 extern int			 msl_max_retries;
 extern int			 msl_root_squash;
 extern int			 msl_repl_enable;
@@ -403,6 +409,9 @@ extern uint64_t			 msl_pagecache_maxsize;
 extern int			 msl_max_namecache_per_directory; 
 
 void				 msl_pgcache_init(void);
-void				 msl_pgcache_reap(void);
+void				 msl_pgcache_reap(int);
+
+extern struct psc_waitq		 sl_freap_waitq;
+int				 bmpce_reaper(struct psc_poolmgr *);
 
 #endif /* _MOUNT_SLASH_H_ */

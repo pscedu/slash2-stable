@@ -168,10 +168,6 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n, int bmaprw,
 	}
 	if (bnew == NULL) {
 		pfl_rwlock_unlock(&f->fcmh_rwlock);
-
-		if (sl_bmap_ops.bmo_reapf)
-			sl_bmap_ops.bmo_reapf();
-
 		bnew = psc_pool_get(bmap_pool);
 		goto restart;
 	}
@@ -260,6 +256,8 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		goto out;
 	}
 
+ retrieve:
+
 	b->bcm_flags |= BMAPF_LOADING;
 	DEBUG_BMAP(PLL_DIAG, b, "loading bmap; flags=%d", flags);
 	BMAP_ULOCK(b);
@@ -321,6 +319,11 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	 	/* client only: call msl_bmap_modeset() */
 		rc = sl_bmap_ops.bmo_mode_chngf(b, rw, flags);
 		BMAP_LOCK(b);
+		if (rc == -ENOENT) {
+			b->bcm_flags &= ~BMAPF_LOADED;
+			OPSTAT_INCR("bmap-reload");
+			goto retrieve;
+		}
 	}
 
  out:
@@ -337,12 +340,13 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 }
 
 void
-bmap_cache_init(size_t priv_size, int count)
+bmap_cache_init(size_t priv_size, int count,
+    int (*reclaimcb)(struct psc_poolmgr *))
 {
 	_psc_poolmaster_init(&bmap_poolmaster,
 	    sizeof(struct bmap) + priv_size,
 	    offsetof(struct bmap, bcm_lentry),
-	    PPMF_AUTO, count, count, 0, NULL, NULL, "bmap");
+	    PPMF_AUTO, count, count, 0, NULL, reclaimcb, "bmap");
 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
 }
 
