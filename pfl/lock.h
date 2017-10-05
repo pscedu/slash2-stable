@@ -75,7 +75,7 @@ typedef struct psc_spinlock {
 #define PSLF_NOLOG		(1 << 0)	/* don't psclog locks/unlocks */
 #define PSLF_LOGTMP		(1 << 1)	/* psclog to tmp subsystem */
 
-#define PSL_SLEEP_NTRIES	256
+#define PSL_SLEEP_NTRIES	32
 #define PSL_SLEEP_NSEC		5001
 
 #define _SPIN_GETATOM(psl)	(&(psl)->psl_value)
