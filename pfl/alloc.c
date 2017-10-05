@@ -283,7 +283,7 @@ _psc_realloc(void *oldp, size_t size, int flags)
 			psclog_error("malloc/realloc");
 			return (NULL);
 		}
-		err(1, "malloc/realloc");
+		psc_fatal("Allocate failed, size = %d", size);
 	}
 
 #if PFL_DEBUG > 1

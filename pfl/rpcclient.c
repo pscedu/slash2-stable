@@ -618,6 +618,8 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 		timeout = 1;
 	} else {
 		//timeout = MAX(req->rq_timeout * 100, 1);
+		
+		/* hopefully, rq_timeout can be tweaked by pfl_rpc_timeout */
 		timeout = MAX(req->rq_timeout, 1);
 		DEBUG_REQ(PLL_DIAG, req, buf, "sleeping for %d sec", timeout);
 	}
