@@ -1,3 +1,9 @@
+10/05/2017
+----------
+
+Now pages can be cached longer than a bmap's lifetime, also get rid of the global
+lock of LRU lists.  As a result, I got big performance improvement. 
+
 07/19/2017
 ----------
 
