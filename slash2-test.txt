@@ -216,7 +216,7 @@ Unit tests
 1. Build everything on Ubuntu and CentOS.
 
 2. Build sliod, wokfs, and mount_slash on FreeBSD 9.0 with gmake (zfs-fuse is too Linux 
-   specific to build on FreeBSD).
+   specific to build on FreeBSD, so slashd won't build).
 
 3. If zfs-fuse is changed, try to create a new ZFS pool.
 
