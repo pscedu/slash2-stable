@@ -114,11 +114,34 @@ FILE				*pflog_ttyfp;
 struct psc_dynarray		_pfl_logpoints = DYNARRAY_INIT_NOLOG;
 struct psc_hashtbl		_pfl_logpoints_hashtbl;
 
+int log_cycle_count;
+int log_rotate_count = 1024*1024;
+ 
+char *lp, fn[PATH_MAX];
+
+int psc_should_rotate_log(void)
+{
+	char newfn[PATH_MAX];
+
+	log_rotate_count--;
+	if (log_rotate_count)
+		return;
+
+	sprintf(&newfn, "%s:%d", fn, log_cycle_count++);
+	rename(fn, newfn);
+
+	if (freopen(newfn, "w", stderr) == NULL)
+		return (errno);
+	if (unlink(lp) == -1 && errno != ENOENT)
+		warn("unlink %s", lp);
+	if (link(fn, lp) == -1)
+		warn("link %s", lp);
+}
+
 int
 psc_log_setfn(const char *p, const char *mode)
 {
 	static int logger_pid = -1;
-	char *lp, fn[PATH_MAX];
 	struct timeval tv;
 	int rc;
 
@@ -422,6 +445,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		    ": %s", pfl_strerror(save_errno));
 
 	PSCLOG_LOCK();
+	psc_should_rotate_log();
 
 	/* XXX consider using fprintf_unlocked() for speed */
 	rc = fprintf(stderr, "%s%s", buf, psclog_eol);
