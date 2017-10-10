@@ -119,7 +119,7 @@ struct psc_hashtbl		_pfl_logpoints_hashtbl;
 
 int log_cycle_count;
 int log_rotate_count;
-int log_rotate_thres = PSC_MAX_LOG_PER_FILE;
+int pfl_log_rotate = PSC_MAX_LOG_PER_FILE;
 
  
 static char *loglk;
@@ -134,10 +134,10 @@ void psc_should_rotate_log(void)
 		return;
 
 	log_rotate_count++;
-	if (log_rotate_count < log_rotate_thres)
+	if (log_rotate_count < pfl_log_rotate)
 		return;
 
-	log_rotate_count = 0;
+	pfl_log_rotate = 0;
 	rc = snprintf(newfn, sizeof(newfn), "%s-%d", logfn, log_cycle_count++);
 	if (rc < 0) {
 		warn("log: snprintf %d", rc);
