@@ -115,27 +115,48 @@ struct psc_dynarray		_pfl_logpoints = DYNARRAY_INIT_NOLOG;
 struct psc_hashtbl		_pfl_logpoints_hashtbl;
 
 int log_cycle_count;
-int log_rotate_count = 1024*1024;
+int log_rotate_count = 10;
  
 char *lp, fn[PATH_MAX];
 
 int psc_should_rotate_log(void)
 {
+	int rc;
 	char newfn[PATH_MAX];
 
 	log_rotate_count--;
 	if (log_rotate_count)
 		return;
 
-	sprintf(&newfn, "%s:%d", fn, log_cycle_count++);
-	rename(fn, newfn);
+	rc = snprintf(&newfn, "%s-%d", fn, log_cycle_count++);
+	if (rc < 0) {
+		warn("snprintf %d", rc);
+		goto out;
+	}
+	rc = rename(fn, newfn);
+	if (rc < 0) {
+		warn("rename %d", rc);
+		goto out;
+	}
 
-	if (freopen(newfn, "w", stderr) == NULL)
-		return (errno);
-	if (unlink(lp) == -1 && errno != ENOENT)
+	if (freopen(newfn, "w", stderr) == NULL) {
+		rc = errno;
+		warn("freopen %s", newfn);
+		goto out;
+	}
+	if (unlink(lp) == -1 && errno != ENOENT) {
+		rc = errno;
 		warn("unlink %s", lp);
-	if (link(fn, lp) == -1)
+		goto out;
+	}
+	if (link(fn, lp) == -1) {
+		rc = errno;
 		warn("link %s", lp);
+	}
+
+ out:
+	if (rc)
+		errx(1, "log rotate");
 }
 
 int
