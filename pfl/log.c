@@ -117,9 +117,10 @@ struct psc_hashtbl		_pfl_logpoints_hashtbl;
 int log_cycle_count;
 int log_rotate_count = 10;
  
-char *lp, fn[PATH_MAX];
+char *lp;
+char logfn[PATH_MAX];
 
-int psc_should_rotate_log(void)
+void psc_should_rotate_log(void)
 {
 	int rc;
 	char newfn[PATH_MAX];
@@ -128,35 +129,28 @@ int psc_should_rotate_log(void)
 	if (log_rotate_count)
 		return;
 
-	rc = snprintf(&newfn, "%s-%d", fn, log_cycle_count++);
+	rc = snprintf(&newfn, sizeof(newfn), "%s-%d", 
+	    logfn, log_cycle_count++);
 	if (rc < 0) {
-		warn("snprintf %d", rc);
-		goto out;
+		warn("log: snprintf %d", rc);
+		return;
 	}
-	rc = rename(fn, newfn);
+	rc = rename(logfn, newfn);
 	if (rc < 0) {
 		warn("rename %d", rc);
-		goto out;
+		return;
 	}
 
 	if (freopen(newfn, "w", stderr) == NULL) {
-		rc = errno;
-		warn("freopen %s", newfn);
-		goto out;
+		warn("log: freopen %s", newfn);
+		return;
 	}
 	if (unlink(lp) == -1 && errno != ENOENT) {
-		rc = errno;
 		warn("unlink %s", lp);
-		goto out;
+		return;
 	}
-	if (link(fn, lp) == -1) {
-		rc = errno;
+	if (link(logfn, lp) == -1)
 		warn("link %s", lp);
-	}
-
- out:
-	if (rc)
-		errx(1, "log rotate");
 }
 
 int
@@ -167,17 +161,17 @@ psc_log_setfn(const char *p, const char *mode)
 	int rc;
 
 	PFL_GETTIMEVAL(&tv);
-	(void)FMTSTR(fn, sizeof(fn), p,
+	(void)FMTSTR(logfn, sizeof(logfn), p,
 		FMTSTRCASE('t', "d", tv.tv_sec)
 	);
-	if (freopen(fn, mode, stderr) == NULL)
+	if (freopen(logfn, mode, stderr) == NULL)
 		return (errno);
 
 	lp = getenv("PSC_LOG_FILE_LINK");
 	if (lp) {
 		if (unlink(lp) == -1 && errno != ENOENT)
 			warn("unlink %s", lp);
-		if (link(fn, lp) == -1)
+		if (link(logfn, lp) == -1)
 			warn("link %s", lp);
 	}
 
@@ -208,7 +202,7 @@ psc_log_setfn(const char *p, const char *mode)
 			char cmdbuf[LINE_MAX];
 
 			rc = snprintf(cmdbuf, sizeof(cmdbuf),
-			    "tail -f %s | %s", fn, lp);
+			    "tail -f %s | %s", logfn, lp);
 			if (rc < 0 || rc > (int)sizeof(cmdbuf))
 				errx(1, "snprintf");
 			exit(system(cmdbuf));
