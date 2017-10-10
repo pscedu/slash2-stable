@@ -109,9 +109,6 @@ int pfl_syslog_map[] = {
 /* info */	LOG_INFO
 };
 
-
-#define PSC_MAX_LOG_PER_FILE	1024*1024*16
-
 FILE				*pflog_ttyfp;
 
 struct psc_dynarray		_pfl_logpoints = DYNARRAY_INIT_NOLOG;

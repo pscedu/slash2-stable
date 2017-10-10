@@ -44,6 +44,7 @@
 
 struct psc_thread;
 
+#define PSC_MAX_LOG_PER_FILE	1024*1024*16
 
 /* Log levels. */
 #define PLL_FATAL	0		/* process termination */
