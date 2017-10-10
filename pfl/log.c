@@ -110,7 +110,7 @@ int pfl_syslog_map[] = {
 };
 
 
-#define		PSC_MAX_LOG_PER_FILE		1024
+#define PSC_MAX_LOG_PER_FILE	1024*1024*16
 
 FILE				*pflog_ttyfp;
 
@@ -118,7 +118,9 @@ struct psc_dynarray		_pfl_logpoints = DYNARRAY_INIT_NOLOG;
 struct psc_hashtbl		_pfl_logpoints_hashtbl;
 
 int log_cycle_count;
-int log_rotate_count = PSC_MAX_LOG_PER_FILE;
+int log_rotate_count;
+int log_rotate_thres = PSC_MAX_LOG_PER_FILE;
+
  
 static char *loglk;
 static char  logfn[PATH_MAX];
@@ -128,11 +130,14 @@ void psc_should_rotate_log(void)
 	int rc;
 	char newfn[PATH_MAX];
 
-	log_rotate_count--;
-	if (log_rotate_count)
+	if (logfn[0] == '\0')
 		return;
 
-	log_rotate_count = PSC_MAX_LOG_PER_FILE;
+	log_rotate_count++;
+	if (log_rotate_count < log_rotate_thres)
+		return;
+
+	log_rotate_count = 0;
 	rc = snprintf(newfn, sizeof(newfn), "%s-%d", logfn, log_cycle_count++);
 	if (rc < 0) {
 		warn("log: snprintf %d", rc);
