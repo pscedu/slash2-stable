@@ -109,13 +109,16 @@ int pfl_syslog_map[] = {
 /* info */	LOG_INFO
 };
 
+
+#define		PSC_MAX_LOG_PER_FILE		10
+
 FILE				*pflog_ttyfp;
 
 struct psc_dynarray		_pfl_logpoints = DYNARRAY_INIT_NOLOG;
 struct psc_hashtbl		_pfl_logpoints_hashtbl;
 
 int log_cycle_count;
-int log_rotate_count = 10;
+int log_rotate_count = PSC_MAX_LOG_PER_FILE;
  
 char *loglk;
 char logfn[PATH_MAX];
@@ -129,6 +132,7 @@ void psc_should_rotate_log(void)
 	if (log_rotate_count)
 		return;
 
+	log_rotate_count = PSC_MAX_LOG_PER_FILE;
 	rc = snprintf(newfn, sizeof(newfn), "%s-%d", logfn, log_cycle_count++);
 	if (rc < 0) {
 		warn("log: snprintf %d", rc);
@@ -140,8 +144,8 @@ void psc_should_rotate_log(void)
 		return;
 	}
 
-	if (freopen(newfn, "w", stderr) == NULL) {
-		warn("log: freopen %s", newfn);
+	if (freopen(logfn, "w", stderr) == NULL) {
+		warn("log: freopen %s", logfn);
 		return;
 	}
 	if (unlink(loglk) == -1 && errno != ENOENT) {
