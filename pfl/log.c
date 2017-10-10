@@ -425,6 +425,11 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 	save_errno = errno;
 
 	thr = pscthr_get();
+	/*
+	 * XXX Set log level 5 crashes right away.
+	 */
+	if (!thr)
+		return;
 	thrid = thr->pscthr_thrid;
 	thrname = thr->pscthr_name;
 
