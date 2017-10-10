@@ -117,7 +117,7 @@ struct psc_hashtbl		_pfl_logpoints_hashtbl;
 int log_cycle_count;
 int log_rotate_count = 10;
  
-char *lp;
+char *loglk;
 char logfn[PATH_MAX];
 
 void psc_should_rotate_log(void)
@@ -144,12 +144,12 @@ void psc_should_rotate_log(void)
 		warn("log: freopen %s", newfn);
 		return;
 	}
-	if (unlink(lp) == -1 && errno != ENOENT) {
-		warn("unlink %s", lp);
+	if (unlink(loglk) == -1 && errno != ENOENT) {
+		warn("unlink %s", loglk);
 		return;
 	}
-	if (link(logfn, lp) == -1)
-		warn("link %s", lp);
+	if (link(logfn, loglk) == -1)
+		warn("link %s", loglk);
 }
 
 int
@@ -158,6 +158,7 @@ psc_log_setfn(const char *p, const char *mode)
 	static int logger_pid = -1;
 	struct timeval tv;
 	int rc;
+	char *lp;
 
 	PFL_GETTIMEVAL(&tv);
 	(void)FMTSTR(logfn, sizeof(logfn), p,
@@ -166,12 +167,12 @@ psc_log_setfn(const char *p, const char *mode)
 	if (freopen(logfn, mode, stderr) == NULL)
 		return (errno);
 
-	lp = getenv("PSC_LOG_FILE_LINK");
-	if (lp) {
-		if (unlink(lp) == -1 && errno != ENOENT)
-			warn("unlink %s", lp);
-		if (link(logfn, lp) == -1)
-			warn("link %s", lp);
+	loglk = getenv("PSC_LOG_FILE_LINK");
+	if (loglk) {
+		if (unlink(loglk) == -1 && errno != ENOENT)
+			warn("unlink %s", loglk);
+		if (link(logfn, loglk) == -1)
+			warn("link %s", loglk);
 	}
 
 #if 0
