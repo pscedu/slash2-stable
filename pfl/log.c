@@ -129,8 +129,7 @@ void psc_should_rotate_log(void)
 	if (log_rotate_count)
 		return;
 
-	rc = snprintf(&newfn, sizeof(newfn), "%s-%d", 
-	    logfn, log_cycle_count++);
+	rc = snprintf(newfn, sizeof(newfn), "%s-%d", logfn, log_cycle_count++);
 	if (rc < 0) {
 		warn("log: snprintf %d", rc);
 		return;
