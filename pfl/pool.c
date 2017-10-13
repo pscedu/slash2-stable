@@ -564,7 +564,12 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 	void *p;
 
 	POOL_LOCK(m);
-	/* (gdb) p m.ppm_u.ppmu_explist.pexl_pll */
+	/*
+	 * (gdb) p m.ppm_u.ppmu_explist.pexl_pll.
+	 *
+	 * Can we grow even if PPGF_NONBLOCK is set?
+	 *
+	 */
 	p = POOL_TRYGETOBJ(m);
 	if (p || (flags & PPGF_NONBLOCK))
 		PFL_GOTOERR(gotitem, 0);
