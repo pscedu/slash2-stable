@@ -135,26 +135,27 @@ void psc_should_rotate_log(void)
 		return;
 
 	pfl_log_rotate = 0;
-	rc = snprintf(newfn, sizeof(newfn), "%s-%d", logfn, log_cycle_count++);
+	rc = snprintf(newfn, sizeof(newfn), "%s-%d", 
+	    logfn, log_cycle_count++);
 	if (rc < 0) {
-		warn("log: snprintf %d", rc);
+		warn("log snprintf rc = %d", rc);
 		return;
 	}
 	rc = rename(logfn, newfn);
 	if (rc < 0) {
-		warn("rename %d", rc);
+		warn("log rename rc = %d", rc);
 		return;
 	}
 
 	if (freopen(logfn, "w", stderr) == NULL) {
-		warn("log: freopen %s", logfn);
+		warn("log freopen %s, rc = %d", logfn, rc);
 		return;
 	}
 	if (loglk) {
 		if (unlink(loglk) == -1 && errno != ENOENT) 
-			warn("log: unlink %s", loglk);
+			warn("log unlink %s, rc = %d", loglk, errno);
 		if (link(logfn, loglk) == -1)
-			warn("log: link %s", loglk);
+			warn("log link %s, rc = %d", loglk, errno);
 	}
 }
 
