@@ -76,6 +76,9 @@ struct psc_journal_cursor {
 	 * in the file after a crash.  By making this information
 	 * accurate, we can be sure that a replay should succeed.  Other
 	 * information can be stale and need to be adjusted before use.
+	 *
+	 * 10/20/2017: After ZFS re-starts, it can commit some transaction
+	 * groups before become available.
 	 */
 	uint64_t			 pjc_commit_txg;	/* last synced ZFS transaction group number */
 	uint64_t			 pjc_distill_xid;	/* last XID whose entry has been distilled */
