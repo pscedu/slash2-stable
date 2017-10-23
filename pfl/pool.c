@@ -741,9 +741,8 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 		 * including the link entry. Right now, we don't do this.
 		 *
 		 * 10/23/2017: Looks like we should not touch the linkage
-		 * entry.  We can zero the whole item because the linkage
-		 * entry is already zero'ed when an item is retrieved for
-		 * use.
+		 * entry.  If we zero the whole item, we must re-init the
+		 * list entry.
 		 */
 
 		INIT_PSC_LISTENTRY(psclist_entry2(p, m->ppm_explist.pexl_offset));
