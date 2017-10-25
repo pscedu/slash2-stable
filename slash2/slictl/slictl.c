@@ -288,6 +288,7 @@ main(int argc, char *argv[])
 {
 	pfl_init();
 	sl_errno_init();
+	pscthr_init(0, NULL, 0, "slictl");
 
 	psc_ctlcli_main(SL_PATH_SLICTLSOCK, argc, argv, opts,
 	    nitems(opts));
