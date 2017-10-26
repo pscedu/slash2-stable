@@ -1242,7 +1242,7 @@ pscfs_fuse_handle_removexattr(fuse_req_t req, fuse_ino_t ino,
 
 /* Begin file system call reply routines */
 
-#define PFR_REPLY(fun, pfr, ...)					\
+#define PFR_REPLY(func, pfr, ...)					\
 	do {								\
 		struct timespec t0, d;					\
 		struct {						\
@@ -1251,7 +1251,7 @@ pscfs_fuse_handle_removexattr(fuse_req_t req, fuse_ino_t ino,
 		} *r0p = (void *)(pfr)->pfr_ufsi_req;			\
 		uint64_t u0 = r0p->uniqid;				\
 									\
-		fuse_reply_##fun((pfr)->pfr_ufsi_req, ## __VA_ARGS__);	\
+		fuse_reply_##func((pfr)->pfr_ufsi_req, ## __VA_ARGS__);	\
 		PFL_GETTIMESPEC(&t0);					\
 		timespecsub(&t0, &(pfr)->pfr_start, &d);		\
 		t0.tv_sec = 0;						\
