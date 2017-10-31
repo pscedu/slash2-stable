@@ -54,6 +54,11 @@ psc_dynarray_initf(struct psc_dynarray *pda, int flags)
 	pda->pda_items = NULL;
 }
 
+int
+psc_dynarray_pos(const struct psc_dynarray *pda)
+{
+	return (pda->pda_pos);
+}
 /*
  * Resize a dynamic array.
  * @pda: dynamic array to resize.

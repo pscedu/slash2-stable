@@ -133,4 +133,6 @@ void	 psc_dynarray_setpos(struct psc_dynarray *, int, void *);
 int	 psc_dynarray_splice(struct psc_dynarray *, int, int, const void *, int);
 void	 psc_dynarray_swap(struct psc_dynarray *, int, int);
 
+int	 psc_dynarray_pos(const struct psc_dynarray *);
+
 #endif /* _PFL_DYNARRAY_H_ */
