@@ -6,6 +6,8 @@
 #
 # It has been tested on git version 1.8.3.1 
 #
+# 11/06/2017: Due to .gitignore at the top directory, we have
+#             to add a file by force (-f). 
 
 function bail-if-fail {
     if [ $? -ne 0 ] 
