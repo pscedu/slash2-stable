@@ -161,7 +161,7 @@ struct psc_poolmgr {
 #define PSC_POOLSET_INIT	{ SPINLOCK_INIT, DYNARRAY_INIT }
 
 /* default value of pool fill before freeing items directly on pool_return */
-#define POOL_AUTOSIZE_THRESH	80
+#define POOL_AUTOSIZE_THRESH	20
 
 /*
  * Initialize a pool resource.
