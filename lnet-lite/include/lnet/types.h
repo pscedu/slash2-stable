@@ -108,6 +108,7 @@ typedef struct {
 #define LNET_MTU        (1<<LNET_MTU_BITS)
 
 /* limit on the number of entries in discontiguous MDs */
+/* Per Jared, I will try to lower 256 to 128 to save some memory someday */
 #define LNET_MAX_IOV    256
 
 /* Max payload size */
