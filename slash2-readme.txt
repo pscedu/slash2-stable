@@ -1,3 +1,10 @@
+11/17/2017
+----------
+
+Get rid of CRC update RPC and also rework slab reap locking.  This cuts down the
+CPU usage and significantly reduce the key-expired message seen on a slow sliod.
+The bigfile.sh test time drops from 28 hours to 20 hours on the slow sliod.
+
 10/05/2017
 ----------
 
