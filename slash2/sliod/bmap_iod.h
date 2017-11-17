@@ -41,13 +41,6 @@ struct slvr;
 extern psc_spinlock_t            sli_release_bmap_lock;
 extern struct psc_waitq          sli_release_bmap_waitq;
 
-struct bcrcupd {
-	struct timespec		 bcr_age;
-	struct bmap_iod_info	*bcr_bii;
-	struct psc_listentry	 bcr_lentry;
-	struct srt_bmap_crcup	 bcr_crcup;
-};
-
 #define bcr_2_bmap(bcr)		bii_2_bmap((bcr)->bcr_bii)
 
 struct bmap_iod_minseq {
@@ -61,6 +54,12 @@ struct bmap_iod_minseq {
 struct bmap_iod_rls {
 	struct srt_bmapdesc	 bir_sbd;
 	struct psc_listentry	 bir_lentry;
+};
+
+struct sli_update {
+	int			 sli_count;
+	struct psc_listentry     sli_lentry;
+	struct srt_update_rec	 sli_recs[MAX_FILE_UPDATES];
 };
 
 #define BIM_RETRIEVE_SEQ	1
@@ -89,15 +88,6 @@ SPLAY_HEAD(biod_slvrtree, slvr);
 struct bmap_iod_info {
 	uint8_t			 bii_crcstates[SLASH_SLVRS_PER_BMAP];
 	uint64_t		 bii_crcs[SLASH_SLVRS_PER_BMAP];
-
-	/*
-	 * Accumulate CRC updates here until its associated bcrcupd
-	 * structure is full, at which point it is set to NULL then
-	 * moved to a ready/hold list for transmission, and a new
-	 * bcrcupd structure must be allocated for future CRC updates.
-	 */
-	struct bcrcupd		*bii_bcr;
-
 	struct biod_slvrtree	 bii_slvrs;
 	struct psc_listentry	 bii_lentry;
 	struct psc_lockedlist	 bii_rls;	/* leases */
@@ -132,9 +122,6 @@ uint64_t	bim_getcurseq(void);
 void		bim_init(void);
 int		bim_updateseq(uint64_t);
 
-void		bcr_ready_add(struct bcrcupd *);
-void		bcr_ready_remove(struct bcrcupd *);
-
 void		slibmaprlsthr_spawn(void);
 
 extern struct bmap_iod_minseq	 sli_bminseq;
@@ -142,10 +129,8 @@ extern struct bmap_iod_minseq	 sli_bminseq;
 extern struct psc_poolmaster	 bmap_rls_poolmaster;
 extern struct psc_poolmgr	*bmap_rls_pool;
 
-extern struct psc_poolmaster	 bmap_crcupd_poolmaster;
-extern struct psc_poolmgr	*bmap_crcupd_pool;
-
-extern struct psc_listcache	 bcr_ready;
+extern struct psc_poolmaster     sli_upd_poolmaster;
+extern struct psc_poolmgr       *sli_upd_pool;
 
 static __inline struct bmap *
 bii_2_bmap(struct bmap_iod_info *bii)

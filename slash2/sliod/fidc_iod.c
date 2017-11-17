@@ -38,40 +38,6 @@
 #include "slutil.h"
 #include "slvr.h"
 
-int
-bcr_update_inodeinfo(struct bcrcupd *bcr)
-{
-	struct fidc_membh *f;
-	struct stat stb;
-	struct bmap *b;
-
-	b = bcr_2_bmap(bcr);
-	f = b->bcm_fcmh;
-
-	if (bcr->bcr_crcup.fg.fg_fid == FID_ANY)
-		return (EINVAL);
-
-	psc_assert(bcr->bcr_crcup.fg.fg_fid == f->fcmh_fg.fg_fid);
-
-	if (bcr->bcr_crcup.fg.fg_gen != f->fcmh_fg.fg_gen) {
-		OPSTAT_INCR("brcupdate-stale");
-		return (ESTALE);
-	}
-
-	if ((f->fcmh_flags & FCMH_IOD_BACKFILE) == 0)
-		return (EBADF);
-
-	if (fstat(fcmh_2_fd(f), &stb) == -1)
-		return (errno);
-
-	/* Used by mds_bmap_crc_update() */
-	bcr->bcr_crcup.fsize = stb.st_size;
-	bcr->bcr_crcup.nblks = stb.st_blocks;
-	bcr->bcr_crcup.utimgen = f->fcmh_sstb.sst_utimgen;
-
-	return (0);
-}
-
 /*
  * Build the pathname in the FID object root that corresponds to a FID,
  * allowing easily lookup of file metadata via FIDs.
@@ -248,6 +214,7 @@ sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 
 	fii = fcmh_2_fii(f);
 	INIT_PSC_LISTENTRY(&fii->fii_lentry);
+	INIT_PSC_LISTENTRY(&fii->fii_lentry2);
 
 	psc_assert(f->fcmh_flags & FCMH_INITING);
 	if (f->fcmh_fg.fg_gen == FGEN_ANY) {
@@ -272,6 +239,7 @@ sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 		} else {
 			sl_externalize_stat(&stb, &f->fcmh_sstb);
 			// XXX get ptruncgen and gen
+			fii->fii_nblks = stb.st_blocks;
 			f->fcmh_flags |= FCMH_HAVE_ATTRS;
 		}
 	}
@@ -305,6 +273,5 @@ struct sl_fcmh_ops sl_fcmh_ops = {
 	sli_fcmh_ctor,		/* sfop_ctor */
 	sli_fcmh_dtor,		/* sfop_dtor */
 	NULL,			/* sfop_getattr */
-	NULL,			/* sfop_postsetattr */
 	sli_fcmh_reopen		/* sfop_modify */
 };

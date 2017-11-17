@@ -47,7 +47,6 @@ struct sl_fcmh_ops {
 	int	(*sfop_ctor)(struct fidc_membh *, int);
 	void	(*sfop_dtor)(struct fidc_membh *);
 	int	(*sfop_getattr)(struct fidc_membh *, void *);
-	void	(*sfop_postsetattr)(struct fidc_membh *);
 	int	(*sfop_reopen)(struct fidc_membh *, slfgen_t);
 };
 
@@ -72,7 +71,7 @@ struct fidc_membh {
 	const char		*fcmh_fn;
 	int			 fcmh_lineno;
 	struct pfl_hashentry	 fcmh_hentry;	/* hash table membership for lookups */
-	struct psclist_head	 fcmh_lentry;	/* busy or idle list */
+	struct psclist_head	 fcmh_lentry;	/* idle or free list */
 	struct psc_waitq	 fcmh_waitq;	/* wait here for operations */
 	struct timespec		 fcmh_etime;	/* current expire time */
 	struct bmaptree		 fcmh_bmaptree;	/* bmap cache splay */
@@ -92,7 +91,7 @@ struct fidc_membh {
 #define _FCMH_FLGSHFT		(1 <<  9)
 
 /* number of seconds in which attribute times out */
-#define FCMH_ATTR_TIMEO		8
+#define FCMH_ATTR_TIMEO		30
 
 #define FCMH_PCI		PFL_CALLERINFOSS(SLSS_FCMH)
 
@@ -218,7 +217,8 @@ struct fidc_membh {
 #define FCMH_OPCNT_READAHEAD		 9	/* IOD/CLI: readahead */
 #define FCMH_OPCNT_DIRCACHE		10	/* CLI: async dircache */
 #define FCMH_OPCNT_SYNC_AHEAD		11	/* IOD: sync ahead */
-#define FCMH_OPCNT_MAXTYPE		12
+#define FCMH_OPCNT_UPDATE		12	/* IOD: update file */
+#define FCMH_OPCNT_MAXTYPE		13
 
 void	fidc_init(int);
 void	fidc_destroy(void);
@@ -236,8 +236,7 @@ void	sl_freapthr_spawn(int, const char *);
 /* fidc_lookup() flags */
 #define FIDC_LOOKUP_CREATE		(1 << 0)	/* create if not present */
 #define FIDC_LOOKUP_LOAD		(1 << 1)	/* use external fetching mechanism */
-#define FIDC_LOOKUP_LOCK		(1 << 2)	/* leave locked upon return */
-#define FIDC_LOOKUP_EXCL		(1 << 4)	/* ensure that this call creates */
+#define FIDC_LOOKUP_EXCL		(1 << 2)	/* ensure that this call creates */
 
 int	_fidc_lookup(const struct pfl_callerinfo *, slfid_t, slfgen_t,
 	    int, struct fidc_membh **, void *);
@@ -268,18 +267,11 @@ int	_fidc_lookup(const struct pfl_callerinfo *, slfid_t, slfgen_t,
 
 ssize_t	 fcmh_getsize(struct fidc_membh *);
 
-#define fcmh_op_start_type(f, type)					\
-	_fcmh_op_start_type(FCMH_PCI, (f), (type))
-#define fcmh_op_done_type(f, type)					\
-	_fcmh_op_done_type(FCMH_PCI, (f), (type), 0)
+void	fcmh_op_start_type(struct fidc_membh *, int);
+void	fcmh_op_done_type(struct fidc_membh *, int);
 
 #define fcmh_op_done(f)							\
     fcmh_op_done_type((f), FCMH_OPCNT_LOOKUP_FIDC)
-
-void	_fcmh_op_start_type(const struct pfl_callerinfo *,
-	    struct fidc_membh *, int);
-void	_fcmh_op_done_type(const struct pfl_callerinfo *,
-	    struct fidc_membh *, int, int);
 
 void	_dump_fcmh_flags_common(int *, int *);
 

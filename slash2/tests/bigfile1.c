@@ -358,7 +358,7 @@ int main(int argc, char *argv[])
 		for (i = 0; i < nfile; i++) {
 			write_file(i);
 		}
-		printf("Loop %d on %d files is done successfully.\n", j, nfile);
+		printf("Loop %2d on %d files is done successfully.\n", j, nfile);
 		fflush(stdout);
 	}
 
@@ -367,10 +367,10 @@ int main(int argc, char *argv[])
 	        close(files[i].fd);
         	rc = unlink(files[i].name);
 		if (rc < 0) {
-			printf("Fail to unlink file %s, errno = %d\n", files[i].name, errno);
+			printf("Fail to unlink file %s, errno = %d.\n", files[i].name, errno);
 			exit (1);
 		}
-		printf("Test file %s has been removed successfully...\n", files[i].name);
+		printf("Test file %s has been removed successfully!\n", files[i].name);
 	}
 	gettimeofday(&t2, NULL);
 

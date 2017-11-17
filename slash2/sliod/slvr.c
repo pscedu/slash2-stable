@@ -63,80 +63,53 @@ struct psc_listcache	 sli_iocb_pndg;
 psc_atomic64_t		 sli_aio_id = PSC_ATOMIC64_INIT(0);
 
 struct psc_listcache	 sli_lruslvrs;		/* LRU list of clean slivers which may be reaped */
-struct psc_listcache	 sli_crcqslvrs;		/* Slivers ready to be CRC'd and have their
-						 * CRCs shipped to the MDS. */
 
 struct psc_listcache	 sli_fcmh_dirty;
+struct psc_listcache	 sli_fcmh_update;
 
 extern struct psc_waitq	 sli_slvr_waitq;
 
 SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
-/*
- * Take the CRC of the data contained within a sliver and add the update
- * to a bcr.
- * @s: the sliver reference.
- * Notes:  Don't hold the lock while taking the CRC.
- * Returns: errno on failure, 0 on success, -1 on not applicable.
- */
-int
-slvr_do_crc(struct slvr *s, uint64_t *crcp)
+#define                  MIN_FREE_SLABS		 16
+#define			 SLAB_RECLAIM_BATCH      1
+
+struct psc_listcache     slab_buffers;
+int                      slab_buffers_count;    /* total, including free */
+
+struct slab_buffer_entry {
+	union {
+		struct psc_listentry     slab_lentry;
+		char                     slab_buf[SLASH_SLVR_SIZE];
+	};
+};
+
+int			 use_slab_buffers = 1;
+
+void *
+sli_slab_alloc(void)
 {
-	uint64_t crc;
+	void *p;
 
-	SLVR_LOCK_ENSURE(s);
-	psc_assert((s->slvr_flags & SLVRF_FAULTING ||
-		    s->slvr_flags & SLVRF_CRCDIRTY));
+	if (use_slab_buffers) {
+		p = lc_getnb(&slab_buffers);
+		psc_assert(p);
+	} else
+		p = PSCALLOC(SLASH_SLVR_SIZE);
 
-	if (s->slvr_flags & SLVRF_CRCDIRTY) {
-		/*
-		 * SLVRF_CRCDIRTY means that DATARDY has been set and
-		 * that a write dirtied the buffer and invalidated the
-		 * CRC.
-		 */
-		DEBUG_SLVR(PLL_DIAG, s, "crc");
-
-#ifdef ADLERCRC32
-		// XXX not a running CRC?  double check for correctness
-		crc = adler32(crc, slvr_2_buf(s, 0) + soff,
-		    (int)(eoff - soff));
-#else
-		psc_crc64_calc(&crc, slvr_2_buf(s, 0), SLASH_SLVR_SIZE);
-#endif
-
-		DEBUG_SLVR(PLL_DIAG, s, "crc=%"PSCPRIxCRC64, crc);
-
-		*crcp = crc;
-		slvr_2_crc(s) = crc;
-		slvr_2_crcbits(s) |= BMAP_SLVR_DATA | BMAP_SLVR_CRC;
-
-		DEBUG_BMAP(PLL_INFO, slvr_2_bmap(s),
-		    "CRC update: slvr=%hu, crc=%"PSCPRIxCRC64,
-		    s->slvr_num, slvr_2_crc(s));
-	} else if (s->slvr_flags & SLVRF_FAULTING) {
-		if (slvr_2_crcbits(s) & BMAP_SLVR_CRCABSENT)
-			return (SLERR_CRCABSENT);
-
-		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
-		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
-
-			psc_crc64_calc(&crc, slvr_2_buf(s, 0),
-			    SLASH_SLVR_SIZE);
-
-			if (crc != slvr_2_crc(s)) {
-				DEBUG_BMAP(PLL_INFO, slvr_2_bmap(s),
-				    "CRC failure: slvr=%hu, crc="
-				    "%"PSCPRIxCRC64,
-				    s->slvr_num, slvr_2_crc(s));
-				return (PFLERR_BADCRC);
-			}
-		} else {
-			return (0);
-		}
-	}
-
-	return (-1);
+	return (p);
 }
+
+void
+sli_slab_free(void *p)
+{
+	if (use_slab_buffers) {
+		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
+		lc_add(&slab_buffers, p);
+	} else
+		PSCFREE(p);
+}
+
 
 void
 sli_aio_aiocbr_release(struct sli_aiocb_reply *a)
@@ -147,6 +120,7 @@ sli_aio_aiocbr_release(struct sli_aiocb_reply *a)
 		sl_csvc_decref(a->aiocbr_csvc);
 	psc_pool_return(sli_aiocbr_pool, a);
 }
+
 
 __static int
 slvr_aio_chkslvrs(const struct sli_aiocb_reply *a)
@@ -265,7 +239,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 		if (a->aiocbr_rw == SL_READ)
 			slvr_rio_done(a->aiocbr_slvrs[i]);
 		else
-			slvr_wio_done(a->aiocbr_slvrs[i], 0);
+			slvr_wio_done(a->aiocbr_slvrs[i]);
 	}
 
 	sli_aio_aiocbr_release(a);
@@ -533,31 +507,8 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 		if (rc == -1) {
 			save_errno = errno;
 			OPSTAT_INCR("fsio-read-fail");
-		} else if (rc) {
-			int crc_rc;
-
+		} else
 			pfl_opstat_add(sli_backingstore_iostats.rd, rc);
-
-			/*
-			 * When a file is truncated, the generation
-			 * number increments and all CRCs should be
-			 * invalid.  Luckily we can use a simple check
-			 * here without resorting to a complicated
-			 * protocol.
-			 */
-			SLVR_LOCK(s);
-			crc_rc = slvr_do_crc(s, NULL);
-			SLVR_ULOCK(s);
-
-			if (crc_rc == PFLERR_BADCRC) {
-				OPSTAT_INCR("fsio-read-crc-bad");
-				DEBUG_SLVR(PLL_ERROR, s,
-				    "bad crc blks=%d off=%zu",
-				    nblks, foff);
-			} else {
-				OPSTAT_INCR("fsio-read-crc-good");
-			}
-		}
 
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &tsd);
@@ -724,39 +675,6 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	return (rc);
 }
 
-__static void
-slvr_schedule_crc_locked(struct slvr *s)
-{
-	s->slvr_flags &= ~SLVRF_LRU;
-	s->slvr_flags |= SLVRF_CRCDIRTY;
-	PFL_GETTIMESPEC(&s->slvr_ts);
-	DEBUG_SLVR(PLL_DIAG, s, "sched crc");
-
-	lc_remove(&sli_lruslvrs, s);
-	lc_addqueue(&sli_crcqslvrs, s);
-}
-
-void
-slvr_crc_update(struct fidc_membh *f, sl_bmapno_t bmapno, int32_t offset)
-{
-	int i, rc;
-	int32_t slvrno;
-	struct slvr *s;
-	struct bmap *bmap;
-
-	rc = bmap_get(f, bmapno, SL_READ, &bmap);
-	if (rc)
-		return;
-
-	slvrno = (offset - 1) / SLASH_SLVR_SIZE;
-	for (i = 0; i <= slvrno; i++) {
-		s = slvr_lookup(i, bmap_2_bii(bmap));
-		rc = slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ, 0);
-		slvr_io_done(s, rc);
-		slvr_wio_done(s, 0);
-	}
-	bmap_op_done(bmap);
-}
 
 void
 slvr_remove(struct slvr *s)
@@ -766,10 +684,7 @@ slvr_remove(struct slvr *s)
 	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
 
 	psc_assert(s->slvr_refcnt == 0);
-	if (s->slvr_flags & SLVRF_LRU)
-		lc_remove(&sli_lruslvrs, s);
-	else
-		lc_remove(&sli_crcqslvrs, s);
+	psc_assert(!(s->slvr_flags & SLVRF_LRU));
 
 	bii = slvr_2_bii(s);
 
@@ -779,7 +694,7 @@ slvr_remove(struct slvr *s)
 
 	if (s->slvr_flags & SLVRF_READAHEAD)
 		OPSTAT_INCR("readahead-waste");
-	slab_free(s->slvr_slab);
+	sli_slab_free(s->slvr_slab);
 	psc_pool_return(slvr_pool, s);
 }
 
@@ -853,6 +768,10 @@ slvr_remove_all(struct fidc_membh *f)
 				goto restart;
 			}
 			s->slvr_flags |= SLVRF_FREEING;
+			if (s->slvr_flags & SLVRF_LRU) {
+				s->slvr_flags &= ~SLVRF_LRU;
+				lc_remove(&sli_lruslvrs, s);
+			}
 
 			SLVR_ULOCK(s);
 			BII_ULOCK(bii);
@@ -883,11 +802,14 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 {
 	SLVR_LOCK_ENSURE(s);
 	psc_assert(s->slvr_slab);
-	if (s->slvr_refcnt || (s->slvr_flags & SLVRF_CRCDIRTY)) {
+	if (s->slvr_refcnt) {
 		SLVR_ULOCK(s);
 		return;
 	}
-
+	if (s->slvr_flags & SLVRF_LRU) {
+		s->slvr_flags &= ~SLVRF_LRU;
+		lc_remove(&sli_lruslvrs, s);
+	}
 	if (s->slvr_flags & SLVRF_DATAERR) {
 		/*
 		 * This is safe because we hold the sliver lock
@@ -900,7 +822,6 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 		return;
 	}
 
-	psc_assert(s->slvr_flags & SLVRF_LRU);
 	psc_assert(s->slvr_flags & SLVRF_DATARDY);
 
 	/*
@@ -910,7 +831,8 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 	 * first before asking for the sliver lock or you should use
 	 * trylock().
 	 */
-	lc_move2tail(&sli_lruslvrs, s);
+	s->slvr_flags |= SLVRF_LRU;
+	lc_add(&sli_lruslvrs, s);
 	SLVR_ULOCK(s);
 
 	/*
@@ -920,7 +842,7 @@ slvr_lru_tryunpin_locked(struct slvr *s)
  	 * We reap proactively instead of on demand to avoid ENOMEM
  	 * situation, which we don't handle gracefully right now.
  	 */
-	if (slvr_pool->ppm_nfree < 3) {
+	if (slvr_pool->ppm_nfree < MIN_FREE_SLABS) {
 		OPSTAT_INCR("slvr-wakeone");
 		psc_waitq_wakeone(&sli_slvr_waitq);
 	}
@@ -962,7 +884,7 @@ slvr_rio_done(struct slvr *s)
  * Called after a write on the given sliver has completed.
  */
 void
-slvr_wio_done(struct slvr *s, int repl)
+slvr_wio_done(struct slvr *s)
 {
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_refcnt > 0);
@@ -970,13 +892,7 @@ slvr_wio_done(struct slvr *s, int repl)
 	s->slvr_refcnt--;
 	DEBUG_SLVR(PLL_DIAG, s, "decref");
 
-	if (s->slvr_flags & SLVRF_DATAERR || repl) {
-		slvr_lru_tryunpin_locked(s);
-	} else {
-		if (s->slvr_flags & SLVRF_LRU)
-			slvr_schedule_crc_locked(s);
-		SLVR_ULOCK(s);
-	}
+	slvr_lru_tryunpin_locked(s);
 }
 
 /*
@@ -987,7 +903,7 @@ struct slvr *
 slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
 {
 	struct slvr *s, *tmp1 = NULL, ts;
-	struct slab *tmp2 = NULL;
+	void *tmp2 = NULL;
 	int alloc = 0;
 
 	ts.slvr_num = num;
@@ -1024,7 +940,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
 			alloc = 1;
 			BII_ULOCK(bii);
 			tmp1 = psc_pool_get(slvr_pool);
-			tmp2 = slab_alloc();
+			tmp2 = sli_slab_alloc();
 			BII_LOCK(bii);
 			goto retry;
 		}
@@ -1040,24 +956,17 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
 		INIT_PSC_LISTENTRY(&s->slvr_lentry);
 		INIT_SPINLOCK(&s->slvr_lock);
 
-		memset(tmp2->slb_base, 0, SLASH_SLVR_SIZE);
+		memset(tmp2, 0, SLASH_SLVR_SIZE);
 		s->slvr_slab = tmp2;
 		s->slvr_refcnt = 1;
 
 		PSC_SPLAY_XINSERT(biod_slvrtree, &bii->bii_slvrs, s);
 		bmap_op_start_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
 
-		/*
-		 * Until the slab is added to the sliver, the sliver is
-		 * private to the bmap's biod_slvrtree.
-		 */
-		s->slvr_flags |= SLVRF_LRU;
-		lc_addtail(&sli_lruslvrs, s);
-
 	}
 	if (alloc) {
+		sli_slab_free(tmp2);
 		psc_pool_return(slvr_pool, tmp1);
-		slab_free(tmp2);
 	}
 	return (s);
 }
@@ -1066,20 +975,26 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *bii)
  * The reclaim function for slvr_pool.  Note that our caller
  * psc_pool_get() ensures that we are called exclusively.
  */
+
 int
 slab_cache_reap(struct psc_poolmgr *m)
 {
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct slvr *s;
-	int i, nitems;
+	struct psc_thread *thr;
+	int i, haswork, nitems = 0;
 
+	thr = pscthr_get();
 	psc_assert(m == slvr_pool);
 
+	psc_dynarray_ensurelen(&a, SLAB_RECLAIM_BATCH);
+
+again:
+	haswork = 0;
 	LIST_CACHE_LOCK(&sli_lruslvrs);
-	nitems = lc_nitems(&sli_lruslvrs) / 5;
-	if (nitems < 5)
-		nitems = 5;
 	LIST_CACHE_FOREACH(s, &sli_lruslvrs) {
+
+		haswork = 1;
 		DEBUG_SLVR(PLL_DIAG, s, "considering for reap");
 
 		/*
@@ -1092,28 +1007,36 @@ slab_cache_reap(struct psc_poolmgr *m)
 		if (!SLVR_TRYLOCK(s))
 			continue;
 
-		/*
-		 * We do not check SLVRF_FAULTING here because we
-		 * are not looking at the CRC list (sli_crcqslvrs).
-		 */
 		if (s->slvr_refcnt || (s->slvr_flags & SLVRF_FREEING)) {
 			SLVR_ULOCK(s);
 			continue;
 		}
-
+		psc_assert(s->slvr_flags & SLVRF_LRU);
 		s->slvr_flags |= SLVRF_FREEING;
+		s->slvr_flags &= ~SLVRF_LRU;
+		lc_remove(&sli_lruslvrs, s);
 		SLVR_ULOCK(s);
 
 		psc_dynarray_add(&a, s);
-		if (psc_dynarray_len(&a) >= nitems && 
+		if (psc_dynarray_len(&a) >= SLAB_RECLAIM_BATCH &&
 		    psc_dynarray_len(&a) >= 
 		    psc_atomic32_read(&m->ppm_nwaiters))
 			break;
 	}
 	LIST_CACHE_ULOCK(&sli_lruslvrs);
-
 	DYNARRAY_FOREACH(s, i, &a)
 		slvr_remove(s);
+
+	nitems += psc_dynarray_len(&a);
+	psc_dynarray_reset(&a);
+
+	if (thr->pscthr_type == SLITHRT_BREAP &&
+	     m->ppm_nfree < MIN_FREE_SLABS && haswork) {
+		pscthr_yield();
+		OPSTAT_INCR("sli.reap-loop");
+		goto again;
+	}
+
 	psc_dynarray_free(&a);
 
 	OPSTAT_INCR("slab-lru-reap");
@@ -1223,6 +1146,7 @@ slirathr_main(struct psc_thread *thr)
 void
 slvr_cache_init(void)
 {
+	void *p;
 	int i, nbuf;
 
 	psc_assert(SLASH_SLVR_SIZE <= LNET_MTU);
@@ -1238,6 +1162,26 @@ slvr_cache_init(void)
 	    nbuf, nbuf, slab_cache_reap, "slvr");
 	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
 
+	if (!use_slab_buffers)
+		goto next;
+
+	lc_reginit(&slab_buffers, struct slab_buffer_entry,
+		slab_lentry, "slabbuffers"); 
+
+	for (i = 0; i < nbuf; i++) {
+		p = mmap(NULL, SLASH_SLVR_SIZE, PROT_READ|PROT_WRITE,
+			MAP_ANONYMOUS|MAP_SHARED, -1, 0); 
+
+		if (p == MAP_FAILED)
+			psc_fatalx("Please raise vm.max_map_count limit");
+
+		OPSTAT_INCR("mmap-success");
+		slab_buffers_count++;
+		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
+		lc_add(&slab_buffers, p);
+	}   
+
+ next:
 	psc_poolmaster_init(&sli_readaheadrq_poolmaster,
 	    struct sli_readaheadrq, rarq_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, "readaheadrq");
@@ -1248,10 +1192,12 @@ slvr_cache_init(void)
 	    "readaheadq");
 
 	lc_reginit(&sli_lruslvrs, struct slvr, slvr_lentry, "lruslvrs");
-	lc_reginit(&sli_crcqslvrs, struct slvr, slvr_lentry, "crcqslvrs");
 
 	lc_reginit(&sli_fcmh_dirty, struct fcmh_iod_info, fii_lentry,
 	    "fcmhdirty");
+
+	lc_reginit(&sli_fcmh_update, struct fcmh_iod_info, fii_lentry2,
+	    "fcmhupdate");
 
 	if (slcfg_local->cfg_async_io) {
 		psc_poolmaster_init(&sli_iocb_poolmaster,
@@ -1274,8 +1220,17 @@ slvr_cache_init(void)
 		pscthr_init(SLITHRT_READAHEAD, slirathr_main, 0,
 		    "slirathr%d", i);
 
+	for (i = 0; i < NSLVRSYNC_THRS; i++)
+		pscthr_init(SLITHRT_SLVR_SYNC, slisyncthr_main, 0,
+		    "slisyncthr%d", i);
+
 	slab_cache_init(nbuf);
-	slvr_worker_init();
+
+	_psc_poolmaster_init(&sli_upd_poolmaster,
+	    sizeof(struct sli_update),
+	    offsetof(struct sli_update, sli_lentry), PPMF_AUTO, 64,
+	    64, 0, NULL, NULL, "sliupd");
+	sli_upd_pool = psc_poolmaster_getmgr(&sli_upd_poolmaster);
 }
 
 #if PFL_DEBUG > 0
@@ -1294,7 +1249,6 @@ dump_sliver_flags(int fl)
 	PFL_PRFLAG(SLVRF_DATARDY, &fl, &seq);
 	PFL_PRFLAG(SLVRF_DATAERR, &fl, &seq);
 	PFL_PRFLAG(SLVRF_LRU, &fl, &seq);
-	PFL_PRFLAG(SLVRF_CRCDIRTY, &fl, &seq);
 	PFL_PRFLAG(SLVRF_FREEING, &fl, &seq);
 	PFL_PRFLAG(SLVRF_ACCESSED, &fl, &seq);
 	if (fl)

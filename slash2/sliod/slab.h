@@ -33,24 +33,11 @@
 #include "pfl/list.h"
 #include "pfl/pool.h"
 
-/*
- * Used for both read caching and write aggregation.
- */
-struct slab {
-	void			*slb_base;		/* pointer to the data buffer */
-	struct psclist_head	 slb_mgmt_lentry;	/* chain lru or outgoing q  */
-};
-
 #define SLAB_DEF_COUNT		512
 #define SLAB_DEF_CACHE		((size_t)SLAB_DEF_COUNT * SLASH_SLVR_SIZE)
 #define SLAB_MIN_CACHE		((size_t)128 * SLASH_SLVR_SIZE)
 
 void	slab_cache_init(int);
 int	slab_cache_reap(struct psc_poolmgr *);
-
-struct slab	*slab_alloc(void);
-void		 slab_free(struct slab *);
-
-extern struct psc_poolmgr	*slab_pool;
 
 #endif /* _SLI_SLAB_H_ */

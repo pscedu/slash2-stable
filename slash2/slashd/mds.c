@@ -102,58 +102,26 @@ mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 int64_t
 slm_bmap_calc_repltraffic(struct bmap *b)
 {
-	int i, locked[2], lastslvr, lastsize;
-	struct bmap_mds_info *bmi;
 	struct fidc_membh *f;
 	sl_bmapno_t lastbno;
-	int64_t amt = 0;
+	int64_t amt;
 
 	f = b->bcm_fcmh;
-	locked[0] = FCMH_RLOCK(f);
-	locked[1] = BMAP_RLOCK(b);
-
 	lastbno = fcmh_nvalidbmaps(f);
 	if (lastbno)
 		lastbno--;
 
-	if (fcmh_2_fsz(f)) {
-		off_t bmapsize;
+	/*
+ 	 * Relying on file size could be a problem if the file size
+ 	 * has not been updated yet.
+ 	 */
+	if (b->bcm_bmapno == lastbno) {
+		amt = fcmh_2_fsz(f) % SLASH_BMAP_SIZE;
+		if (amt == 0)
+			amt = SLASH_BMAP_SIZE;
+	} else
+		amt = SLASH_BMAP_SIZE;
 
-		bmapsize = fcmh_2_fsz(f) % SLASH_BMAP_SIZE;
-		if (bmapsize == 0)
-			bmapsize = SLASH_BMAP_SIZE;
-
-		/* last slvr number within the bmap */
-		lastslvr = (bmapsize - 1) / SLASH_SLVR_SIZE;
-		lastsize = fcmh_2_fsz(f) % SLASH_SLVR_SIZE;
-		if (lastsize == 0)
-			lastsize = SLASH_SLVR_SIZE;
-	} else {
-		/*
-		 * XXX can we unlock and return here
-		 * without going through the next loop?
-		 */ 
-		lastslvr = 0;
-		lastsize = 0;
-	}
-
-	bmi = bmap_2_bmi(b);
-	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++) {
-		if (bmi->bmi_crcstates[i] & BMAP_SLVR_DATA) {
-			/*
-			 * If this is the last sliver of the last bmap,
-			 * tally only the portion of data that exists.
-			 */
-			if (b->bcm_bmapno == lastbno &&
-			    i == lastslvr) {
-				amt += lastsize;
-				break;
-			}
-			amt += SLASH_SLVR_SIZE;
-		}
-	}
-	BMAP_URLOCK(b, locked[1]);
-	FCMH_URLOCK(f, locked[0]);
 	return (amt);
 }
 
@@ -1076,11 +1044,13 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	}
 
  out:
-	DEBUG_BMAP(rc && rc != -SLERR_BMAP_DIOWAIT ? PLL_WARN : PLL_DIAG,
-	    b, "bml_add (mion=%p) bml=%p (seq=%"PRId64") (rw=%d) "
-	    "(nwtrs=%d nrdrs=%d) (rc=%d)",
-	    bmi->bmi_wr_ion, bml, bml->bml_seq, rw,
-	    bmi->bmi_writers, bmi->bmi_readers, rc);
+	/*
+	 * This used to print 8192 bytes of message and cause fprintf()
+	 * to return -1 and we abort. So it was simplified.
+	 */
+	psclogs(rc && rc != -SLERR_BMAP_DIOWAIT ? PLL_WARN : PLL_DIAG,
+	     SLSS_BMAP, "bno = %d, fid = "SLPRI_FID,
+     	     b->bcm_bmapno, fcmh_2_fid(b->bcm_fcmh));
 
 	/*
 	 * On error, the caller will issue mds_bmap_bml_release() which
@@ -1496,154 +1466,6 @@ mds_bia_odtable_startup_cb(void *data, int64_t item,
 		bmap_op_done(b);
 	if (f)
 		fcmh_op_done(f);
-}
-
-/*
- * Process a CRC update request from an ION.
- * @c: the RPC request containing the FID, bmapno, and chunk ID (cid).
- * @iosid:  the IOS ID of the I/O node which sent the request.  It is
- *	compared against the ID stored in the bml
- */
-int
-mds_bmap_crc_write(struct srt_bmap_crcup *c, sl_ios_id_t iosid,
-    __unusedx const struct srm_bmap_crcwrt_req *mq)
-{
-	struct sl_resource *res = libsl_id2res(iosid);
-	struct bmap *bmap = NULL;
-	struct bmap_mds_info *bmi;
-	struct fidc_membh *f;
-	int rc, vfsid;
-	struct srt_stat sstb;
-
-	rc = slfid_to_vfsid(c->fg.fg_fid, &vfsid);
-	if (rc)
-		return (rc);
-	if (vfsid != current_vfsid)
-		return (-EINVAL);
-
-	rc = slm_fcmh_get(&c->fg, &f);
-	if (rc) {
-		if (rc == ENOENT) {
-			psclog_warnx("fid="SLPRI_FID" appears to have "
-			    "been deleted", c->fg.fg_fid);
-			return (0);
-		}
-		psclog_errorx("fid="SLPRI_FID" slm_fcmh_get() rc=%d",
-		    c->fg.fg_fid, rc);
-		return (-rc);
-	}
-
-	/*
-	 * Ignore updates from old or invalid generation numbers.
-	 * XXX XXX fcmh is not locked here
-	 */
-	FCMH_LOCK(f);
-	if (fcmh_2_gen(f) != c->fg.fg_gen) {
-		int x = (fcmh_2_gen(f) > c->fg.fg_gen) ? 1 : 0;
-
-		DEBUG_FCMH(x ? PLL_DIAG : PLL_ERROR, f,
-		    "MDS gen (%"PRIu64") %s than crcup gen (%"PRIu64")",
-		    fcmh_2_gen(f), x ? ">" : "<", c->fg.fg_gen);
-
-		rc = -(x ? SLERR_GEN_OLD : SLERR_GEN_INVALID);
-		FCMH_ULOCK(f);
-		goto out;
-	}
-	FCMH_ULOCK(f);
-
-	/*
-	 * BMAP_OP #2
-	 * XXX are we sure after restart bmap will be loaded?
-	 */
-	rc = -bmap_get(f, c->bno, SL_WRITE, &bmap);
-	if (rc) {
-		DEBUG_FCMH(PLL_ERROR, f, "bmap lookup failed; "
-		    "bno=%u rc=%d", c->bno, rc);
-		goto out;
-	}
-
-	DEBUG_BMAP(PLL_DIAG, bmap, "bmapno=%u sz=%"PRId64" ios=%s",
-	    c->bno, c->fsize, res->res_name);
-
-	bmi = bmap_2_bmi(bmap);
-
-	/*
-	 * If this bmap is associated with a lease, then it must be
-	 * owned by the IOS.  Note that the bmap might be just read
-	 * from the disk.
-	 */
-	if (bmi->bmi_wr_ion &&
-	    iosid != rmmi2resm(bmi->bmi_wr_ion)->resm_res_id) {
-		/* We recv'd a request from an unexpected NID. */
-		psclog_errorx("CRCUP for/from invalid NID; "
-		    "wr_ion=%s ios=%#x",
-		    bmi->bmi_wr_ion ?
-		    rmmi2resm(bmi->bmi_wr_ion)->resm_name : "<NONE>",
-		    iosid);
-
-		BMAP_ULOCK(bmap);
-		PFL_GOTOERR(out, rc = -EINVAL);
-	}
-
-	if (bmap->bcm_flags & BMAPF_CRC_UP) {
-		/*
-		 * Ensure that this thread is the only thread updating
-		 * the bmap CRC table.
-		 * XXX may have to replace this with a waitq
-		 */
-
-		DEBUG_BMAP(PLL_ERROR, bmap,
-		    "EALREADY bmapno=%u sz=%"PRId64" ios=%s",
-		    c->bno, c->fsize, res->res_name);
-
-		DEBUG_FCMH(PLL_ERROR, f,
-		    "EALREADY bmapno=%u sz=%"PRId64" ios=%s",
-		    c->bno, c->fsize, res->res_name);
-
-		BMAP_ULOCK(bmap);
-		PFL_GOTOERR(out, rc = -PFLERR_ALREADY);
-	}
-
-	/*
-	 * Mark that bmap is undergoing CRC updates - this is
-	 * non-reentrant so the ION must know better than to send
-	 * multiple requests for the same bmap.
-	 */
-	bmap->bcm_flags |= BMAPF_CRC_UP;
-	BMAP_ULOCK(bmap);
-
-	/* Call the journal and update the in-memory CRCs. */
-	rc = mds_bmap_crc_update(bmap, iosid, c);
-
-	/* Signify that the update has occurred. */
-	BMAP_LOCK(bmap);
-	bmap->bcm_flags &= ~BMAPF_CRC_UP;
-	BMAP_ULOCK(bmap);
-
-	/*
-	 * As a security precaution, most systems disable setuid or
-	 * setgid when a file is modified by nonsuperuser.  Since
-	 * we fully trust clients and cannot distinguish between
-	 * superuser or nonsuperuser, be overzealous and simply
-	 * turn them off after any modification.
-	 */
-	if (f->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
-		FCMH_LOCK(f);
-		sstb.sst_mode = f->fcmh_sstb.sst_mode & ~(S_ISGID | S_ISUID);
-		mds_fcmh_setattr_nolog(vfsid, f, PSCFS_SETATTRF_MODE, &sstb);
-	}
-
- out:
-	/*
-	 * Mark that mds_bmap_crc_write() is done with this bmap
-	 *  - it was incref'd in fcmh_bmap_lookup().
-	 */
-	if (bmap)
-		/* BMAP_OP #2, drop lookup ref */
-		bmap_op_done(bmap);
-
-	fcmh_op_done(f);
-	return (rc);
 }
 
 void
@@ -2129,6 +1951,17 @@ slm_ptrunc_prepare(struct fidc_membh *f, struct srt_stat *sstb, int to_set)
 				BMAP_LOCK(b);
 				continue;
 			}
+			/*
+			 * 10/18/2017:
+			 *
+			 * This leads to psclist_add() crash, we should 
+			 * probably have a reference to protect bml_exp.
+			 *
+			 * 11/05/2017:
+			 *
+			 * Segment fault (11) from here.  We just can't
+			 * trust bml_exp.
+			 */
 			csvc = slm_getclcsvc(bml->bml_exp);
 			if (csvc == NULL) {
 				psclog_warnx("Unable to get csvc: %p",

@@ -172,6 +172,27 @@ readahead_enqueue(struct fidc_membh *f, off_t off, off_t size)
 	lc_add(&sli_readaheadq, rarq);
 }
 
+void
+sli_enqueue_update(struct fidc_membh *f)
+{
+	struct timeval now;
+	struct fcmh_iod_info *fii;
+
+	fii = fcmh_2_fii(f);
+	PFL_GETTIMEVAL(&now);
+	if (!(f->fcmh_flags & FCMH_IOD_UPDATEFILE)) {
+		OPSTAT_INCR("fcmh-update-enqueue");
+		lc_add(&sli_fcmh_update, fii);
+		f->fcmh_flags |= FCMH_IOD_UPDATEFILE;
+		fcmh_op_start_type(f, FCMH_OPCNT_UPDATE);
+	} else {
+		OPSTAT_INCR("fcmh-update-requeue");
+		lc_move2tail(&sli_fcmh_update, fii);
+	}
+	fii->fii_nwrites++;
+	fii->fii_lastwrite = now.tv_sec;
+}
+
 __static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
@@ -334,6 +355,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			lc_add(&sli_fcmh_dirty, fii);
 			f->fcmh_flags |= FCMH_IOD_DIRTYFILE;
 		}
+		/*
+		 * We should do this after write is done successfully.
+		 * However, it is tricky to handle the AIO case. So
+		 * be careful.
+		 */ 
+		sli_enqueue_update(f);
 	}
 	FCMH_ULOCK(f);
 
@@ -393,7 +420,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		 * here because reading beyond EOF should return 0
 		 * bytes.
 		 */
-		iovs[i].iov_base = slvr[i]->slvr_slab->slb_base + roff;
+		iovs[i].iov_base = slvr[i]->slvr_slab + roff;
 		tsize -= iovs[i].iov_len = len[i];
 
 		/*
@@ -561,7 +588,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		if (rw == SL_READ)
 			slvr_rio_done(slvr[i]);
 		else
-			slvr_wio_done(slvr[i], 0);
+			slvr_wio_done(slvr[i]);
 	}
 
  out2:

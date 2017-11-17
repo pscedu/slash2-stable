@@ -244,9 +244,8 @@ msl_biorq_del(struct bmpc_ioreq *r)
 
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
-	if (r->biorq_flags & BIORQ_ONTREE) {
+	if (r->biorq_flags & BIORQ_ONTREE)
 		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
-	}
 
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
 		pll_remove(&bmpc->bmpc_biorqs_exp, r);
@@ -363,7 +362,9 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 	mfh->mfh_fcmh = f;
 	mfh->mfh_pid = pscfs_getclientctx(pfr)->pfcc_pid;
 	mfh->mfh_sid = getsid(mfh->mfh_pid);
-	mfh->mfh_accessing_euid = slc_getfscreds(pfr, &pcr)->pcr_uid;
+	mfh->mfh_accessing_uid = slc_getfscreds(pfr, &pcr, 0)->pcr_uid;
+	mfh->mfh_accessing_gid = slc_getfscreds(pfr, &pcr, 0)->pcr_gid;
+	mfh->mfh_accessing_euid = slc_getfscreds(pfr, &pcr, 1)->pcr_uid;
 	INIT_SPINLOCK(&mfh->mfh_lock);
 	INIT_PSC_LISTENTRY(&mfh->mfh_lentry);
 
@@ -2037,7 +2038,7 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 	}
 	if (!(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE)) {
 		fci = fcmh_2_fci(f);
-		fci->fci_etime.tv_sec = ts.tv_sec + FCMH_ATTR_TIMEO;
+		fci->fci_etime.tv_sec = ts.tv_sec + msl_attributes_timeout;
 		fci->fci_etime.tv_nsec = ts.tv_nsec;
 		f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
 		lc_addtail(&msl_attrtimeoutq, fci);

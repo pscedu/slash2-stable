@@ -42,15 +42,14 @@ struct fcmh_cli_info_file {
 };
 
 struct fcmh_cli_info_dir {
-	struct psc_lockedlist	 pages;
-	struct psc_dynarray	 ents;		/* dircache ents not in a page */
-	struct pfl_rwlock	 dircache_rwlock;
-
+	struct psclist_head	 pages;
+	int			 count;
 	/*
-	 * Predictive readdir when LOOKUPs aren't hitting dircache.
+	 * Compared to a dynarray, a linked list allows us to use as much memory
+	 * as needed.  It is also easier to remove an item from the list. 	
 	 */
-	struct timeval		 lookup_age;	/* async readdir  */
-	uint64_t		 lookup_misses;
+	struct psclist_head	 entlist;
+	struct pfl_rwlock	 dircache_rwlock;
 };
 
 /*
@@ -66,19 +65,16 @@ struct fcmh_cli_info_dir {
  * @fcif_mapstircnt: how many times @idxmap has been used since last
  *	stir.
  * @fci_dc_pages: dircache pages.
- * @fcid_lookup_age: second-resolution of last dircache LOOKUP miss.
- * @fcid_lookup_misses: how many LOOKUPs did not hit dircache since @age.
  * @fci_lentry: cache membership.
  * @fci_etime: attribute expiration time.
  */
 struct fcmh_cli_info {
 	struct sl_resm			*fci_resm;
-	struct timeval			 fci_age;
+	struct timeval			 fci_age;	/* attr update time */
 
 	uint64_t                         fci_pino;	/* silly rename fields */
 	int                         	 fci_nopen;
 	char                            *fci_name;
-	int				 fci_pos;	/* next to displace */
 
 	union {
 		struct fcmh_cli_info_file f;
@@ -89,12 +85,11 @@ struct fcmh_cli_info {
 
 		struct fcmh_cli_info_dir d;
 #define fci_dc_pages		u.d.pages
+#define fcid_entlist		u.d.entlist
+#define fcid_count		u.d.count
 #define fcid_dircache_rwlock	u.d.dircache_rwlock
-#define fcid_ents		u.d.ents
-#define fcid_lookup_age		u.d.lookup_age
-#define fcid_lookup_misses	u.d.lookup_misses
 	} u;
-	struct psclist_head		 fci_lentry;	/* all fcmhs with dirty attributes */
+	struct psc_listentry		 fci_lentry;	/* all fcmhs with dirty attributes */
 	struct timespec			 fci_etime;	/* attr expire time */
 };
 

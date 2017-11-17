@@ -96,6 +96,68 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	return (0);
 }
 
+
+int
+mds_file_update(sl_ios_id_t iosid, struct srt_update_rec *recp)
+{
+	struct fidc_membh *f;
+	struct srt_stat sstb;
+	int rc, fl, idx, vfsid;
+	uint64_t nblks;
+	struct slash_inode_handle *ih;
+
+        rc = slm_fcmh_get(&recp->fg, &f); 
+        if (rc) 
+		return (rc);
+
+	rc = slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
+	if (rc) {
+		rc = -rc;
+		goto out;
+	}
+
+	ih = fcmh_2_inoh(f);
+	idx = mds_repl_ios_lookup(vfsid, ih, iosid);
+	if (idx < 0) {
+		psclog_warnx("CRC update: invalid IOS %x", iosid);
+		rc = idx;
+		goto out;
+	}
+
+	if (idx < SL_DEF_REPLICAS)
+		nblks = fcmh_2_ino(f)->ino_repl_nblks[idx];
+	else
+		nblks = fcmh_2_inox(f)->inox_repl_nblks[idx - SL_DEF_REPLICAS];
+
+	/*
+	 * Only update the block usage when there is a real change.
+	 */
+	if (recp->nblks != nblks) {
+		sstb.sst_blocks = fcmh_2_nblks(f) + recp->nblks - nblks;
+		fl = SL_SETATTRF_NBLKS;
+
+		fcmh_set_repl_nblks(f, idx, recp->nblks);
+
+		/* use nolog because mdslog_bmap_crc() will cover this */
+		FCMH_LOCK(f);
+		rc = mds_fcmh_setattr_nolog(vfsid, f, fl, &sstb);
+		if (rc)
+			psclog_error("unable to setattr: rc=%d", rc);
+
+		FCMH_LOCK(f);
+		if (idx < SL_DEF_REPLICAS)
+			mds_inode_write(vfsid, ih, NULL, NULL);
+		else
+			mds_inox_write(vfsid, ih, NULL, NULL);
+		FCMH_ULOCK(f);
+	}
+
+ out:
+	if (f)
+		fcmh_op_done(f);
+	return (rc);
+}
+
 /*
  * Handle a BMAPCRCWRT request from ION, which receives the CRCs for the
  * data contained in a bmap, checks their integrity during transmission,
@@ -105,101 +167,31 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
  * XXX should we check if an actual lease is out??
  */
 int
-slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
+slm_rmi_handle_update(struct pscrpc_request *rq)
 {
-	struct srm_bmap_crcwrt_req *mq;
-	struct srm_bmap_crcwrt_rep *mp;
-	struct iovec *iovs;
-	size_t len = 0;
+	struct srm_updatefile_req *mq;
+	struct srm_updatefile_rep *mp;
+	int rc;
 	uint32_t i;
-	off_t off;
-	void *buf;
+	sl_ios_id_t iosid;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->ncrc_updates > MAX_BMAP_NCRC_UPDATES) {
-		psclog_errorx("ncrc_updates=%u is > %d",
-		    mq->ncrc_updates, MAX_BMAP_NCRC_UPDATES);
+	if (mq->count > MAX_FILE_UPDATES || mq->count <= 0) {
+		psclog_errorx("updates=%u is > %d",
+		    mq->count, MAX_FILE_UPDATES);
 		mp->rc = -EINVAL;
 		return (mp->rc);
 	}
+	iosid = libsl_nid2iosid(rq->rq_conn->c_peer.nid);
 
-	len = mq->ncrc_updates * sizeof(struct srt_bmap_crcup);
-	for (i = 0; i < mq->ncrc_updates; i++) {
-		/* XXX sanity check mq->ncrcs_per_update[i] */
-		len += mq->ncrcs_per_update[i] *
-		    sizeof(struct srt_bmap_crcwire);
-	}
-
-	iovs = PSCALLOC(sizeof(*iovs) * mq->ncrc_updates);
-	buf = PSCALLOC(len);
-
-	for (i = 0, off = 0; i < mq->ncrc_updates; i++) {
-		iovs[i].iov_base = buf + off;
-		iovs[i].iov_len = (mq->ncrcs_per_update[i] *
-		    sizeof(struct srt_bmap_crcwire)) +
-		    sizeof(struct srt_bmap_crcup);
-
-		off += iovs[i].iov_len;
-	}
-
-	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRMI_BULK_PORTAL,
-	    iovs, mq->ncrc_updates);
-	if (mp->rc) {
-		psclog_errorx("slrpc_bulkserver() rc=%d", mp->rc);
-		goto out;
-	}
-
-	for (i = 0, off = 0; i < mq->ncrc_updates; i++) {
-		struct srt_bmap_crcup *c = iovs[i].iov_base;
-		uint32_t j;
-		int rc;
-
-		/*
-		 * Due to poor code structure, the IOS will occasionally
-		 * send us known junk.  Until that gets fixed, do a hack
-		 * and ignore updates to old generations.
-		 */
-		if (c->fg.fg_fid == FID_ANY)
+	for (i = 0; i < mq->count; i++) {
+		rc = mds_file_update(iosid, &mq->updates[i]);
+		if (!rc) 
 			continue;
-
-		/*
-		 * Does the bulk payload agree with the original
-		 * request?
-		 */
-		if (c->nups != mq->ncrcs_per_update[i]) {
-			psclog_errorx("nups(%u) != ncrcs_per_update(%u)",
-			    c->nups, mq->ncrcs_per_update[i]);
-			mp->crcup_rc[i] = -EINVAL;
-		}
-
-		/* Verify slot number validity. */
-		for (j = 0; j < c->nups; j++)
-			if (c->crcs[j].slot >= SLASH_SLVRS_PER_BMAP)
-				mp->crcup_rc[i] = -ERANGE;
-
-		/* Look up the bmap in the cache and write the CRCs. */
-		rc = mds_bmap_crc_write(c,
-		    libsl_nid2iosid(rq->rq_conn->c_peer.nid), mq);
-		if (rc)
-			mp->crcup_rc[i] = rc;
-		if (mp->crcup_rc[i]) {
-			/*
-			 * A rash of EBADF (-9) errors can food
-			 * network monitoring tools.  So let us
-			 * tone down the log level as a workaround.
-			 */
-			psclog_info(
-			    "mds_bmap_crc_write() failed: "
-			    "fid="SLPRI_FID", rc=%d",
-			    c->fg.fg_fid, mp->crcup_rc[i]);
-		}
+		psclog_errorx("Update failed: "SLPRI_FG,
+			SLPRI_FG_ARGS(&mq->updates[i].fg));
 	}
-
- out:
-	PSCFREE(buf);
-	PSCFREE(iovs);
-
-	return (mp->rc);
+	return (0);
 }
 
 int
@@ -369,8 +361,8 @@ slm_rmi_handler(struct pscrpc_request *rq)
 	switch (rq->rq_reqmsg->opc) {
 
 	/* bmap messages */
-	case SRMT_BMAPCRCWRT:
-		rc = slm_rmi_handle_bmap_crcwrt(rq);
+	case SRMT_UPDATEFILE:
+		rc = slm_rmi_handle_update(rq);
 		break;
 	case SRMT_RELEASEBMAP:
 		rc = slm_rmi_handle_rls_bmap(rq);

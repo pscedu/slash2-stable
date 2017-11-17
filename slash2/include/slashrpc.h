@@ -42,13 +42,20 @@
 struct stat;
 struct statvfs;
 
+/*
+ * Technically, RPCs between different kinds of pairs of peers 
+ * can have different versions. However, to avoid hassle in terms 
+ * of maintainence and administration. Let us use one version.
+ */
+#define	SL_RPC_VERSION		2
+
 /* RPC channel to MDS from CLI. */
 #define SRMC_REQ_PORTAL		10
 #define SRMC_REP_PORTAL		11
 #define SRMC_BULK_PORTAL	12
 #define SRMC_CTL_PORTAL		13
 
-#define SRMC_VERSION		1
+#define SRMC_VERSION		SL_RPC_VERSION
 #define SRMC_MAGIC		UINT64_C(0xaabbccddeeff0022)
 
 /* RPC channel to MDS from MDS. */
@@ -57,7 +64,7 @@ struct statvfs;
 #define SRMM_BULK_PORTAL	17
 #define SRMM_CTL_PORTAL		18
 
-#define SRMM_VERSION		1
+#define SRMM_VERSION		SL_RPC_VERSION
 #define SRMM_MAGIC		UINT64_C(0xaabbccddeeff0033)
 
 /* RPC channel to MDS from ION. */
@@ -66,7 +73,7 @@ struct statvfs;
 #define SRMI_BULK_PORTAL	22
 #define SRMI_CTL_PORTAL		23
 
-#define SRMI_VERSION		1
+#define SRMI_VERSION		SL_RPC_VERSION
 #define SRMI_MAGIC		UINT64_C(0xaabbccddeeff0044)
 
 /* RPC channel to CLI from MDS. */
@@ -75,7 +82,7 @@ struct statvfs;
 #define SRCM_BULK_PORTAL	27
 #define SRCM_CTL_PORTAL		28
 
-#define SRCM_VERSION		1
+#define SRCM_VERSION		SL_RPC_VERSION
 #define SRCM_MAGIC		UINT64_C(0xaabbccddeeff0055)
 
 /* RPC channel to ION from CLI. */
@@ -84,7 +91,7 @@ struct statvfs;
 #define SRIC_BULK_PORTAL	32
 #define SRIC_CTL_PORTAL		33
 
-#define SRIC_VERSION		1
+#define SRIC_VERSION		SL_RPC_VERSION
 #define SRIC_MAGIC		UINT64_C(0xaabbccddeeff0066)
 
 /* RPC channel to ION from ION. */
@@ -93,7 +100,7 @@ struct statvfs;
 #define SRII_BULK_PORTAL	37
 #define SRII_CTL_PORTAL		38
 
-#define SRII_VERSION		1
+#define SRII_VERSION		SL_RPC_VERSION
 #define SRII_MAGIC		UINT64_C(0xaabbccddeeff0077)
 
 /* RPC channel to ION from MDS. */
@@ -102,7 +109,7 @@ struct statvfs;
 #define SRIM_BULK_PORTAL	42
 #define SRIM_CTL_PORTAL		43
 
-#define SRIM_VERSION		1
+#define SRIM_VERSION		SL_RPC_VERSION
 #define SRIM_MAGIC		UINT64_C(0xaabbccddeeff0088)
 
 /* RPC channel to CLI from ION. */
@@ -111,7 +118,7 @@ struct statvfs;
 #define SRCI_BULK_PORTAL	47
 #define SRCI_CTL_PORTAL		48
 
-#define SRCI_VERSION		1
+#define SRCI_VERSION		SL_RPC_VERSION
 #define SRCI_MAGIC		UINT64_C(0xaabbccddeeff0099)
 
 /* sizeof(pscrpc_msg) + hdr + sizeof(authbuf_footer) */
@@ -131,7 +138,7 @@ enum {
 
 	/* bmap operations */
 	SRMT_BMAPCHWRMODE,			/*  5: change read/write access mode */
-	SRMT_BMAPCRCWRT,			/*  6: update bmap data checksums */
+	SRMT_UPDATEFILE,			/*  6: update file status */
 	SRMT_BMAPDIO,				/*  7: request client direct I/O on a bmap */
 	SRMT_BMAP_PTRUNC,			/*  8: partial truncate and redo CRC for bmap */
 	SRMT_BMAP_WAKE,				/*  9: client work may now progress after EAGAIN */
@@ -543,38 +550,23 @@ struct srm_delete_req {
 
 #define srm_delete_rep		srm_generic_rep
 
-struct srt_bmap_crcwire {
-	uint64_t		crc;		/* CRC of the corresponding sliver */
-	uint32_t		slot;		/* sliver number in the owning bmap */
-	 int32_t		_pad;
-} __packed;
-
-#define MAX_BMAP_INODE_PAIRS	24		/* ~520 bytes (max) per srt_bmap_crcup */
-
-struct srt_bmap_crcup {				/* a batch of CRC updates for the same file */
+struct srt_update_rec {
 	struct sl_fidgen	fg;
-	uint64_t		fsize;		/* largest known size applied in mds_bmap_crc_update() */
-	uint64_t		nblks;		/* st_blocks for us */
-	uint32_t		bno;		/* bmap number */
-	uint32_t		nups;		/* number of CRC updates */
-	uint32_t		utimgen;
-	 int32_t		extend;
-	struct srt_bmap_crcwire	crcs[0];	/* see above, MAX_BMAP_INODE_PAIRS max */
+	uint64_t		nblks;
 } __packed;
 
-#define MAX_BMAP_NCRC_UPDATES	64		/* max number of CRC update batches in an RPC */
+/*
+ * I tried 32 and the RPC does not go through.  See SLM_RMI_BUFSZ.
+ */
+#define	MAX_FILE_UPDATES	16
 
-struct srm_bmap_crcwrt_req {
-	uint8_t			ncrcs_per_update[MAX_BMAP_NCRC_UPDATES];
-	uint32_t		ncrc_updates;
-	uint32_t		flags;
+struct srm_updatefile_req {
+	uint16_t		count;
+	uint16_t		flags;
+	struct srt_update_rec	updates[MAX_FILE_UPDATES];
 } __packed;
 
-struct srm_bmap_crcwrt_rep {
-	 int32_t		crcup_rc[MAX_BMAP_NCRC_UPDATES];
-	 int32_t		rc;
-	 int32_t		_pad;
-} __packed;
+#define srm_updatefile_rep	srm_generic_rep
 
 struct srm_bmap_iod_get {
 	uint64_t		fid;

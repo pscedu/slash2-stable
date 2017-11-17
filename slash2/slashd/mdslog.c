@@ -488,7 +488,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
     __unusedx uint64_t xid, int npeers, int action)
 {
 	struct slmds_jent_namespace *sjnm = NULL;
-	struct slmds_jent_bmap_crc *sjbc = NULL;
 	struct srt_update_entry ue, *u;
 	int rc, count, total;
 	uint16_t type;
@@ -501,11 +500,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	 * thread.
 	 */
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
-	if (type == MDS_LOG_BMAP_CRC) {
-		sjbc = PJE_DATA(pje);
-		goto check_update;
-	}
-
 	if (type != MDS_LOG_NAMESPACE)
 		return (0);
 
@@ -563,6 +557,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	memset(&ue, 0, U_ENTSZ);
 	ue.xid = pje->pje_xid;
 
+#if 0
 	/*
 	 * Fabricate a setattr update entry to change the size.
 	 */
@@ -574,6 +569,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 		ue.target_fid = sjbc->sjbc_fid;
 		goto write_update;
 	}
+#endif
 
 	ue.op = sjnm->sjnm_op;
 	ue.target_gen = sjnm->sjnm_target_gen;
@@ -599,8 +595,11 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	ue.namelen2 = sjnm->sjnm_namelen2;
 	memcpy(ue.name, sjnm->sjnm_name,
 	    sjnm->sjnm_namelen + sjnm->sjnm_namelen2);
+#if 0
 
  write_update:
+
+#endif
 	rc = mds_write_file(nsupd_prg.log_handle, &ue, U_ENTSZ, &size,
 	    nsupd_prg.log_offset);
 	if (size != U_ENTSZ)
@@ -714,6 +713,8 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid, uint64_t npfid,
 		 *
 		 * Add 1000 to differentiate the reason for distilling
 		 * in the log messages.
+		 *
+		 * 10/20/2017: It is not likely we have 1000 peers.
 		 */
 		distill += 1000;
 		sjnm->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
@@ -1358,6 +1359,19 @@ slm_rim_reclaim_cb(struct pscrpc_request *rq,
 		freelock(&ra->lock);
 	}
 
+	/*
+ 	 * Saw rc = -110 below during bigfile.sh test.  The problem
+ 	 * is lime is every slow with only two disks. It can't keep
+ 	 * up.  So we timed out here.  However, we should not drop
+ 	 * the connection with pscrpc_fail_import() just because a
+ 	 * single RPC fails. As a result, the MDS will tell the client
+ 	 * to write elsewhere even if lime is its preferred IOS.
+ 	 * The good news is that lime pings MDS and come back online
+ 	 * shortly.  Also, the bigfile.sh test passes as well.
+ 	 *
+ 	 * We need to make this scenario more robust.
+ 	 */
+
 	psclog(rc ? PLL_ERROR : PLL_DIAG,
 	    "reclaim batchno=%"PRId64" res=%s rc=%d",
 	    si->si_batchno, res->res_name, rc);
@@ -1798,60 +1812,6 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 	pjournal_add_entry(slm_journal, txg, MDS_LOG_BMAP_REPLS, 0,
 	    sjbr, sizeof(*sjbr));
 	pjournal_put_buf(slm_journal, sjbr);
-}
-
-/*
- * Commit bmap CRC changes to the journal.
- * @datap: CRC log structure.
- * @txg: transaction group ID.
- * Notes: bmap_crc_writes from the ION are sent here directly because
- *	this function is responsible for updating the cached bmap after
- *	the CRC has been committed to the journal.  This allows us to
- *	not have to hold the lock while doing journal I/O with the
- *	caveat that we trust the ION to not send multiple CRC updates
- *	for the same region which we may then process out of order.
- */
-void
-mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
-{
-	struct sl_mds_crc_log *crclog = datap;
-	struct bmapc_memb *bmap = crclog->scl_bmap;
-	struct srt_bmap_crcup *crcup = crclog->scl_crcup;
-	struct slmds_jent_bmap_crc *sjbc;
-	uint32_t n, t, distill;
-
-	/*
-	 * See if we need to distill the file enlargement information.
-	 */
-	distill = crcup->extend;
-	for (t = 0, n = 0; t < crcup->nups; t += n) {
-
-		n = MIN(SLJ_MDS_NCRCS, crcup->nups - t);
-
-		sjbc = pjournal_get_buf(slm_journal, sizeof(*sjbc));
-		sjbc->sjbc_fid = fcmh_2_fid(bmap->bcm_fcmh);
-		sjbc->sjbc_iosid = crclog->scl_iosid;
-		sjbc->sjbc_bmapno = bmap->bcm_bmapno;
-		sjbc->sjbc_ncrcs = n;
-		sjbc->sjbc_fsize = crcup->fsize;		/* largest known size */
-		sjbc->sjbc_repl_nblks = crcup->nblks;
-		sjbc->sjbc_aggr_nblks = fcmh_2_nblks(bmap->bcm_fcmh);
-		sjbc->sjbc_extend = distill;
-		sjbc->sjbc_utimgen = crcup->utimgen;		/* utime generation number */
-
-		memcpy(sjbc->sjbc_crc, &crcup->crcs[t],
-		    n * sizeof(struct srt_bmap_crcwire));
-
-		pjournal_add_entry(slm_journal, txg, MDS_LOG_BMAP_CRC,
-		    distill, sjbc, sizeof(*sjbc));
-
-		if (!distill)
-			pjournal_put_buf(slm_journal, sjbc);
-		else
-			distill = 0;
-	}
-
-	psc_assert(t == crcup->nups);
 }
 
 void

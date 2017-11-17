@@ -61,6 +61,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 {
 	struct slvr *s;
 	int slvrsiz;
+	struct fidc_membh *f;
 
 	s = w->srw_slvr[slvridx];
 
@@ -80,15 +81,22 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		return (rc);
 	}
 
-	if (rc == 0) {
+	if (!rc) {
 		slvrsiz = SLASH_SLVR_SIZE;
 		if (s->slvr_num == w->srw_len / SLASH_SLVR_SIZE)
 			slvrsiz = w->srw_len % SLASH_SLVR_SIZE;
 		rc = slvr_fsbytes_wio(s, 0, slvrsiz);
 	}
 
+	if (!rc) {
+		f = slvr_2_fcmh(s);
+		FCMH_LOCK(f);
+		sli_enqueue_update(f);
+		FCMH_ULOCK(f);
+	}
+
 	slvr_io_done(s, rc);
-	slvr_wio_done(s, 1);
+	slvr_wio_done(s);
 
 	spinlock(&w->srw_lock);
 	if (!rc)
@@ -148,7 +156,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	rv = slvr_io_prep(s, 0, mq->len, SL_READ, 0);
 	BMAP_ULOCK(b);
 
-	iov.iov_base = s->slvr_slab->slb_base;
+	iov.iov_base = s->slvr_slab;
 	iov.iov_len = mq->len;
 
 	if (rv == -SLERR_AIOWAIT) {
@@ -284,7 +292,7 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	psc_assert(!rc);
 	BMAP_ULOCK(b);
 
-	iov.iov_base = s->slvr_slab->slb_base;
+	iov.iov_base = s->slvr_slab;
 	iov.iov_len = mq->len;
 
 	sli_bwqueued_adj(&sli_bwqueued.sbq_egress, mq->len);
@@ -383,7 +391,7 @@ sli_rii_issue_repl_read(struct slrpc_cservice *csvc, int slvrno,
 	if (rc)
 		goto out;
 
-	iov.iov_base = s->slvr_slab->slb_base;
+	iov.iov_base = s->slvr_slab;
 	iov.iov_len = mq->len;
 
 	rc = slrpc_bulkclient(rq, BULK_PUT_SINK, SRII_BULK_PORTAL, &iov,
@@ -403,7 +411,7 @@ sli_rii_issue_repl_read(struct slrpc_cservice *csvc, int slvrno,
  out:
 	if (rc) {
 		slvr_io_done(s, rc);
-		slvr_wio_done(s, 1);
+		slvr_wio_done(s);
 
 		spinlock(&w->srw_lock);
 		w->srw_slvr[slvridx] = NULL;

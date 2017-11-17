@@ -109,8 +109,6 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #define mfh_getfid(mfh)		fcmh_2_fid((mfh)->mfh_fcmh)
 #define mfh_getfg(mfh)		(mfh)->mfh_fcmh->fcmh_fg
 
-#define MSL_FLUSH_ATTR_TIMEOUT	8
-
 #define fcmh_super_root(f)	(fcmh_2_fid(f) == SLFID_ROOT && \
 				fcmh_2_gen(f) == FGEN_ANY - 1  ? EPERM : 0)
 
@@ -172,7 +170,9 @@ int				 msl_max_retries = 5;
 int				 msl_fuse_direct_io = 1;
 uint64_t			 msl_pagecache_maxsize;
 int				 msl_statfs_pref_ios_only;
-int				 msl_max_namecache_per_directory = 16384; 
+int				 msl_max_namecache_per_directory = 65536; 
+
+int				 msl_attributes_timeout = FCMH_ATTR_TIMEO;
 
 struct resprof_cli_info		 msl_statfs_aggr_rpci;
 int				 msl_ios_max_inflight_rpcs = RESM_MAX_IOS_OUTSTANDING_RPCS;
@@ -270,11 +270,13 @@ newent_select_group(struct fidc_membh *p, struct pscfs_creds *pcr)
 }
 
 struct pscfs_creds *
-slc_getfscreds(struct pscfs_req *pfr, struct pscfs_creds *pcr)
+slc_getfscreds(struct pscfs_req *pfr, struct pscfs_creds *pcr, int map)
 {
 	pscfs_getcreds(pfr, pcr);
-	uidmap_ext_cred(pcr);
-	gidmap_ext_cred(pcr);
+	if (map) {
+		uidmap_ext_cred(pcr);
+		gidmap_ext_cred(pcr);
+	}
 	return (pcr);
 }
 
@@ -308,7 +310,7 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int accmode)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 
 	FCMH_LOCK(c);
 	if (pcr.pcr_uid == 0) {
@@ -442,7 +444,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK | X_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -615,7 +617,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	if ((oflags & O_ACCMODE) != O_WRONLY) {
 		rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
 		if (rc)
@@ -738,12 +740,15 @@ msl_stat(struct fidc_membh *f, void *arg)
 
 	if (f->fcmh_flags & FCMH_HAVE_ATTRS) {
 		PFL_GETTIMEVAL(&now);
-		if (timercmp(&now, &fci->fci_age, <)) {
+		now.tv_sec -= msl_attributes_timeout;
+		if (now.tv_sec < fci->fci_age.tv_sec) {
 			DEBUG_FCMH(PLL_DIAG, f,
 			    "attrs retrieved from local cache");
 			FCMH_ULOCK(f);
+			OPSTAT_INCR("attr-cached");
 			return (0);
 		}
+		OPSTAT_INCR("attr-timeout");
 	}
 
 	/* Attrs have expired or do not exist. */
@@ -802,7 +807,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -855,7 +860,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		PFL_GOTOERR(out, rc);
 
 	/* XXX this is wrong, it needs to check sticky */
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -955,7 +960,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1125,6 +1130,8 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 {
 	pscfs_inum_t inum;
 	struct fidc_membh *p = NULL, *c = NULL;
+	struct timeval now;
+	struct fcmh_cli_info *fci;
 	int rc;
 
 	if (fp)
@@ -1191,18 +1198,30 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		OPSTAT_INCR("msl.dircache-lookup-hit");
 		/* will call msl_stat() if necessary */
 		rc = msl_load_fcmh(pfr, inum, &c);
-		if (!rc) {
-			OPSTAT_INCR("msl.dircache-lookup-hit-ok");
-			if (sstb)
-				*sstb = c->fcmh_sstb;
-			goto out;
+		if (rc) {
+			/*
+ 			 * Retry LOOK RPC below in case the name 
+ 			 * cache has wrong information.
+ 			 */
+			OPSTAT_INCR("msl.dircache-lookup-err");
+			goto rpc;
 		}
-		/*
- 		 * Retry LOOK RPC below in case the name 
- 		 * cache has wrong information.
- 		 */
-		OPSTAT_INCR("msl.dircache-lookup-err");
+		OPSTAT_INCR("msl.dircache-lookup-hit-ok");
+		if (c->fcmh_flags & FCMH_HAVE_ATTRS) {
+			PFL_GETTIMEVAL(&now);
+			fci = fcmh_2_fci(c);
+			now.tv_sec -= msl_attributes_timeout;
+			if (now.tv_sec < fci->fci_age.tv_sec) {
+				if (sstb)
+					*sstb = c->fcmh_sstb;
+				goto out;
+			}
+		}
+		fcmh_op_done(c);
+		c = NULL;
 	}
+
+ rpc:
 
 	rc = msl_lookup_rpc(pfr, p, name, fgp, sstb, &c);
  out:
@@ -1401,7 +1420,7 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 	if (pinum == SLFID_ROOT && strcmp(name, MSL_FIDNS_RPATH) == 0)
 		PFL_GOTOERR(out, rc = EPERM);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 
 	FCMH_LOCK(p);
 	if ((p->fcmh_sstb.sst_mode & S_ISVTX) && pcr.pcr_uid) {
@@ -1495,10 +1514,10 @@ msl_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum, const char *name,
 
 	slc_fcmh_setattr(p, &mp->pattr);
 
-	if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY,
-	    FIDC_LOOKUP_LOCK, &c, pfr))
+	if (sl_fcmh_lookup(mp->cattr.sst_fg.fg_fid, FGEN_ANY, 0, &c, pfr))
 		OPSTAT_INCR("msl.delete-skipped");
 	else {
+		FCMH_LOCK(c);
 		if (mp->valid) {
 			slc_fcmh_setattr_locked(c, &mp->cattr);
 		} else {
@@ -1574,7 +1593,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
@@ -1740,6 +1759,10 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
  out:
 	DIRCACHE_WRLOCK(d);
 
+	/*
+ 	 * XXX Looks like we never free a page inside a callback. If we
+ 	 * use reference count properly, we should be able to do so.
+ 	 */
 	p->dcp_rc = rc;
 	p->dcp_refcnt--;
 	async = p->dcp_flags & DIRCACHEPGF_ASYNC;
@@ -1747,7 +1770,6 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	p->dcp_flags &= ~(DIRCACHEPGF_LOADING | DIRCACHEPGF_ASYNC);
 
 	PFL_GETPTIMESPEC(&p->dcp_local_tm);
-	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
 
 	if (p->dcp_flags & DIRCACHEPGF_WAIT) {
 		p->dcp_flags &= ~DIRCACHEPGF_WAIT;
@@ -1878,7 +1900,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	struct dircache_page *p, *np;
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *d = NULL;
-	struct dircache_expire dexp;
+	struct pfl_timespec now;
 	struct fcmh_cli_info *fci;
 	struct pscfs_dirent *pfd;
 	struct pscfs_creds pcr;
@@ -1895,31 +1917,34 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		DEBUG_FCMH(PLL_ERROR, d, "readdir on a non-dir");
 		PFL_GOTOERR(out, rc = ENOTDIR);
 	}
+
 	rc = fcmh_reserved(d);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 
 	rc = fcmh_checkcreds(d, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
 	DIRCACHE_WRLOCK(d);
+
 	fci = fcmh_2_fci(d);
 
  restart:
 
 	raoff = 0;
 	issue = 1;
-	DIRCACHEPG_INITEXP(&dexp);
+	PFL_GETPTIMESPEC(&now);
+	now.tv_sec -= DIRCACHEPG_SOFT_TIMEO;
 
 	/*
 	 * XXX Large directories will page in lots of buffers so this
 	 * code should really be changed to create a stub and wait for
 	 * it to be filled in instead of rescanning the entire list.
 	 */
-	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
+	psclist_for_each_entry_safe(p, np, &fci->fci_dc_pages, dcp_lentry) {
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 			OPSTAT_INCR("msl.dircache-wait");
 			p->dcp_flags |= DIRCACHEPGF_WAIT;
@@ -1936,7 +1961,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			}
 			break;
 		}
-		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
+		if (DIRCACHEPG_EXPIRED(d, p, &now)) {
 			dircache_free_page(d, p);
 			continue;
 		}
@@ -2054,7 +2079,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (strlen(name) > SL_NAME_MAX)
 		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = msl_lookup_fidcache(pfr, &pcr, pinum, name, &fg, &sstb, &c);
 	if (rc == ENOENT)
 		sstb.sst_fid = 0;
@@ -2088,7 +2113,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(c, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2428,7 +2453,7 @@ slc_log_get_fsctx_uid(struct psc_thread *thr)
 
 	pft = thr->pscthr_private;
 	if (pft->pft_pfr) {
-		slc_getfscreds(pft->pft_pfr, &pcr);
+		slc_getfscreds(pft->pft_pfr, &pcr, 1);
 		return (pcr.pcr_uid);
 	}
 	return (-1);
@@ -2467,6 +2492,7 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 		if (mfh->mfh_nbytes_rd || mfh->mfh_nbytes_wr)
 			psclogs_info(SLCSS_INFO,
 			    "file closed fid="SLPRI_FID" "
+			    "uid=%u gid=%u "
 			    "euid=%u owner=%u fgrp=%u "
 			    "fsize=%"PRId64" "
 			    "oatime="PFLPRI_PTIMESPEC" "
@@ -2474,6 +2500,8 @@ mslfsop_release(struct pscfs_req *pfr, void *data)
 			    "otime="PSCPRI_TIMESPEC" "
 			    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT,
 			    fcmh_2_fid(f),
+			    mfh->mfh_accessing_uid,
+			    mfh->mfh_accessing_gid,
 			    mfh->mfh_accessing_euid,
 			    f->fcmh_sstb.sst_uid, f->fcmh_sstb.sst_gid,
 			    f->fcmh_sstb.sst_size,
@@ -2534,7 +2562,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	if (pcr.pcr_uid) {
 		FCMH_LOCK(op);
 		sticky = op->fcmh_sstb.sst_mode & S_ISVTX;
@@ -2665,7 +2693,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	 * Author: Jared Yanovich <yanovich@psc.edu>
 	 * Date:   Wed Jan 8 23:26:58 2014 +0000
 	 *
-	 * fix an fcmh leak of child and refresh RENAME clobbered file stat(2) attributes
+	 * fix an fcmh leak of child and refresh RENAME clobbered file 
+	 * stat(2) attributes
 	 *         
 	 */
 	/*
@@ -2675,7 +2704,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	 */
 	if (mp->srr_clattr.sst_fid != FID_ANY &&
 	    sl_fcmh_lookup(mp->srr_clattr.sst_fg.fg_fid, FGEN_ANY,
-	    FIDC_LOOKUP_LOCK, &ch, pfr) == 0) {
+	    0, &ch, pfr) == 0) {
+		FCMH_LOCK(ch);
 		if (!mp->srr_clattr.sst_nlink) {
 			ch->fcmh_flags |= FCMH_DELETED;
 			OPSTAT_INCR("msl.clobber");
@@ -2825,7 +2855,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(p, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -2979,7 +3009,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		goto out;
 	}
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	if (msl_root_squash && pcr.pcr_uid == 0 && 
 	    fcmh_2_fid(c) != SLFID_ROOT) {
 		rc = EACCES;
@@ -3533,7 +3563,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3545,8 +3575,9 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		struct timeval now;
 
 		PFL_GETTIMEVAL(&now);
+		now.tv_sec -= msl_attributes_timeout;
 		fci = fcmh_2_fci(f);
-		if (timercmp(&now, &fci->fci_age, >=)) {
+		if (now.tv_sec >= fci->fci_age.tv_sec) {
 			f->fcmh_flags &= ~FCMH_CLI_XATTR_INFO;
 		/* 05/08/2017: suspect crash site */
 		} else if (size == 0 && fci->fci_xattrsize != (uint32_t)-1) {
@@ -3701,7 +3732,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3736,9 +3767,10 @@ slc_getxattr(struct pscfs_req *pfr, const char *name, void *buf,
 		struct timeval now;
 
 		PFL_GETTIMEVAL(&now);
+		now.tv_sec -= msl_attributes_timeout;
 		fci = fcmh_2_fci(f);
 		locked = FCMH_RLOCK(f);
-		if (timercmp(&now, &fci->fci_age, <) &&
+		if (now.tv_sec < fci->fci_age.tv_sec &&
 		    fci->fci_xattrsize == 0)
 			rc = ENODATA; // ENOATTR
 		FCMH_URLOCK(f, locked);
@@ -3814,7 +3846,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name, size_t size,
 	if (size)
 		buf = PSCALLOC(size);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(f, pfr, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3879,7 +3911,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	slc_getfscreds(pfr, &pcr);
+	slc_getfscreds(pfr, &pcr, 1);
 	rc = fcmh_checkcreds(f, pfr, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -3909,7 +3941,7 @@ msattrflushthr_main(struct psc_thread *thr)
 	struct fidc_membh *f;
 
 	while (pscthr_run(thr)) {
-		nexttimeo.tv_sec = FCMH_ATTR_TIMEO;
+		nexttimeo.tv_sec = msl_attributes_timeout;
 		nexttimeo.tv_nsec = 0;
 
 		LIST_CACHE_LOCK(&msl_attrtimeoutq);
@@ -3952,20 +3984,10 @@ msattrflushthr_main(struct psc_thread *thr)
 void
 msreapthr_main(struct psc_thread *thr)
 {
-	int rc = 0;
-
 	while (pscthr_run(thr)) {
-
-		if (rc)
-			while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
-
-		msl_pgcache_reap(rc);
-		while (1) {
-			rc = psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 30);
-			if (rc)
-				break;
-			bmpce_reaper(bmpce_pool);
-		}
+		msl_pgcache_reap();
+		while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
+		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, 30);
 	}
 }
 
@@ -4222,8 +4244,8 @@ msl_init(void)
 			sl_csvc_decref(csvc);
 	}
 
-	pscfs_entry_timeout = 8.;
-	pscfs_attr_timeout = 8.;
+	pscfs_attr_timeout = (double)PSCFS_ATTR_TIMEOUT; 
+	pscfs_entry_timeout = (double)PSCFS_ENTRY_TIMEOUT;
 
 	/* Catch future breakage after two-day's debugging */
 	psc_assert(msl_ctlthr0_private == msl_ctlthr0->pscthr_private);

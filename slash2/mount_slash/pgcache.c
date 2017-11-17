@@ -164,19 +164,18 @@ msl_pgcache_put(void *p)
 }
 
 void
-msl_pgcache_reap(__unusedx int idle)
+msl_pgcache_reap(void)
 {
 	void *p;
 	static int last;
 	int i, rc, nfree;
 
+	bmpce_reaper(bmpce_pool);
+
 	if (msl_bmpce_gen != last) {
 		last = msl_bmpce_gen;
 		return;
 	}
-
-	if (!bmpce_reaper(bmpce_pool))
-		return;
 
 	nfree = bmpce_pool->ppm_nfree; 
 	psc_pool_try_shrink(bmpce_pool, nfree);
@@ -646,7 +645,6 @@ bmpc_global_init(void)
 	    msl_bmpces_min, msl_bmpces_min, msl_bmpces_max, 
 	    bmpce_reaper, "bmpce");
 	bmpce_pool = psc_poolmaster_getmgr(&bmpce_poolmaster);
-	bmpce_pool->ppm_thres = 100;
 
 	msl_pgcache_init();
 

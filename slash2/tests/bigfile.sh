@@ -12,9 +12,12 @@
 function bail {
     set +o pipefail
     END=`date +%s%N`
-    ELAPSED=`echo "scale=8; ($END - $START) / 1000000000" | bc`
+    ELAPSED=`echo "scale=0; ($END - $START) / 1000000000" | bc`
     echo
-    echo "Some tests have failed. Total elapsed time: $ELAPSED seconds."
+    HOURS=$((ELAPSED/60/60))
+    MINS=$(((ELAPSED%3600)/60))
+    SECS=$((ELAPSED%60))
+    echo "Some tests have failed on $myhost. Total elapsed time: $ELAPSED seconds ($HOURS : $MINS : $SECS)."
     exit 0
 }
 
@@ -24,6 +27,7 @@ then
 else
     mypath=/zzh-slash2/zhihui
 fi
+
 
 if [ ! -d "$mypath" ]; then
     echo "Working directory $mypath does not exist, bailing.."
@@ -138,5 +142,5 @@ echo
 HOURS=$((ELAPSED/60/60))
 MINS=$(((ELAPSED%3600)/60))
 SECS=$((ELAPSED%60))
-echo "All tests have passed successfully! Total elapsed time: $ELAPSED seconds ($HOURS : $MINS : $SECS)."
+echo "All tests have passed successfully on $myhost! Total elapsed time: $ELAPSED seconds ($HOURS : $MINS : $SECS)."
 

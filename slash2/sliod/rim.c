@@ -97,6 +97,8 @@ sli_rim_batch_handle_preclaim(__unusedx struct slrpc_batch_rep *bp,
 		OPSTAT_INCR("preclaim-err");
 	} else {
 		p->rc = 0;
+		FCMH_LOCK(f);
+		sli_enqueue_update(f);
 		OPSTAT_INCR("preclaim-ok");
 	}
 
@@ -157,17 +159,9 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 		OPSTAT_INCR("ptrunc-success");
 	}
 
-	/*
-	 * Simulate a write to trigger a CRC update to be transmitted 
-	 * back to MDS.
-	 *
-	 * We should not need to care about the CRC values beyond the 
-	 * truncation point.
-	 */
-	if (mq->offset)
-		slvr_crc_update(f, mq->bmapno, mq->offset);
-
+	sli_enqueue_update(f);
 	fcmh_op_done(f);
+
 	return (0);
 }
 

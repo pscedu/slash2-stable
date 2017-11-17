@@ -44,7 +44,6 @@ enum {
 	SLITHRT_BREAP,			/* bmap reaper */
 	SLITHRT_BATCHRPC,		/* batch RPC sender */
 	SLITHRT_CONN,			/* connection monitor */
-	SLITHRT_CRUD,			/* CRC update sender */
 	SLITHRT_CTL,			/* control processor */
 	SLITHRT_CTLAC,			/* control acceptor */
 	SLITHRT_FREAP,			/* file reaper */
@@ -57,7 +56,7 @@ enum {
 	SLITHRT_RII,			/* service RPC requests from ION */
 	SLITHRT_RIM,			/* service RPC requests from MDS */
 	SLITHRT_SEQNO,			/* update min seqno */
-	SLITHRT_SLVR_CRC,		/* sliver CRC updaters */
+	SLITHRT_UPDATE,			/* update file status */
 	SLITHRT_SLVR_SYNC,		/* sliver SYNC to reduce fsync spikes */
 	SLITHRT_READAHEAD,		/* sliver read-ahead */
 	SLITHRT_STATFS,			/* statvfs(2) updater */
@@ -104,8 +103,6 @@ void	slictlthr_main(const char *);
 int	sli_has_enough_space(struct fidc_membh *, uint32_t, uint32_t,
 	    uint32_t);
 
-int	bcr_update_inodeinfo(struct bcrcupd *);
-
 #define SLI_NWORKER_THREADS	4
 
 extern struct pfl_opstats_grad	 sli_iorpc_iostats_rd;
@@ -120,6 +117,7 @@ extern struct srt_statfs	 sli_ssfb;
 extern psc_spinlock_t		 sli_ssfb_lock;
 extern struct timespec		 sli_ssfb_send;
 extern struct psc_listcache	 sli_fcmh_dirty;
+extern struct psc_listcache	 sli_fcmh_update;
 extern int			 sli_sync_max_writes;
 extern int			 sli_min_space_reserve_gb;
 extern int			 sli_min_space_reserve_pct;
@@ -139,7 +137,10 @@ extern struct statvfs		 sli_statvfs_buf;
 
 void	slictlthr_spawn(const char *);
 
+void	sliupdthr_main(struct psc_thread *);
+void	slisyncthr_main(struct psc_thread *);
 void	sliseqnothr_main(struct psc_thread *);
 
+void	sli_enqueue_update(struct fidc_membh *);
 
 #endif /* _SLIOD_H_ */

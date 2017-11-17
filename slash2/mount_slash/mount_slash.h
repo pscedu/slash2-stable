@@ -157,6 +157,8 @@ struct msl_fhent {
 	pid_t				 mfh_pid;
 	pid_t				 mfh_sid;
 	uid_t				 mfh_accessing_euid;
+	uid_t				 mfh_accessing_uid;
+	gid_t				 mfh_accessing_gid;
 
 	int				 mfh_oflags;	/* open(2) flags */
 
@@ -232,6 +234,7 @@ struct resprof_cli_info {
 	int				 rpci_timeouts;
 	int				 rpci_saw_error;
 	int				 rpci_infl_rpcs;
+	int				 rpci_total_rpcs;
 	int				 rpci_infl_credits;
 	int				 rpci_max_infl_rpcs;
 };
@@ -339,7 +342,7 @@ void	 slc_setprefios(sl_ios_id_t);
 int	 msl_pages_fetch(struct bmpc_ioreq *);
 
 struct pscfs_creds *
-	 slc_getfscreds(struct pscfs_req *, struct pscfs_creds *);
+	 slc_getfscreds(struct pscfs_req *, struct pscfs_creds *, int);
 
 void	 uidmap_ext_cred(struct pscfs_creds *);
 void	 gidmap_ext_cred(struct pscfs_creds *);
@@ -407,9 +410,10 @@ extern int			 msl_repl_enable;
 extern int			 msl_statfs_pref_ios_only;
 extern uint64_t			 msl_pagecache_maxsize;
 extern int			 msl_max_namecache_per_directory; 
+extern int			 msl_attributes_timeout;
 
 void				 msl_pgcache_init(void);
-void				 msl_pgcache_reap(int);
+void				 msl_pgcache_reap(void);
 
 extern struct psc_waitq		 sl_freap_waitq;
 int				 bmpce_reaper(struct psc_poolmgr *);

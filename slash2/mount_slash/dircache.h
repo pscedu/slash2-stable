@@ -67,8 +67,7 @@ struct fidc_membh;
 #define DIRCACHE_NPAGES		64		/* initial number of pages in pool */
 #define DIRCACHE_NAMECACHE	2048		/* initial number of name cache enties in pool */
 
-#define DIRCACHEPG_SOFT_TIMEO	4		/* expiration after page read */
-#define DIRCACHEPG_HARD_TIMEO	30		/* expiration regardless if read */
+#define DIRCACHEPG_SOFT_TIMEO	30		/* expiration regardless if read or not */
 
 /*
  * This consitutes a block of 'struct dirent' members (dircache_ent)
@@ -82,7 +81,6 @@ struct dircache_page {
 	off_t			 dcp_off;	/* getdents(2) 'offset' cookie of first dirent */
 	off_t			 dcp_nextoff;	/* next getdents(2) 'offset' cookie */
 	struct pfl_timespec	 dcp_local_tm;	/* local clock when populated */
-	struct pfl_timespec	 dcp_remote_tm;	/* remote clock when populated */
 	struct psc_listentry	 dcp_lentry;	/* chain on dci  */
 	void			*dcp_base;	/* pscfs_dirents */
 	slfgen_t		 dcp_dirgen;	/* directory generation; used to detect stale pages */
@@ -99,8 +97,6 @@ struct dircache_page {
 #define DIRCACHEPGF_FREEING	(1 << 5)	/* a thread is trying to free */
 
 #define DIRCACHE_WRLOCK(d)	pfl_rwlock_wrlock(fcmh_2_dc_rwlock(d))
-#define DIRCACHE_REQWRLOCK(d)	pfl_rwlock_reqwrlock(fcmh_2_dc_rwlock(d))
-#define DIRCACHE_UREQLOCK(d, l)	pfl_rwlock_ureqlock(fcmh_2_dc_rwlock(d), (l))
 #define DIRCACHE_RDLOCK(d)	pfl_rwlock_rdlock(fcmh_2_dc_rwlock(d))
 #define DIRCACHE_ULOCK(d)	pfl_rwlock_unlock(fcmh_2_dc_rwlock(d))
 #define DIRCACHE_WR_ENSURE(d)	psc_assert(pfl_rwlock_haswrlock(fcmh_2_dc_rwlock(d)))
@@ -121,41 +117,11 @@ struct dircache_page {
 	} while (0)
 
 /*
- * This structure is used to decide when to evict a page.  It is
- * assigned the 'now' timestamp minus the page timeout intervals then
- * these values are checked against the time stored when the page was
- * populated.
- */
-struct dircache_expire {
-	struct pfl_timespec	 dexp_soft;	/* used if page was read */
-	struct pfl_timespec	 dexp_hard;	/* max */
-};
-
-/*
  * Determine if a page of dirents should be evicted.
- * Conditions:
- *   (1) no current references to this page
- *   (2) page was READ and is older than soft timeout: evict.
- *   (3) page is older than hard timeout: evict.
- *   (4) XXX page is older than directory's mtime: evict.
- *   (5) page references an older directory generation: evict.
  */
-#define DIRCACHEPG_EXPIRED(d, p, dexp)					\
-	((p)->dcp_refcnt == 0 &&					\
-	 (((p)->dcp_flags & DIRCACHEPGF_READ &&				\
-	  timespeccmp(&(dexp)->dexp_soft, &(p)->dcp_local_tm, >)) ||	\
-	  timespeccmp(&(dexp)->dexp_hard, &(p)->dcp_local_tm, >) ||	\
-	  memcmp(&(d)->fcmh_sstb.sst_mtim, &(p)->dcp_remote_tm,		\
-	    sizeof((p)->dcp_remote_tm)) ||				\
-	  (p)->dcp_dirgen != fcmh_2_gen(d)))
-
-#define DIRCACHEPG_INITEXP(dexp)					\
-	do {								\
-		PFL_GETPTIMESPEC(&(dexp)->dexp_soft);			\
-		(dexp)->dexp_hard = (dexp)->dexp_soft;			\
-		(dexp)->dexp_soft.tv_sec -= DIRCACHEPG_SOFT_TIMEO;	\
-		(dexp)->dexp_hard.tv_sec -= DIRCACHEPG_HARD_TIMEO;	\
-	} while (0)
+#define DIRCACHEPG_EXPIRED(d, p, expire)				\
+	(timespeccmp((expire), &(p)->dcp_local_tm, >) ||		\
+	  (p)->dcp_dirgen != fcmh_2_gen(d))
 
 #define PFLOG_DIRCACHEPG(lvl, p, fmt, ...)				\
 	psclog((lvl), "dcp@%p off %"PSCPRIdOFFT" rf %d gen %"PRId64" "	\
@@ -173,9 +139,11 @@ struct dircache_ent {
 	struct psc_hashentry     dce_hentry;    /* hash table linkage */
 #define dce_lentry dce_hentry.phe_lentry
 
+	struct psc_listentry	 dce_entry;     /* per directory linkage */
 	uint64_t		 dce_pino;
 	uint64_t		 dce_ino;
 	uint32_t		 dce_namelen;
+	long			 dce_age;
 	int			 dce_flag;
 	char			 dce_short[SL_SHORT_NAME];
 	char			*dce_name;	/* NOT null-terminated */

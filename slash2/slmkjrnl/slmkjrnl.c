@@ -204,9 +204,11 @@ sl_journal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 	case MDS_LOG_BMAP_REPLS:
 		printf("fid=%016"PRIx64" bmap_repls", u.sjbr->sjbr_fid);
 		break;
+#if 0
 	case MDS_LOG_BMAP_CRC:
 		printf("fid=%016"PRIx64" bmap_crc", u.sjbc->sjbc_fid);
 		break;
+#endif
 	case MDS_LOG_BMAP_SEQ:
 		printf("lwm=%"PRIu64" hwm=%"PRIu64,
 		    u.sjsq->sjbsq_low_wm,
@@ -473,6 +475,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	sl_errno_init();
+	pscthr_init(0, NULL, 0, "slmkjrnl");
 	sl_subsys_register();
 
 	fn[0] = '\0';

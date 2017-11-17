@@ -59,7 +59,10 @@ struct slvr {
 	struct bmap_iod_info	*slvr_bii;
 	struct timespec		 slvr_ts;
 	struct sli_iocb		*slvr_iocb;
-	struct slab		*slvr_slab;
+	/*
+	 * Used for both read caching and write aggregation.
+	 */
+	void			*slvr_slab;
 	struct sli_aiocb_reply  *slvr_aioreply;
 	struct psclist_head	 slvr_lentry;	/* dirty queue */
 	SPLAY_ENTRY(slvr)	 slvr_tentry;	/* bmap tree entry */
@@ -75,10 +78,9 @@ struct slvr {
  * like to get rid of this special case.  However, maybe someday, we
  * will remove the CRC logic entirely.
  */
-#define SLVRF_CRCDIRTY		(1 <<  4)	/* CRC does not match cached buffer */
-#define SLVRF_FREEING		(1 <<  5)	/* sliver is being reaped */
-#define SLVRF_ACCESSED		(1 <<  6)	/* actually used by a client */
-#define SLVRF_READAHEAD		(1 <<  7)	/* loaded via readahead logic */
+#define SLVRF_FREEING		(1 <<  4)	/* sliver is being reaped */
+#define SLVRF_ACCESSED		(1 <<  5)	/* actually used by a client */
+#define SLVRF_READAHEAD		(1 <<  6)	/* loaded via readahead logic */
 
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
 #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)
@@ -113,7 +115,7 @@ struct slvr {
 #define slvr_2_fd(s)		slvr_2_fii(s)->fii_fd
 
 #define slvr_2_buf(s, blk)						\
-	((void *)(((s)->slvr_slab->slb_base) + ((blk) * SLASH_SLVR_BLKSZ)))
+	((void *)((s)->slvr_slab + ((blk) * SLASH_SLVR_BLKSZ)))
 
 #define slvr_2_fileoff(s, blk)						\
 	((off_t)((slvr_2_bmap(s)->bcm_bmapno * SLASH_BMAP_SIZE) +	\
@@ -130,7 +132,7 @@ struct slvr {
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu ref=%u "		\
 	    "ts="PSCPRI_TIMESPEC" "					\
 	    "bii=%p slab=%p bmap=%p fid="SLPRI_FID" iocb=%p flgs="	\
-	    "%s%s%s%s%s%s%s :: " fmt,					\
+	    "%s%s%s%s%s%s :: " fmt,					\
 	    (s), (s)->slvr_num, (s)->slvr_refcnt,			\
 	    PSCPRI_TIMESPEC_ARGS(&(s)->slvr_ts),			\
 	    (s)->slvr_bii, (s)->slvr_slab,				\
@@ -142,7 +144,6 @@ struct slvr {
 	    (s)->slvr_flags & SLVRF_DATARDY	? "d" : "-",		\
 	    (s)->slvr_flags & SLVRF_DATAERR	? "E" : "-",		\
 	    (s)->slvr_flags & SLVRF_LRU		? "l" : "-",		\
-	    (s)->slvr_flags & SLVRF_CRCDIRTY	? "D" : "-",		\
 	    (s)->slvr_flags & SLVRF_FREEING	? "F" : "-",		\
 	    (s)->slvr_flags & SLVRF_ACCESSED	? "a" : "-",		\
 	    ##__VA_ARGS__)
@@ -186,13 +187,12 @@ ssize_t	slvr_io_prep(struct slvr *, uint32_t, uint32_t, enum rw, int);
 
 void	slvr_io_done(struct slvr *, int);
 void	slvr_rio_done(struct slvr *);
-void	slvr_wio_done(struct slvr *, int);
+void	slvr_wio_done(struct slvr *);
 
 void	slvr_remove(struct slvr *);
 void	slvr_remove_all(struct fidc_membh *);
 
 void	slvr_schedule_crc(struct slvr *);
-void	slvr_worker_init(void);
 
 struct sli_aiocb_reply *
 	sli_aio_reply_setup(struct pscrpc_request *, uint32_t, uint32_t,
@@ -203,8 +203,6 @@ struct sli_aiocb_reply *
 	    struct iovec *);
 
 void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
-
-void	slvr_crc_update(struct fidc_membh *, sl_bmapno_t, int32_t);
 
 
 struct sli_readaheadrq {
