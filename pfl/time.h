@@ -115,7 +115,7 @@ int futimens(int, const struct timespec *);
 #define PFL_CTIME_BUFSIZ		26
 
 struct pfl_timespec {
-	uint64_t			tv_sec;
+	uint64_t			tv_sec;		/* XXX __time_t is long */
 	uint64_t			tv_nsec;
 };
 

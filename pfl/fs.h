@@ -55,6 +55,9 @@ struct psc_ctlop;
 typedef uint64_t pscfs_inum_t;
 typedef uint64_t pscfs_fgen_t;
 
+#define	PSCFS_ATTR_TIMEOUT	10
+#define	PSCFS_ENTRY_TIMEOUT	10
+
 struct pscfs_creds {
 	uid_t			pcr_uid;
 	gid_t			pcr_gid;

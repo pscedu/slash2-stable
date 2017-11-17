@@ -114,27 +114,72 @@ FILE				*pflog_ttyfp;
 struct psc_dynarray		_pfl_logpoints = DYNARRAY_INIT_NOLOG;
 struct psc_hashtbl		_pfl_logpoints_hashtbl;
 
+int log_cycle_count;
+int log_rotate_count;
+int pfl_log_rotate = PSC_MAX_LOG_PER_FILE;
+
+ 
+static char *loglk;
+static char  logfn[PATH_MAX];
+
+void psc_should_rotate_log(void)
+{
+	int rc;
+	char newfn[PATH_MAX];
+
+	if (logfn[0] == '\0')
+		return;
+
+	log_rotate_count++;
+	if (log_rotate_count < pfl_log_rotate)
+		return;
+
+	pfl_log_rotate = 0;
+	rc = snprintf(newfn, sizeof(newfn), "%s-%d", 
+	    logfn, log_cycle_count++);
+	if (rc < 0) {
+		warn("log snprintf rc = %d", rc);
+		return;
+	}
+	rc = rename(logfn, newfn);
+	if (rc < 0) {
+		warn("log rename rc = %d", rc);
+		return;
+	}
+
+	if (freopen(logfn, "w", stderr) == NULL) {
+		warn("log freopen %s, rc = %d", logfn, rc);
+		return;
+	}
+	if (loglk) {
+		if (unlink(loglk) == -1 && errno != ENOENT) 
+			warn("log unlink %s, rc = %d", loglk, errno);
+		if (link(logfn, loglk) == -1)
+			warn("log link %s, rc = %d", loglk, errno);
+	}
+}
+
 int
 psc_log_setfn(const char *p, const char *mode)
 {
 	static int logger_pid = -1;
-	char *lp, fn[PATH_MAX];
 	struct timeval tv;
 	int rc;
+	char *lp;
 
 	PFL_GETTIMEVAL(&tv);
-	(void)FMTSTR(fn, sizeof(fn), p,
+	(void)FMTSTR(logfn, sizeof(logfn), p,
 		FMTSTRCASE('t', "d", tv.tv_sec)
 	);
-	if (freopen(fn, mode, stderr) == NULL)
+	if (freopen(logfn, mode, stderr) == NULL)
 		return (errno);
 
-	lp = getenv("PSC_LOG_FILE_LINK");
-	if (lp) {
-		if (unlink(lp) == -1 && errno != ENOENT)
-			warn("unlink %s", lp);
-		if (link(fn, lp) == -1)
-			warn("link %s", lp);
+	loglk = getenv("PSC_LOG_FILE_LINK");
+	if (loglk) {
+		if (unlink(loglk) == -1 && errno != ENOENT)
+			warn("unlink %s", loglk);
+		if (link(logfn, loglk) == -1)
+			warn("link %s", loglk);
 	}
 
 #if 0
@@ -164,7 +209,7 @@ psc_log_setfn(const char *p, const char *mode)
 			char cmdbuf[LINE_MAX];
 
 			rc = snprintf(cmdbuf, sizeof(cmdbuf),
-			    "tail -f %s | %s", fn, lp);
+			    "tail -f %s | %s", logfn, lp);
 			if (rc < 0 || rc > (int)sizeof(cmdbuf))
 				errx(1, "snprintf");
 			exit(system(cmdbuf));
@@ -383,6 +428,11 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 	save_errno = errno;
 
 	thr = pscthr_get();
+	/*
+	 * XXX Set log level 5 crashes right away.
+	 */
+	if (!thr)
+		return;
 	thrid = thr->pscthr_thrid;
 	thrname = thr->pscthr_name;
 
@@ -422,6 +472,7 @@ _psclogv(const struct pfl_callerinfo *pci, int level, int options,
 		    ": %s", pfl_strerror(save_errno));
 
 	PSCLOG_LOCK();
+	psc_should_rotate_log();
 
 	/* XXX consider using fprintf_unlocked() for speed */
 	rc = fprintf(stderr, "%s%s", buf, psclog_eol);

@@ -564,7 +564,12 @@ _psc_pool_get(struct psc_poolmgr *m, int flags)
 	void *p;
 
 	POOL_LOCK(m);
-	/* (gdb) p m.ppm_u.ppmu_explist.pexl_pll */
+	/*
+	 * (gdb) p m.ppm_u.ppmu_explist.pexl_pll.
+	 *
+	 * Can we grow even if PPGF_NONBLOCK is set?
+	 *
+	 */
 	p = POOL_TRYGETOBJ(m);
 	if (p || (flags & PPGF_NONBLOCK))
 		PFL_GOTOERR(gotitem, 0);
@@ -717,6 +722,8 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 	 * If pool max is less than total (i.e., when an administrator lowers 
 	 * max below total) or free reaches the auto resize threshold, which
 	 * can be adjusted, directly free this item.
+	 *
+	 * m->ppm_nfree: m->ppm_u.ppmu_explist.pexl_pll.pll_nitems
 	 */
 	locked = POOL_RLOCK(m);
 	pfl_opstat_incr(m->ppm_opst_returns);
@@ -734,7 +741,12 @@ _psc_pool_return(struct psc_poolmgr *m, void *p)
 		/*
 		 * We need this if all the memory of the item will be used 
 		 * including the link entry. Right now, we don't do this.
+		 *
+		 * 10/23/2017: Looks like we should not touch the linkage
+		 * entry.  If we zero the whole item, we must re-init the
+		 * list entry.
 		 */
+
 		INIT_PSC_LISTENTRY(psclist_entry2(p, m->ppm_explist.pexl_offset));
 #endif
 		POOL_ADD_ITEM(m, p);
