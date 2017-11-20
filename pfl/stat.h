@@ -100,7 +100,13 @@ struct stat;
 #define ALLPERMS	(S_ISUID | S_ISGID | S_ISVTX | S_IRWXU | S_IRWXG | S_IRWXO)
 #endif
 
-/* XXX we should be careful here */
+/*
+ * XXX we should be careful here.
+ *
+ * If there is a definition conflict, please remove pickle files
+ * under the mk directory and retry.
+ */
+
 #ifndef HAVE_BLKSIZE_T
 typedef uint64_t blksize_t;
 typedef uint64_t blkcnt_t;
