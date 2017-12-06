@@ -229,7 +229,7 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 {
 	struct fidc_membh *f;
 	struct iovec iovs[2];
-	uint64_t crc, od_crc;
+	uint64_t crc, od_crc = 0;
 	int rc, vfsid;
 	size_t nb;
 	char buf[LINE_MAX];
