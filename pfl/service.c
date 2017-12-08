@@ -367,6 +367,10 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		atomic_set(&exp->exp_refcount, 1);
 		atomic_set(&exp->exp_rpc_count, 0);
 		exp->exp_connection = request->rq_conn;
+
+		/*
+ 		 * 12/07/2017: we also have exp->exp_connection.
+ 		 */
 		request->rq_conn->c_exp = exp;
 	}
 	freelock(&request->rq_conn->c_lock);

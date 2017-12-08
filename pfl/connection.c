@@ -164,9 +164,20 @@ pscrpc_drop_conns(lnet_process_id_t *peer)
  		 * usocklnd_check_peer_stale() --> usocklnd_destroy_peer() -->
  		 * lnet_enq_event_locked() --> pscrpc_master_callback() -->
  		 * pscrpc_drop_callback().
+ 		 *
+ 		 * 12/07/2017: We should take one extra reference count
+ 		 * to the connection itself so that we can drop the
+ 		 * connection normally. Also, we should take reference
+ 		 * count on export as well, but don't use it if its
+ 		 * underlying connection is gone.
  		 */
 		psc_hashbkt_lock(b);
 		PSC_HASHBKT_FOREACH_ENTRY(&pscrpc_conn_hashtbl, c, b)
+			/*
+ 			 * XXX, mark export and import as failed. Let
+ 			 * them go away when the reference count drops
+ 			 * to zero.
+ 			 */
 			if ((c->c_peer.nid == peer->nid &&
 			     c->c_peer.pid == peer->pid) ||
 			    peer->nid == LNET_NID_ANY) {
