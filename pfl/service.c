@@ -369,7 +369,8 @@ pscrpc_server_handle_request(struct pscrpc_service *svc,
 		exp->exp_connection = request->rq_conn;
 
 		/*
- 		 * 12/07/2017: we also have exp->exp_connection.
+ 		 * 12/07/2017: we also have exp->exp_connection. So export
+ 		 * and connection each take other's reference count!
  		 */
 		request->rq_conn->c_exp = exp;
 	}
