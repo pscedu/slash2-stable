@@ -78,6 +78,12 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 
 //	psc_assert(uuid);
 
+	/*
+	 * (gdb) p $11.c_peer
+	 * $36 = {nid = 562995062530988, pid = 2147496892}
+	 * (gdb)  call libcfs_nid2str($11.c_peer)
+	 * $37 = 0xb38a40 <libcfs_nidstrings+1184> "128.182.99.172@tcp10"
+	 */
 	psclog_debug("self %s peer %s",
 	    libcfs_nid2str(self), libcfs_id2str(peer));
 
