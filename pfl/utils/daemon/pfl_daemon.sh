@@ -215,7 +215,9 @@ postproc()
 	mv -f *core* $cf 2>/dev/null
 
 	# If the core file exists and the mail address is set, send an email.
-	# The mail address is set in the so-called daemon configuration file.
+	# The mail address is set in the so-called daemon configuration file
+	# (e.g., pylon2.dcfg).
+	
 
 	if [ -e "$cf" -a -n "$mail_to" ]; then
 		chmod og+r $cf
