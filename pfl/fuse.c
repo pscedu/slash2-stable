@@ -112,8 +112,6 @@ typedef struct {
 	int			 mntlen;
 } fuse_fs_info_t;
 
-double				 pscfs_entry_timeout;
-double				 pscfs_attr_timeout;
 struct psc_poolmaster		 pflfs_req_poolmaster;
 struct psc_poolmgr		*pflfs_req_pool;
 struct psc_dynarray		 pscfs_modules;
