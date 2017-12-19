@@ -238,6 +238,10 @@ postproc()
 			echo --------------------------------------------------
 			gdb -batch -c $cf -x $cmdfile c/$prog.$id 2>&1 | $srcdir/tools/filter-pstack
 		} | sendmail -t
+
+		# We could send a message to logger as well. On CentOS, logger will
+		# write log messages to /var/log/messages by default per Jason.
+
 		echo binary was $base/c/$prog.$id
 		echo log file was $base/log/$host.$name/$tm
 		rm -f $cmdfile
