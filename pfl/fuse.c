@@ -534,12 +534,6 @@ pscfs_main(int nthr, const char *thrname)
 #endif
 	psc_ctlparam_register_simple("fuse.version",
 	    pscfs_ctlparam_fuse_version_get, NULL);
-	psc_ctlparam_register_simple("pscfs.entry_timeout",
-	    pscfs_ctlparam_entry_timeout_get,
-	    pscfs_ctlparam_entry_timeout_set);
-	psc_ctlparam_register_simple("pscfs.attr_timeout",
-	    pscfs_ctlparam_attr_timeout_get,
-	    pscfs_ctlparam_attr_timeout_set);
 #endif
 
 	thrv = PSCALLOC(sizeof(*thrv) * nthr);
