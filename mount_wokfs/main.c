@@ -232,9 +232,6 @@ main(int argc, char *argv[])
 	pfl_workq_init(128, 1024, 1024);
 	pfl_wkthr_spawn(PFL_THRT_WORKER, 4, 0, "wkthr%d");
 
-	pscfs_entry_timeout = 8.;
-	pscfs_attr_timeout = 8.;
-
 	/*
 	 * Here, $p = (directory this daemon binary resides in).
 	 * Now we add the following to $PATH:
