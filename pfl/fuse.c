@@ -431,6 +431,7 @@ pscfs_fuse_listener_loop(__unusedx struct psc_thread *thr)
 }
 
 #ifdef PFL_CTL
+
 #ifdef HAVE_FUSE_DEBUGLEVEL
 void
 pscfs_ctlparam_fuse_debug_get(char buf[PCP_VALUE_MAX])
@@ -462,48 +463,7 @@ pscfs_ctlparam_fuse_version_get(char buf[PCP_VALUE_MAX])
 	    FUSE_MAJOR_VERSION, FUSE_MINOR_VERSION);
 }
 
-void
-pscfs_ctlparam_entry_timeout_get(char buf[PCP_VALUE_MAX])
-{
-	snprintf(buf, PCP_VALUE_MAX, "%g", pscfs_entry_timeout);
-}
-
-int
-pscfs_ctlparam_entry_timeout_set(const char *s)
-{
-	double val;
-	char *endp;
-
-	endp = NULL;
-	val = strtod(s, &endp);
-	if (val < 0. || val > 60. ||
-	    endp == s || *endp != '\0')
-		return (-1);
-	pscfs_entry_timeout = val;
-	return (0);
-}
-
-void
-pscfs_ctlparam_attr_timeout_get(char buf[PCP_VALUE_MAX])
-{
-	snprintf(buf, PCP_VALUE_MAX, "%g", pscfs_attr_timeout);
-}
-
-int
-pscfs_ctlparam_attr_timeout_set(const char *s)
-{
-	char *endp;
-	long val;
-
-	endp = NULL;
-	val = strtod(s, &endp);
-	if (val < 0. || val > 60. ||
-	    endp == s || *endp != '\0')
-		return (-1);
-	pscfs_attr_timeout = val;
-	return (0);
-}
-#endif
+#endif	/* PFL_CTL */
 
 void
 pfl_fuse_atexit(void)
