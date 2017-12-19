@@ -214,10 +214,22 @@ postproc()
 	cf=c/$prog.$id.core
 	mv -f *core* $cf 2>/dev/null
 
+	# Send a message via logger as well. On CentOS, logger will
+	# write log messages to /var/log/messages by default.
+
+	if [ -f "/usr/bin/logger" ]
+	then
+		if [ $ex -gt 128 ]
+		then
+			echo "$prog ($base) receive signal $((ex-128))" | logger
+		else
+			echo "$prog ($base) exit with code $ex" | logger
+		fi  
+	fi
+
 	# If the core file exists and the mail address is set, send an email.
 	# The mail address is set in the so-called daemon configuration file
 	# (e.g., pylon2.dcfg).
-	
 
 	if [ -e "$cf" -a -n "$mail_to" ]; then
 		chmod og+r $cf
@@ -238,9 +250,6 @@ postproc()
 			echo --------------------------------------------------
 			gdb -batch -c $cf -x $cmdfile c/$prog.$id 2>&1 | $srcdir/tools/filter-pstack
 		} | sendmail -t
-
-		# We could send a message to logger as well. On CentOS, logger will
-		# write log messages to /var/log/messages by default per Jason.
 
 		echo binary was $base/c/$prog.$id
 		echo log file was $base/log/$host.$name/$tm
