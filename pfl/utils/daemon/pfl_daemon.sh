@@ -308,6 +308,9 @@ preproc()
 
 	mv -f *core* c/ 2>/dev/null
 	cp `which $prog` c/$prog.$id
+
+        # XXX Not sure how this timestap is attached to the log file.
+
 	tm=$(date +%s)
 	trap cleanup EXIT
 }
