@@ -82,8 +82,6 @@ _lc_get(struct psc_listcache *plc, const struct timespec *abstime,
 			if (rc) {
 				psc_assert(rc == ETIMEDOUT);
 				errno = rc;
-				LIST_CACHE_LOCK(plc);
-				LIST_CACHE_URLOCK(plc, locked);
 				return (NULL);
 			}
 		} else

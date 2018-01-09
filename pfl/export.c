@@ -32,10 +32,6 @@
 void
 _pscrpc_export_put(struct pscrpc_export *exp)
 {
-	/*
- 	 * 12/07/2017: There should be a way to make the export as
- 	 * failed before it is freed.
- 	 */
 	if (atomic_dec_and_test(&exp->exp_refcount)) {
 		psclog_debug("destroying export %p/%s",
 		    exp, exp->exp_connection ?

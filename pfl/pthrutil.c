@@ -249,12 +249,6 @@ _pfl_rwlock_wrlock(const struct pfl_callerinfo *pci,
 	p = pthread_self();
 	psc_assert(rw->pr_writer != p);
 
-	/*
-	 * If a thread already has a read lock and request for a write
-	 * lock, we will deadlock.
-	 *
-	 * (gdb) p/x *(pthread_t *)rw->pr_readers.pda_items[0]
-	 */
 	rc = pthread_rwlock_wrlock(&rw->pr_rwlock);
 	if (rc)
 		psc_fatalx("pthread_rwlock_wrlock: %s", strerror(rc));

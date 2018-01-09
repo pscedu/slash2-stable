@@ -78,14 +78,6 @@ pscrpc_get_connection(lnet_process_id_t peer, lnet_nid_t self,
 
 //	psc_assert(uuid);
 
-	/*
-	 * (gdb) p $11.c_peer
-	 * $36 = {nid = 562995062530988, pid = 2147496892}
-	 * (gdb)  call libcfs_nid2str($11.c_peer)
-	 * $37 = 0xb38a40 <libcfs_nidstrings+1184> "128.182.99.172@tcp10"
-	 *
-	 * The pid is probably LNET_PID_USERFLAG | getpid().
-	 */
 	psclog_debug("self %s peer %s",
 	    libcfs_nid2str(self), libcfs_id2str(peer));
 
@@ -164,20 +156,9 @@ pscrpc_drop_conns(lnet_process_id_t *peer)
  		 * usocklnd_check_peer_stale() --> usocklnd_destroy_peer() -->
  		 * lnet_enq_event_locked() --> pscrpc_master_callback() -->
  		 * pscrpc_drop_callback().
- 		 *
- 		 * 12/07/2017: We should take one extra reference count
- 		 * to the connection itself so that we can drop the
- 		 * connection normally. Also, we should take reference
- 		 * count on export as well, but don't use it if its
- 		 * underlying connection is gone.
  		 */
 		psc_hashbkt_lock(b);
 		PSC_HASHBKT_FOREACH_ENTRY(&pscrpc_conn_hashtbl, c, b)
-			/*
- 			 * XXX, mark export and import as failed. Let
- 			 * them go away when the reference count drops
- 			 * to zero.
- 			 */
 			if ((c->c_peer.nid == peer->nid &&
 			     c->c_peer.pid == peer->pid) ||
 			    peer->nid == LNET_NID_ANY) {
