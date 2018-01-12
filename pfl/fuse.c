@@ -465,27 +465,6 @@ pscfs_ctlparam_fuse_version_get(char buf[PCP_VALUE_MAX])
 }
 
 void
-pscfs_ctlparam_entry_timeout_get(char buf[PCP_VALUE_MAX])
-{
-	snprintf(buf, PCP_VALUE_MAX, "%g", pscfs_entry_timeout);
-}
-
-int
-pscfs_ctlparam_entry_timeout_set(const char *s)
-{
-	double val;
-	char *endp;
-
-	endp = NULL;
-	val = strtod(s, &endp);
-	if (val < 0. || val > 60. ||
-	    endp == s || *endp != '\0')
-		return (-1);
-	pscfs_entry_timeout = val;
-	return (0);
-}
-
-void
 pscfs_ctlparam_attr_timeout_get(char buf[PCP_VALUE_MAX])
 {
 	snprintf(buf, PCP_VALUE_MAX, "%g", pscfs_attr_timeout);
@@ -574,14 +553,6 @@ pscfs_main(int nthr, const char *thrname)
 	    pscfs_ctlparam_fuse_debug_get,
 	    pscfs_ctlparam_fuse_debug_set);
 #endif
-	psc_ctlparam_register_simple("fuse.version",
-	    pscfs_ctlparam_fuse_version_get, NULL);
-	psc_ctlparam_register_simple("pscfs.entry_timeout",
-	    pscfs_ctlparam_entry_timeout_get,
-	    pscfs_ctlparam_entry_timeout_set);
-	psc_ctlparam_register_simple("pscfs.attr_timeout",
-	    pscfs_ctlparam_attr_timeout_get,
-	    pscfs_ctlparam_attr_timeout_set);
 #endif
 
 	thrv = PSCALLOC(sizeof(*thrv) * nthr);
