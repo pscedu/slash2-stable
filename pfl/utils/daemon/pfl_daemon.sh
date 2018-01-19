@@ -231,6 +231,8 @@ postproc()
 	# The mail address is set in the so-called daemon configuration file
 	# (e.g., pylon2.dcfg).
 
+	# PSC_LOG_FILE_LINK is set up in mount_slash.sh, sliod.sh, or slashd.sh
+
 	if [ -e "$cf" -a -n "$mail_to" ]; then
 		chmod og+r $cf
 
