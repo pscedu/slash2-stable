@@ -417,7 +417,8 @@ mksliods()
 		echo -n %ctl=slictl$i
 
 		# This is supposed to put the log files of each daemon 
-		# like sliod into its own directory.
+		# like sliod into its own directory. However, the name
+		# is overwritten each loop, right?
 
 		echo -n %name=sliod$i
 		echo -n %CTL_SOCK_FILE=
