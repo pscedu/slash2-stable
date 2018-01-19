@@ -232,6 +232,8 @@ postproc()
 	# (e.g., pylon2.dcfg).
 
 	# PSC_LOG_FILE_LINK is set up in mount_slash.sh, sliod.sh, or slashd.sh
+	# This only works if each daemon has its own log directory or the link
+	# itself is different among different daemon instance.
 
 	if [ -e "$cf" -a -n "$mail_to" ]; then
 		chmod og+r $cf
@@ -413,6 +415,10 @@ mksliods()
 		echo -n %tag=$i
 		echo -n %narg=1
 		echo -n %ctl=slictl$i
+
+		# This is supposed to put the log files of each daemon 
+		# like sliod into its own directory.
+
 		echo -n %name=sliod$i
 		echo -n %CTL_SOCK_FILE=
 		printf $ctlsock $i
