@@ -114,10 +114,9 @@ FILE				*pflog_ttyfp;
 struct psc_dynarray		_pfl_logpoints = DYNARRAY_INIT_NOLOG;
 struct psc_hashtbl		_pfl_logpoints_hashtbl;
 
-int log_cycle_count;
-int log_rotate_count;
+static int log_cycle_count;
+static int log_rotate_count;
 int pfl_log_rotate = PSC_MAX_LOG_PER_FILE;
-
  
 static char *loglk;
 static char  logfn[PATH_MAX];
@@ -134,25 +133,19 @@ void psc_should_rotate_log(void)
 	if (log_rotate_count < pfl_log_rotate)
 		return;
 
-	pfl_log_rotate = 0;
+	log_rotate_count = 0;
 	rc = snprintf(newfn, sizeof(newfn), "%s-%d", 
 	    logfn, log_cycle_count++);
 	if (rc < 0) {
 		warn("log snprintf rc = %d", rc);
 		return;
 	}
-	/*
-	 * Rename the current log file to keep a copy.
-	 */
 	rc = rename(logfn, newfn);
 	if (rc < 0) {
 		warn("log rename rc = %d", rc);
 		return;
 	}
 
-	/*
-	 * Reopen the log file to accept new contents.
-	 */
 	if (freopen(logfn, "w", stderr) == NULL) {
 		warn("log freopen %s, rc = %d", logfn, rc);
 		return;
