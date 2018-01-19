@@ -229,7 +229,7 @@ psc_log_init(void)
 
 	p = getenv("PSC_LOG_FILE");
 	if (p && psc_log_setfn(p, "w"))
-		warn("%s", p);
+		errx(1, "%s", p);
 
 	p = getenv("PSC_LOG_FORMAT");
 	if (p)
