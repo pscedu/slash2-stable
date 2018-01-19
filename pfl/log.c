@@ -140,12 +140,18 @@ void psc_should_rotate_log(void)
 		warn("log snprintf rc = %d", rc);
 		return;
 	}
+	/*
+	 * Rename the current log file to keep a copy.
+	 */
 	rc = rename(logfn, newfn);
 	if (rc < 0) {
 		warn("log rename rc = %d", rc);
 		return;
 	}
 
+	/*
+	 * Reopen the log file to accept new contents.
+	 */
 	if (freopen(logfn, "w", stderr) == NULL) {
 		warn("log freopen %s, rc = %d", logfn, rc);
 		return;
