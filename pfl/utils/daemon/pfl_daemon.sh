@@ -245,7 +245,15 @@ postproc()
 			echo
 			echo core file is $base/$cf
 			echo binary is $base/c/$prog.$id
-			echo log is $base/log/$host.$name/$tm
+			
+			# The following code used to be: echo log is $base/log/$host.$name/$tm
+			# However, that is probably predicated on using %t as the log file,
+			# which is no longer true.  We use %t.$$ now.  In addition, the use of
+			# of tm is suspicious, depending on whether slash2 can create the log
+			# file within the same second.
+
+			echo log is $base/log/$host.$name/$PSC_LOG_FILE_LINK
+
 			[ $ex -gt 128 ] && echo exited via signal $((ex-128))
 			echo --------------------------------------------------
 			tail $PSC_LOG_FILE_LINK
