@@ -231,6 +231,10 @@ postproc()
 	# The mail address is set in the so-called daemon configuration file
 	# (e.g., pylon2.dcfg).
 
+	# PSC_LOG_FILE_LINK is set up in mount_slash.sh, sliod.sh, or slashd.sh
+	# This only works if each daemon has its own log directory or the link
+	# itself is different among different daemon instance.
+
 	if [ -e "$cf" -a -n "$mail_to" ]; then
 		chmod og+r $cf
 
@@ -243,7 +247,15 @@ postproc()
 			echo
 			echo core file is $base/$cf
 			echo binary is $base/c/$prog.$id
-			echo log is $base/log/$host.$name/$tm
+			
+			# The following code used to be: echo log is $base/log/$host.$name/$tm
+			# However, that is probably predicated on using %t as the log file,
+			# which is no longer true.  We use %t.$$ now.  In addition, the use of
+			# of tm is suspicious, depending on whether slash2 can create the log
+			# file within the same second.
+
+			echo log is $base/log/$host.$name/$PSC_LOG_FILE_LINK
+
 			[ $ex -gt 128 ] && echo exited via signal $((ex-128))
 			echo --------------------------------------------------
 			tail $PSC_LOG_FILE_LINK
@@ -411,6 +423,11 @@ mksliods()
 		echo -n %tag=$i
 		echo -n %narg=1
 		echo -n %ctl=slictl$i
+
+		# This is supposed to put the log files of each daemon 
+		# like sliod into its own directory. However, the name
+		# is overwritten each loop, right?
+
 		echo -n %name=sliod$i
 		echo -n %CTL_SOCK_FILE=
 		printf $ctlsock $i
