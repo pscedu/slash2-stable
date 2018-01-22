@@ -731,6 +731,7 @@ pscrpcthr_main(struct psc_thread *thr)
 			 svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
 		);
 #endif
+		/* 01/22/2018: Program terminated with signal 7, Bus error. */
 		(void)pscrpc_svr_wait_event(&svc->srv_waitq,
 		    pscrpcthr_waitevent(thr, svc) || !prt->prt_alive,
 		    &lwi, NULL);
