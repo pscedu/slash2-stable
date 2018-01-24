@@ -3,7 +3,7 @@
 # %ISC_START_LICENSE%
 # ---------------------------------------------------------------------
 # Copyright 2015-2016, Google, Inc.
-# Copyright 2013-2016, Pittsburgh Supercomputing Center
+# Copyright 2013-2018, Pittsburgh Supercomputing Center
 # All rights reserved.
 #
 # Permission to use, copy, modify, and distribute this software for any
@@ -212,6 +212,9 @@ postproc()
 	trap '' EXIT
 
 	cf=c/$prog.$id.core
+
+	# Rename the core to our "unique" name
+
 	mv -f *core* $cf 2>/dev/null
 
 	# Send a message via logger as well. On CentOS, logger will
@@ -254,7 +257,7 @@ postproc()
 			# of tm is suspicious, depending on whether slash2 can create the log
 			# file within the same second.
 
-			echo log is $base/log/$host.$name/$PSC_LOG_FILE_LINK
+			echo log is likely $base/log/$host.$name/$PSC_LOG_FILE_LINK
 
 			[ $ex -gt 128 ] && echo exited via signal $((ex-128))
 			echo --------------------------------------------------
