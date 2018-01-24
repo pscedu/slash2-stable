@@ -914,3 +914,71 @@ In the log:
 [1504982458.53610500 msnbrqthr12:7ffebb3fc700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe6809ece0 x41358242/t0 cb=0x7fffd7afb53d c0 o42->@54321-128.182.99.27@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1504982456 :: type == PSCRPC_MSG_ERR, rc == -501
 [1504982458.54361100 msnbrqthr3:7ffefdbf6700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe70074410 x41358251/t0 cb=0x7fffd7afb53d c0 o42->@54321-128.182.99.27@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1504982456 :: type == PSCRPC_MSG_ERR, rc == -501
 
+01/24/2018
+----------
+
+With orange (mds), lemon (ios), and zebes:
+
+zhihui@zebes: /zzh-slash2/zhihui$ dd if=/dev/zero of=big1.out bs=1M count=102400
+102400+0 records in
+102400+0 records out
+107374182400 bytes (107 GB) copied, 929.024 s, 116 MB/s
+zhihui@zebes: /zzh-slash2/zhihui$ dd if=/dev/zero of=big2.out bs=1M count=102400
+102400+0 records in
+102400+0 records out
+107374182400 bytes (107 GB) copied, 927.585 s, 116 MB/s
+
+zhihui@zebes: /zzh-slash2/zhihui$ dd if=big1.out of=/dev/null bs=1M
+102400+0 records in
+102400+0 records out
+107374182400 bytes (107 GB) copied, 1115.18 s, 96.3 MB/s
+zhihui@zebes: /zzh-slash2/zhihui$ dd if=big2.out of=/dev/null bs=1M
+102400+0 records in
+102400+0 records out
+107374182400 bytes (107 GB) copied, 1114.48 s, 96.3 MB/s
+
+zhihui@zebes: ~$ uname -a
+Linux zebes.psc.edu 4.4.0-1.el7.x86_64.netboot #1 SMP Fri Jan 22 00:31:19 EST 2016 x86_64 x86_64 x86_64 GNU/Linux
+
+bash-4.2# uname -a
+Linux lemon.psc.edu 3.10.0-123.20.1.el7.netboot #2 SMP Fri Feb 6 15:16:28 EST 2015 x86_64 x86_64 x86_64 GNU/Linux
+
+
+bash-4.2# mdadm --detail /dev/md0
+/dev/md0:
+        Version : 1.2
+  Creation Time : Fri Nov 10 11:47:17 2017
+     Raid Level : raid0
+     Array Size : 7568259584 (7217.65 GiB 7749.90 GB)
+   Raid Devices : 13
+  Total Devices : 13
+    Persistence : Superblock is persistent
+
+    Update Time : Fri Nov 10 11:47:17 2017
+          State : clean 
+ Active Devices : 13
+Working Devices : 13
+ Failed Devices : 0
+  Spare Devices : 0
+
+     Chunk Size : 512K
+
+           Name : lemon.psc.edu:0  (local to host lemon.psc.edu)
+           UUID : b60b3195:91f9e253:0b037690:3fbb4779
+         Events : 0
+
+    Number   Major   Minor   RaidDevice State
+       0       8       64        0      active sync   /dev/sde
+       1       8       80        1      active sync   /dev/sdf
+       2       8       96        2      active sync   /dev/sdg
+       3       8      112        3      active sync   /dev/sdh
+       4       8      128        4      active sync   /dev/sdi
+       5       8      144        5      active sync   /dev/sdj
+       6       8      160        6      active sync   /dev/sdk
+       7       8      176        7      active sync   /dev/sdl
+       8       8      192        8      active sync   /dev/sdm
+       9       8      208        9      active sync   /dev/sdn
+      10       8      224       10      active sync   /dev/sdo
+      11       8      240       11      active sync   /dev/sdp
+      12      65        0       12      active sync   /dev/sdq
+
