@@ -982,3 +982,37 @@ Working Devices : 13
       11       8      240       11      active sync   /dev/sdp
       12      65        0       12      active sync   /dev/sdq
 
+
+01/25/2018
+----------
+
+zhihui@zebes: /zzh-slash2/zhihui/linux-4.14.15$ time tar xvf ~/linux-4.14.15.tar.xz 
+
+real	6m57.846s
+user	0m12.508s
+sys	0m11.930s
+
+zhihui@zebes: /zzh-slash2/zhihui/linux-4.14.15$ time make -j 3
+
+
+  LD [M]  sound/soundcore.ko
+  LD [M]  sound/synth/emux/snd-emux-synth.ko
+  LD [M]  sound/synth/snd-util-mem.ko
+  LD [M]  sound/usb/6fire/snd-usb-6fire.ko
+  LD [M]  sound/usb/caiaq/snd-usb-caiaq.ko
+  LD [M]  sound/usb/misc/snd-ua101.ko
+  LD [M]  sound/usb/snd-usb-audio.ko
+  LD [M]  sound/usb/snd-usbmidi-lib.ko
+  LD [M]  sound/usb/usx2y/snd-usb-us122l.ko
+  LD [M]  sound/usb/usx2y/snd-usb-usx2y.ko
+  LD [M]  virt/lib/irqbypass.ko
+
+real	188m14.159s
+user	83m34.130s
+sys	19m21.552s
+
+
+zhihui@zebes: /zzh-slash2/zhihui/linux-4.14.15$ find . | wc -l
+112592
+zhihui@zebes: /zzh-slash2/zhihui/linux-4.14.15$ 
+
