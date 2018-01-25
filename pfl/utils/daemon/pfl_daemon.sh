@@ -257,7 +257,7 @@ postproc()
 			# of tm is suspicious, depending on whether slash2 can create the log
 			# file within the same second.
 
-			echo log is likely $base/log/$host.$name/$PSC_LOG_FILE_LINK
+			echo log is most likely $PSC_LOG_FILE_LINK
 
 			[ $ex -gt 128 ] && echo exited via signal $((ex-128))
 			echo --------------------------------------------------
