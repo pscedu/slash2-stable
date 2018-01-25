@@ -149,7 +149,6 @@ void
 pscthrs_init(void)
 {
 	int rc;
-	size_t size;
 
 	INIT_SPINLOCK_NOLOG(&pthread_lock);
 	psc_waitq_init_nolog(&pthread_waitq, "thrs_wait");
@@ -159,10 +158,9 @@ pscthrs_init(void)
 		errx(1, "pthread_key_create: %s", strerror(rc));
 
 	pthread_attr_init(&pthread_attr);
-	rc = pthread_attr_getstacksize(&pthread_attr, &size);
 	rc = pthread_attr_setstacksize(&pthread_attr, PTHREAD_STACK_SIZE);
 	if (rc)
-		errx(1, "pthread_attr_setstacksize: %s, def = %zd", strerror(rc), size);
+		errx(1, "pthread_attr_setstacksize: %s", strerror(rc));
 	rc = pthread_attr_setguardsize(&pthread_attr, PTHREAD_GUARD_SIZE);
 	if (rc)
 		errx(1, "pthread_attr_setguardsize: %s", strerror(rc));
