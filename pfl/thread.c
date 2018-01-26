@@ -63,7 +63,7 @@ struct psc_lockedlist		 psc_threads =
  * The following does not affect ZFS-fuse threads.
  */
 #define	PTHREAD_GUARD_SIZE	 4096
-#define	PTHREAD_STACK_SIZE	 4*1024*1024
+#define	PTHREAD_STACK_SIZE	 6*1024*1024
 
 __static pthread_attr_t		 pthread_attr;
 __static psc_spinlock_t	  	 pthread_lock;
