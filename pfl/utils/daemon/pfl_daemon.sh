@@ -45,12 +45,14 @@ prof=
 allow_logfiles_over_nfs=0
 
 # Print a message if verbose (-v) mode is enabled.
+
 vprint()
 {
 	[ $verbose -eq 1 ] && echo "$@"
 }
 
 # Extract something out of a key1=val1,key2=val2,... expression.
+
 extract_value()
 {
 	key=$1
@@ -67,6 +69,7 @@ extract_value()
 }
 
 # Load profile for the host where invoked.
+
 loadprof()
 {
 	local _h=${1%%%*}
@@ -103,8 +106,8 @@ loadprof()
 		narg=*|\
 		prog=*|\
 		srcdir=*)
-			declare ${fl%%=*}=${fl#*=};;
-
+			local newvalue=${fl#*=}
+			eval ${fl%%=*}=\$newvalue;;
 		args=*)	
 			# xargs is a comma separated list of arguments.
 			# Some of them can have values.
@@ -135,6 +138,9 @@ loadprof()
 
 # Apply settings to the shell interpretter environment from the loaded
 # profile.
+#
+# Called from slashd.sh, sliod.sh, and mount_slash.sh
+
 apply_host_prefs()
 {
 	local narg=0 base fn
@@ -183,6 +189,7 @@ die()
 }
 
 # Launch my gdb with some custom settings.
+
 mygdb()
 {
 	shift
@@ -205,6 +212,7 @@ mygdb()
 }
 
 # Perform daemon post processing (i.e. after the daemon exits).
+
 postproc()
 {
 	ex=$1
@@ -282,6 +290,7 @@ cleanup()
 }
 
 # Determine if the given directory is remotely mounted.
+
 is_on_nfs()
 {
 	local dir=$1
@@ -292,6 +301,7 @@ is_on_nfs()
 }
 
 # Perform daemon launch pre processing.
+
 preproc()
 {
 	PSC_TIMEOUT=5 $ctl -p sys.version >/dev/null && \
@@ -328,6 +338,7 @@ preproc()
 }
 
 # Backoff-sensitive sleep, invoked before relaunch of a daemon instance.
+
 vsleep()
 {
 	local amt=0
@@ -372,6 +383,7 @@ vsleep()
 # This script runs within another service script using the source or dot
 # operator.  The backup argv (bkav) is saved by the service script and
 # is used here to re-execute ourself when the service daemon dies.
+
 _rundaemon()
 {
 	preproc
@@ -387,6 +399,7 @@ _rundaemon()
 }
 
 # Launch a daemon, doing any "daemonization" necessary.
+
 rundaemon()
 {
 	vprint "launching daemon: $@"
@@ -401,6 +414,7 @@ rundaemon()
 
 # Utility routine for generating a batch of profiles for hosts offering
 # the SLASH2 I/O service.
+
 mksliods()
 {
 	local noif0=0 OPTIND c i _
@@ -421,15 +435,22 @@ mksliods()
 	[ -n "$opts" ] && opts=%$opts
 
 	for i in $(seq 0 $((np - 1))); do
+
+		# Add info for each sliod to match a host profile. 
+		# Each option is separated by %.
+
 		echo -n $host
 		echo -n %sliod
+
+		# tag is used to match instance, such as sliod.sh 1
+
 		echo -n %tag=$i
 		echo -n %narg=1
 		echo -n %ctl=slictl$i
 
-		# This is supposed to put the log files of each daemon 
-		# like sliod into its own directory. However, the name
-		# is overwritten each loop, right?
+		# We only override name for sliod because we can run
+		# multiple sliod daemons on the same host.  We want
+		# each daemon to have its own log directory.
 
 		echo -n %name=sliod$i
 		echo -n %CTL_SOCK_FILE=
@@ -450,6 +471,7 @@ mksliods()
 
 # Utility routine for generating a batch of profiles for hosts offering
 # the SLASH2 client service.
+
 mkclients()
 {
 	# The underscore (_) assigns/localizes the $_, which is the last 
