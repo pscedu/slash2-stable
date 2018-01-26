@@ -426,10 +426,7 @@ mksliods()
 
 	for i in $(seq 0 $((np - 1))); do
 
-
-		#
-		# These seem to be making parameters.
-		#
+		# Add info for each sliod. Each option is separated by %.
 
 		echo -n $host
 		echo -n %sliod
@@ -437,9 +434,9 @@ mksliods()
 		echo -n %narg=1
 		echo -n %ctl=slictl$i
 
-		# This is supposed to put the log files of each daemon 
-		# like sliod into its own directory. However, the name
-		# is overwritten each loop, right?
+		# We only override name for sliod because we can run
+		# multiple sliod daemons on the same host.  We want
+		# each daemon to have its own log directory.
 
 		echo -n %name=sliod$i
 		echo -n %CTL_SOCK_FILE=
