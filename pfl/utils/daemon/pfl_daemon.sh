@@ -45,12 +45,14 @@ prof=
 allow_logfiles_over_nfs=0
 
 # Print a message if verbose (-v) mode is enabled.
+
 vprint()
 {
 	[ $verbose -eq 1 ] && echo "$@"
 }
 
 # Extract something out of a key1=val1,key2=val2,... expression.
+
 extract_value()
 {
 	key=$1
@@ -67,6 +69,7 @@ extract_value()
 }
 
 # Load profile for the host where invoked.
+
 loadprof()
 {
 	local _h=${1%%%*}
@@ -137,7 +140,6 @@ loadprof()
 # profile.
 #
 # Called from slashd.sh, sliod.sh, and mount_slash.sh
-#
 
 apply_host_prefs()
 {
@@ -187,6 +189,7 @@ die()
 }
 
 # Launch my gdb with some custom settings.
+
 mygdb()
 {
 	shift
@@ -209,6 +212,7 @@ mygdb()
 }
 
 # Perform daemon post processing (i.e. after the daemon exits).
+
 postproc()
 {
 	ex=$1
@@ -286,6 +290,7 @@ cleanup()
 }
 
 # Determine if the given directory is remotely mounted.
+
 is_on_nfs()
 {
 	local dir=$1
@@ -296,6 +301,7 @@ is_on_nfs()
 }
 
 # Perform daemon launch pre processing.
+
 preproc()
 {
 	PSC_TIMEOUT=5 $ctl -p sys.version >/dev/null && \
@@ -332,6 +338,7 @@ preproc()
 }
 
 # Backoff-sensitive sleep, invoked before relaunch of a daemon instance.
+
 vsleep()
 {
 	local amt=0
@@ -376,6 +383,7 @@ vsleep()
 # This script runs within another service script using the source or dot
 # operator.  The backup argv (bkav) is saved by the service script and
 # is used here to re-execute ourself when the service daemon dies.
+
 _rundaemon()
 {
 	preproc
@@ -391,6 +399,7 @@ _rundaemon()
 }
 
 # Launch a daemon, doing any "daemonization" necessary.
+
 rundaemon()
 {
 	vprint "launching daemon: $@"
@@ -405,6 +414,7 @@ rundaemon()
 
 # Utility routine for generating a batch of profiles for hosts offering
 # the SLASH2 I/O service.
+
 mksliods()
 {
 	local noif0=0 OPTIND c i _
@@ -426,10 +436,14 @@ mksliods()
 
 	for i in $(seq 0 $((np - 1))); do
 
-		# Add info for each sliod. Each option is separated by %.
+		# Add info for each sliod to match host profile. 
+		# Each option is separated by %.
 
 		echo -n $host
 		echo -n %sliod
+
+		# tag is used to match instance, such as sliod.sh 1
+
 		echo -n %tag=$i
 		echo -n %narg=1
 		echo -n %ctl=slictl$i
@@ -457,6 +471,7 @@ mksliods()
 
 # Utility routine for generating a batch of profiles for hosts offering
 # the SLASH2 client service.
+
 mkclients()
 {
 	# The underscore (_) assigns/localizes the $_, which is the last 
