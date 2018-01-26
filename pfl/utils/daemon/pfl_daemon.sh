@@ -135,6 +135,10 @@ loadprof()
 
 # Apply settings to the shell interpretter environment from the loaded
 # profile.
+#
+# Called from slashd.sh, sliod.sh, and mount_slash.sh
+#
+
 apply_host_prefs()
 {
 	local narg=0 base fn
@@ -421,6 +425,12 @@ mksliods()
 	[ -n "$opts" ] && opts=%$opts
 
 	for i in $(seq 0 $((np - 1))); do
+
+
+		#
+		# These seem to be making parameters.
+		#
+
 		echo -n $host
 		echo -n %sliod
 		echo -n %tag=$i
