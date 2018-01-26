@@ -2,7 +2,7 @@
 # $Id$
 # %ISC_START_LICENSE%
 # ---------------------------------------------------------------------
-# Copyright 2015-2016, Google, Inc.
+# Copyright 2015-2018, Google, Inc.
 # Copyright 2013-2018, Pittsburgh Supercomputing Center
 # All rights reserved.
 #
@@ -103,8 +103,8 @@ loadprof()
 		narg=*|\
 		prog=*|\
 		srcdir=*)
-			declare ${fl%%=*}=${fl#*=};;
-
+			local newvalue=${fl#*=}
+			eval ${fl%%=*}=\$newvalue;;
 		args=*)	
 			# xargs is a comma separated list of arguments.
 			# Some of them can have values.
