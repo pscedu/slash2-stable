@@ -436,7 +436,7 @@ mksliods()
 
 	for i in $(seq 0 $((np - 1))); do
 
-		# Add info for each sliod to match host profile. 
+		# Add info for each sliod to match a host profile. 
 		# Each option is separated by %.
 
 		echo -n $host
