@@ -611,6 +611,7 @@ pscrpc_grow_req_bufs(struct pscrpc_service *svc)
 		rqbd = pscrpc_alloc_rqbd(svc);
 
 		if (rqbd == NULL) {
+			/* 01/29/2018: Crash here on signal 7 */
 			CERROR("%s: Can't allocate request buffer",
 				svc->srv_name);
 			return (-ENOMEM);
