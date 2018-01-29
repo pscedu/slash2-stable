@@ -27,8 +27,11 @@
 #define _PFL_RPC_INTRFC_H_
 
 /* 
- * used to be 64, however, we use it at various 
- * places to define a log buffer.
+ * It used to be 64, however, we use it at various 
+ * places to define the size of a log buffer.
+ *
+ * What about LNET_NIDSTR_SIZE?
+ *
  */ 
 #define PSCRPC_NIDSTR_SIZE	256
 
