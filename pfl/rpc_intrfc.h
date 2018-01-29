@@ -28,7 +28,8 @@
 
 /* 
  * It used to be 64, however, we use it at various 
- * places to define the size of a log buffer.
+ * places to define the size of a log buffer. See
+ * pscrpc_check_status() for an example.
  *
  * What about LNET_NIDSTR_SIZE?
  *
