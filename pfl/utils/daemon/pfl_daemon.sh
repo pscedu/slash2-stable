@@ -257,7 +257,7 @@ postproc()
 			echo "Subject: [sysbug] $prof $host $name down"
 			echo
 			#
-			# This is done manually to match the vesion of the
+			# This is done manually to match the version of the
 			# slash2 code base.
 			#
 			echo slash2 version ">=" 45134.
