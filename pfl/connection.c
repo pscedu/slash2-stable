@@ -163,6 +163,10 @@ pscrpc_drop_conns(lnet_process_id_t *peer)
 			     c->c_peer.pid == peer->pid) ||
 			    peer->nid == LNET_NID_ANY) {
 				if (c->c_exp) {
+					/*
+					 * 01/30/2018: c->c_exp->exp_hldropf == NULL
+					 * c->c_exp->exp_private = (void *) 0x2b8b14028900
+					 */
 					pscrpc_export_hldrop(c->c_exp);
 					c->c_exp = NULL;
 				}
