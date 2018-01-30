@@ -688,6 +688,7 @@ slvr_remove(struct slvr *s)
 
 	bii = slvr_2_bii(s);
 
+	/* (gdb) p *((struct bmap *)bii - 1) */
 	BII_LOCK(bii);
 	PSC_SPLAY_XREMOVE(biod_slvrtree, &bii->bii_slvrs, s);
 	bmap_op_done_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
@@ -743,7 +744,6 @@ slvr_remove_all(struct fidc_membh *f)
 		 * race. More invetigation is needed.
 		 */
 		bmap_op_start_type(b, BMAP_OPCNT_SLVR);
-		psc_dynarray_add(&a, b);
 
 		bii = bmap_2_bii(b);
 		while ((s = SPLAY_ROOT(&bii->bii_slvrs))) {
@@ -764,6 +764,8 @@ slvr_remove_all(struct fidc_membh *f)
 				SLVR_ULOCK(s);
 				BII_ULOCK(bii);
 				pfl_rwlock_unlock(&f->fcmh_rwlock);
+				bmap_op_done_type(b, BMAP_OPCNT_SLVR);
+				OPSTAT_INCR("slvr-remove-restart");
 				pscthr_yield();
 				goto restart;
 			}
@@ -780,6 +782,7 @@ slvr_remove_all(struct fidc_membh *f)
 
 			BII_LOCK(bii);
 		}
+		psc_dynarray_add(&a, b);
 		BMAP_ULOCK(b);
 	}
 	pfl_rwlock_unlock(&f->fcmh_rwlock);
