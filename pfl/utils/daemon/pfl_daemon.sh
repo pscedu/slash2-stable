@@ -260,7 +260,7 @@ postproc()
 			# This must be done manually to match the vesion of the
 			# slash2 code base.
 			#
-			echo version is 45134.
+			echo slash2 version >= 45134.
 			echo core file is $base/$cf
 			echo binary is $base/c/$prog.$id
 			
