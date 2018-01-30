@@ -256,6 +256,11 @@ postproc()
 			echo To: $mail_to
 			echo "Subject: [sysbug] $prof $host $name down"
 			echo
+			#
+			# This must be done manually to match the vesion of the
+			# slash2 code base.
+			#
+			echo version is 45134.
 			echo core file is $base/$cf
 			echo binary is $base/c/$prog.$id
 			
