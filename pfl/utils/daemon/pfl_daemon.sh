@@ -31,6 +31,7 @@
 host=$(hostname -s)
 nodaemonize=0
 name=$prog
+coredir=c/$host
  
 # This is the default source code directory for the slash2 software. 
 # It can be overridden by the daemon config file (i.e., $prof.dcfg) 
@@ -219,7 +220,7 @@ postproc()
 
 	trap '' EXIT
 
-	cf=c/$prog.$id.core
+	cf=$prog.$id.core
 
 	# Rename the core to our "unique" name
 
@@ -261,8 +262,8 @@ postproc()
 			# slash2 code base.
 			#
 			echo slash2 version is 45143+
-			echo core file is $base/$cf
-			echo binary is $base/c/$prog.$id
+			echo core file is $base/$coredir/$cf
+			echo binary is $base/$coredir/$prog.$id
 			
 			# The following code used to be: echo log is $base/log/$host.$name/$tm
 			# However, that is probably predicated on using %t as the log file,
@@ -279,11 +280,11 @@ postproc()
 			gdb -batch -c $cf -x $cmdfile c/$prog.$id 2>&1 | $srcdir/tools/filter-pstack
 		} | sendmail -t
 
-		echo binary was $base/c/$prog.$id
+		echo binary was $base/$coredir/$prog.$id
 		echo log file was $base/log/$host.$name/$tm
 		rm -f $cmdfile
 	else
-		rm -f c/$prog.$id
+		rm -f $prog.$id
 	fi
 }
 
@@ -319,10 +320,14 @@ preproc()
 
 	mkdir -p $logdir
 	cd $base
-	mkdir -p c
+	mkdir -p $coredir
 
 	find log/$host.$name/ -type f -mtime +30 -exec rm -f {} \;
-	find c/ -type f -size 0 -exec rm -f {} \;
+	find $coredir -type f -size 0 -exec rm -f {} \;
+
+	# Running in my own directory to avoid conflicts
+
+	cd $coredir
 
 	# delete core files with no accompanying executable
 #	n=[0-9]
@@ -332,12 +337,11 @@ preproc()
 
 	while :; do
 		id=$RANDOM
-		[ -e c/$prog.$id ] || break
+		[ -e $prog.$id ] || break
 		sleep 1
 	done
 
-	mv -f *core* c/ 2>/dev/null
-	cp `which $prog` c/$prog.$id
+	cp `which $prog` $prog.$id
 	tm=$(date +%s)
 	trap cleanup EXIT
 }
