@@ -281,7 +281,12 @@ postproc()
 		} | sendmail -t
 
 		echo binary was $base/$coredir/$prog.$id
-		echo log file was $base/log/$host.$name/$tm
+
+		# The log file format is now %t.$$ for all three services. At least
+		# the tm part is accurate as long as the service created the log file
+		# within the same second.
+
+		echo log file was likely $base/log/$host.$name/$tm.pid
 		rm -f $cmdfile
 	else
 		rm -f $prog.$id
