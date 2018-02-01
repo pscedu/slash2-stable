@@ -334,12 +334,6 @@ preproc()
 
 	cd $coredir
 
-	# delete core files with no accompanying executable
-#	n=[0-9]
-#	for i in c/*.$n$n$n c/*.$n$n$n$n c/*.$n$n$n$n$n; do
-#		[ -e $i.core ] || rm $i
-#	done
-
 	while :; do
 		id=$RANDOM
 		[ -e $prog.$id ] || break
