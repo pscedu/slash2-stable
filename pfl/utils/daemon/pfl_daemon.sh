@@ -204,7 +204,7 @@ mygdb()
 		echo set print pretty
 		echo r
 	} > $tmpfn
-	export GDBHISTFILE=c/$prog.$id.gdbhist
+	export GDBHISTFILE=$coredir/$prog.$id.gdbhist
 
 	# hack for some systems
 	[ -e /bin/bash ] && export SHELL=/bin/bash
@@ -277,7 +277,7 @@ postproc()
 			echo --------------------------------------------------
 			tail $PSC_LOG_FILE_LINK
 			echo --------------------------------------------------
-			gdb -batch -c $cf -x $cmdfile c/$prog.$id 2>&1 | $srcdir/tools/filter-pstack
+			gdb -batch -c $cf -x $cmdfile $prog.$id 2>&1 | $srcdir/tools/filter-pstack
 		} | sendmail -t
 
 		echo binary was $base/$coredir/$prog.$id
