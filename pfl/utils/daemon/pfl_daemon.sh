@@ -220,7 +220,7 @@ postproc()
 
 	trap '' EXIT
 
-	cf=$prog.$id.core
+	cf=$prog.$id.cdump
 
 	# Rename the core to our "unique" name
 
