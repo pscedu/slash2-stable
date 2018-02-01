@@ -219,7 +219,7 @@ postproc()
 
 	trap '' EXIT
 
-	cf=c/$prog.$id.$$.core
+	cf=c/$prog.$id.core
 
 	# Rename the core to our "unique" name
 
@@ -260,7 +260,7 @@ postproc()
 			# This is done manually to match the version of the
 			# slash2 code base.
 			#
-			echo slash2 version is 45140+
+			echo slash2 version is 45143+
 			echo core file is $base/$cf
 			echo binary is $base/c/$prog.$id
 			
