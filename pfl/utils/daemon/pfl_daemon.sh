@@ -261,7 +261,7 @@ postproc()
 			# This is done manually to match the version of the
 			# slash2 code base.
 			#
-			echo slash2 version is 45143+
+			echo slash2 version is 45144+
 			echo core file is $base/$coredir/$cf
 			echo binary is $base/$coredir/$prog.$id
 			
