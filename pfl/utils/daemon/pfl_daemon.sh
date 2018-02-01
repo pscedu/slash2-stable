@@ -31,6 +31,7 @@
 host=$(hostname -s)
 nodaemonize=0
 name=$prog
+coredir=c/$host
  
 # This is the default source code directory for the slash2 software. 
 # It can be overridden by the daemon config file (i.e., $prof.dcfg) 
@@ -143,18 +144,18 @@ loadprof()
 
 apply_host_prefs()
 {
-	local narg=0 base fn
+	local narg=0 tmpbase fn
 
 	vprint "searching for profile; prof=$prof; host=$host; prog=$prog"
 
 	for dir in %%INST_BASE%%; do
-		base=$dir/pfl_daemon.cfg
-		[ -d $base ] || continue
+		tmpbase=$dir/pfl_daemon.cfg
+		[ -d $tmpbase ] || continue
 
-		fn=$base/local
+		fn=$tmpbase/local
 		[ -f $fn ] && . $fn
 
-		fn=$base/$prof.dcfg
+		fn=$tmpbase/$prof.dcfg
 		[ -f $fn ] || continue
 
 		av="$@"
@@ -203,7 +204,7 @@ mygdb()
 		echo set print pretty
 		echo r
 	} > $tmpfn
-	export GDBHISTFILE=c/$prog.$id.gdbhist
+	export GDBHISTFILE=$coredir/$prog.$id.gdbhist
 
 	# hack for some systems
 	[ -e /bin/bash ] && export SHELL=/bin/bash
@@ -219,7 +220,7 @@ postproc()
 
 	trap '' EXIT
 
-	cf=c/$prog.$id.core
+	cf=$prog.$id.cdump
 
 	# Rename the core to our "unique" name
 
@@ -260,9 +261,9 @@ postproc()
 			# This is done manually to match the version of the
 			# slash2 code base.
 			#
-			echo slash2 version is 45143+
-			echo core file is $base/$cf
-			echo binary is $base/c/$prog.$id
+			echo slash2 version is 45144+
+			echo core file is $base/$coredir/$cf
+			echo binary is $base/$coredir/$prog.$id
 			
 			# The following code used to be: echo log is $base/log/$host.$name/$tm
 			# However, that is probably predicated on using %t as the log file,
@@ -276,14 +277,19 @@ postproc()
 			echo --------------------------------------------------
 			tail $PSC_LOG_FILE_LINK
 			echo --------------------------------------------------
-			gdb -batch -c $cf -x $cmdfile c/$prog.$id 2>&1 | $srcdir/tools/filter-pstack
+			gdb -batch -c $cf -x $cmdfile $prog.$id 2>&1 | $srcdir/tools/filter-pstack
 		} | sendmail -t
 
-		echo binary was $base/c/$prog.$id
-		echo log file was $base/log/$host.$name/$tm
+		echo binary was $base/$coredir/$prog.$id
+
+		# The log file format is now %t.$$ for all three services. At least
+		# the tm part is accurate as long as the service created the log file
+		# within the same second.
+
+		echo log file was likely $base/log/$host.$name/$tm.pid
 		rm -f $cmdfile
 	else
-		rm -f c/$prog.$id
+		rm -f $prog.$id
 	fi
 }
 
@@ -319,25 +325,22 @@ preproc()
 
 	mkdir -p $logdir
 	cd $base
-	mkdir -p c
+	mkdir -p $coredir
 
 	find log/$host.$name/ -type f -mtime +30 -exec rm -f {} \;
-	find c/ -type f -size 0 -exec rm -f {} \;
+	find $coredir -type f -size 0 -exec rm -f {} \;
 
-	# delete core files with no accompanying executable
-#	n=[0-9]
-#	for i in c/*.$n$n$n c/*.$n$n$n$n c/*.$n$n$n$n$n; do
-#		[ -e $i.core ] || rm $i
-#	done
+	# Running in my own directory to avoid conflicts
+
+	cd $coredir
 
 	while :; do
 		id=$RANDOM
-		[ -e c/$prog.$id ] || break
+		[ -e $prog.$id ] || break
 		sleep 1
 	done
 
-	mv -f *core* c/ 2>/dev/null
-	cp `which $prog` c/$prog.$id
+	cp `which $prog` $prog.$id
 	tm=$(date +%s)
 	trap cleanup EXIT
 }
