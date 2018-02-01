@@ -337,7 +337,7 @@ preproc()
 	done
 
 	mv -f *core* c/ 2>/dev/null
-	cp `which $prog` c/$prog.$$.$id
+	cp `which $prog` c/$prog.$id
 	tm=$(date +%s)
 	trap cleanup EXIT
 }
