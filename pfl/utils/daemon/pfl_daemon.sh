@@ -144,18 +144,18 @@ loadprof()
 
 apply_host_prefs()
 {
-	local narg=0 base fn
+	local narg=0 tmpbase fn
 
 	vprint "searching for profile; prof=$prof; host=$host; prog=$prog"
 
 	for dir in %%INST_BASE%%; do
-		base=$dir/pfl_daemon.cfg
-		[ -d $base ] || continue
+		tmpbase=$dir/pfl_daemon.cfg
+		[ -d $tmpbase ] || continue
 
-		fn=$base/local
+		fn=$tmpbase/local
 		[ -f $fn ] && . $fn
 
-		fn=$base/$prof.dcfg
+		fn=$tmpbase/$prof.dcfg
 		[ -f $fn ] || continue
 
 		av="$@"
