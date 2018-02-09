@@ -404,6 +404,9 @@ _rundaemon()
 	# sometimes reads garbage and abort. We have to kill slashd.sh to
 	# restart slashd.
 
+	# This should also pick up a new version of the wrapper script that
+	# has been installed.
+
 	exec $0 "${bkav[@]}"
 }
 
