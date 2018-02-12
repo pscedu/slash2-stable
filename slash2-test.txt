@@ -1016,3 +1016,9 @@ zhihui@zebes: /zzh-slash2/zhihui/linux-4.14.15$ find . | wc -l
 112592
 zhihui@zebes: /zzh-slash2/zhihui/linux-4.14.15$ 
 
+
+02/10/2018
+----------
+
+128 iozone -a parallel test on orange/lemon/zebes: Total elapsed time: 168928 seconds.
+
