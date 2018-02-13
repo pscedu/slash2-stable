@@ -3,7 +3,7 @@
  * %ISC_START_LICENSE%
  * ---------------------------------------------------------------------
  * Copyright 2015-2016, Google, Inc.
- * Copyright 2006-2017, Pittsburgh Supercomputing Center
+ * Copyright 2006-2016, Pittsburgh Supercomputing Center
  * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -2473,8 +2473,9 @@ psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 		FMTSTRCASE('n', "s", __progname)
 	);
 
+	/* refuse to start to avoid troubles down the road */
 	if (unlink(saun->sun_path) == -1 && errno != ENOENT)
-		psclog_error("unlink %s", saun->sun_path);
+		psc_fatal("fail to unlink old socket %s", saun->sun_path);
 
 	spinlock(&psc_umask_lock);
 	old_umask = umask(S_IXUSR | S_IXGRP | S_IWOTH | S_IROTH |
