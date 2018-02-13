@@ -2462,7 +2462,7 @@ psc_ctlthr_spawn_listener(const char *ofn, int acthrtype)
 
 	s = socket(AF_LOCAL, SOCK_STREAM, PF_UNSPEC);
 	if (s == -1)
-		psc_fatal("socket");
+		psc_fatal("fail to create local stream socket");
 
 	saun->sun_family = AF_LOCAL;
 	SOCKADDR_SETLEN(saun);
