@@ -31,7 +31,7 @@
 host=$(hostname -s)
 nodaemonize=0
 name=$prog
-coredir=c/$host
+coredir=core/$host
  
 # This is the default source code directory for the slash2 software. 
 # It can be overridden by the daemon config file (i.e., $prof.dcfg) 
@@ -262,17 +262,14 @@ postproc()
 			# slash2 code base. It should be the last submit to
 			# to be accurate.
 			#
-			echo slash2 version is 45164+
+			echo slash2 version is 45166+
 			echo core file is $base/$coredir/$cf
 			echo binary is $base/$coredir/$prog.$id
 			
-			# The following code used to be: echo log is $base/log/$host.$name/$tm
-			# However, that is probably predicated on using %t as the log file,
-			# which is no longer true.  We use %t.$$ now.  In addition, the use of
-			# of tm is suspicious, depending on whether slash2 can create the log
-			# file within the same second.
+			# As long as our our daemon open the file within the same
+			# second, the log file name will match.
 
-			echo log is most likely $PSC_LOG_FILE_LINK
+			echo log is most likely $base/log/$host.$name/$tm
 
 			[ $ex -gt 128 ] && echo exited via signal $((ex-128))
 			echo --------------------------------------------------
@@ -283,11 +280,7 @@ postproc()
 
 		echo binary was $base/$coredir/$prog.$id
 
-		# The log file format is now %t.$$ for all three services. At least
-		# the tm part is accurate as long as the service created the log file
-		# within the same second.
-
-		echo log file was likely $base/log/$host.$name/$tm.pid
+		echo log file was most likely $base/log/$host.$name/$tm
 		rm -f $cmdfile
 	else
 		rm -f $prog.$id
@@ -340,6 +333,8 @@ preproc()
 		[ -e $prog.$id ] || break
 		sleep 1
 	done
+
+	# Make a copy before hand.
 
 	cp `which $prog` $prog.$id
 	tm=$(date +%s)
