@@ -163,27 +163,22 @@ msl_pgcache_put(void *p)
 	LIST_CACHE_ULOCK(&free_page_buffers);
 }
 
-void
+int
 msl_pgcache_reap(void)
 {
 	void *p;
-	static int last;
-	int i, rc, nfree;
+	int i, rc, nfree, didwork;
 
-	bmpce_reaper(bmpce_pool);
-
-	if (msl_bmpce_gen != last) {
-		last = msl_bmpce_gen;
-		return;
-	}
+	didwork = bmpce_reaper(bmpce_pool);
 
 	/* (gdb) p bmpce_pool.ppm_u.ppmu_explist.pexl_pll.pll_nitems */
 	nfree = bmpce_pool->ppm_nfree; 
 	psc_pool_try_shrink(bmpce_pool, nfree);
 
 	if (lc_nitems(&free_page_buffers) <= bmpce_pool->ppm_total)
-		return;
+		return (didwork);
 
+	didwork = 1;
 	nfree = lc_nitems(&free_page_buffers) - bmpce_pool->ppm_total;
 	for (i = 0; i < nfree; i++) {
 		p = lc_getnb(&free_page_buffers);
@@ -198,6 +193,7 @@ msl_pgcache_reap(void)
 	LIST_CACHE_LOCK(&free_page_buffers);
 	page_buffers_count -= i;
 	LIST_CACHE_ULOCK(&free_page_buffers);
+	return (didwork);
 }
 
 /*
@@ -539,7 +535,7 @@ bmpc_biorqs_flush(struct bmap *b)
 
 #define	PAGE_RECLAIM_BATCH	1
 
-/* Called from psc_pool_reap() */
+/* Called from psc_pool_reap() and msl_pgcache_reap() */
 int
 bmpce_reaper(struct psc_poolmgr *m)
 {
