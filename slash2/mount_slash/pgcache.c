@@ -177,6 +177,7 @@ msl_pgcache_reap(void)
 		return;
 	}
 
+	/* (gdb) p bmpce_pool.ppm_u.ppmu_explist.pexl_pll.pll_nitems */
 	nfree = bmpce_pool->ppm_nfree; 
 	psc_pool_try_shrink(bmpce_pool, nfree);
 
