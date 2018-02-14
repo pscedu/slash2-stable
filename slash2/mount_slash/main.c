@@ -4023,8 +4023,11 @@ msreapthr_main(struct psc_thread *thr)
 			idle++;
 		didwork = msl_pgcache_reap();
 		timeout = 30;
+		/*
+ 		 * Try to reclaim 1G worth of pages in about 30 minutes.
+ 		 */
 		if (didwork && idle > 10)
-			timeout = 3;
+			timeout = 1;
 		psc_waitq_waitrel_s(&sl_freap_waitq, NULL, timeout);
 	}
 }
