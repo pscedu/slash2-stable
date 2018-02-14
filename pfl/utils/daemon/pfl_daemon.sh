@@ -262,7 +262,7 @@ postproc()
 			# slash2 code base. It should be the last submit to
 			# to be accurate.
 			#
-			echo slash2 version is 45154+
+			echo slash2 version is 45164+
 			echo core file is $base/$coredir/$cf
 			echo binary is $base/$coredir/$prog.$id
 			
