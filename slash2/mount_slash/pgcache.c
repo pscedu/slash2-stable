@@ -62,7 +62,7 @@ RB_GENERATE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
     bmpce_cmp)
 RB_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
 
-struct psc_listcache	 page_buffers;
+struct psc_listcache	 free_page_buffers;
 int			 page_buffers_count;	/* total, including free */
 
 struct psc_listcache	 bmpcLru;
@@ -75,7 +75,7 @@ msl_pgcache_init(void)
 	int i;
 	void *p;
 
-	lc_reginit(&page_buffers, struct bmap_page_entry,
+	lc_reginit(&free_page_buffers, struct bmap_page_entry,
 	    page_lentry, "pagebuffers");
 
 	for (i = 0; i < bmpce_pool->ppm_min; i++) {
@@ -88,7 +88,7 @@ msl_pgcache_init(void)
 		OPSTAT_INCR("mmap-success");
 		page_buffers_count++;
 		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
-		lc_add(&page_buffers, p);
+		lc_add(&free_page_buffers, p);
 	}
 }
 
@@ -99,12 +99,12 @@ msl_pgcache_get(int wait)
 	struct timespec ts;
 	static int warned = 0, failed = 0;
 
-	p = lc_getnb(&page_buffers);
+	p = lc_getnb(&free_page_buffers);
 	if (p)
 		return p;
  again:
 
-	LIST_CACHE_LOCK(&page_buffers);
+	LIST_CACHE_LOCK(&free_page_buffers);
 	if (page_buffers_count < bmpce_pool->ppm_max) {
 		p = mmap(NULL, BMPC_BUFSZ, PROT_READ|PROT_WRITE, 
 		    MAP_ANONYMOUS|MAP_SHARED, -1, 0);
@@ -112,13 +112,13 @@ msl_pgcache_get(int wait)
 			warned = 0;
 			OPSTAT_INCR("mmap-success");
 			page_buffers_count++;
-			LIST_CACHE_ULOCK(&page_buffers);
+			LIST_CACHE_ULOCK(&free_page_buffers);
 			return (p);
 		}
 		failed = 1;
 		OPSTAT_INCR("mmap-failure");
 	}
-	LIST_CACHE_ULOCK(&page_buffers);
+	LIST_CACHE_ULOCK(&free_page_buffers);
 
 	if (failed && warned < 5) {
 		warned++;
@@ -131,13 +131,13 @@ msl_pgcache_get(int wait)
 		 */
 		ts.tv_nsec = 0;
 		ts.tv_sec = time(NULL) + 30;
-		p = lc_gettimed(&page_buffers, &ts);
+		p = lc_gettimed(&free_page_buffers, &ts);
 		if (!p) {
 			OPSTAT_INCR("pagecache-get-retry");
 			goto again;
 		}
 	} else
-		p = lc_getnb(&page_buffers);
+		p = lc_getnb(&free_page_buffers);
 	return (p);
 }
 
@@ -148,7 +148,7 @@ msl_pgcache_put(void *p)
 	/*
  	 * Do not assume that the max value has not changed.
  	 */
-	LIST_CACHE_LOCK(&page_buffers);
+	LIST_CACHE_LOCK(&free_page_buffers);
 	if (page_buffers_count > bmpce_pool->ppm_max) {
 		rc = munmap(p, BMPC_BUFSZ);
 		if (rc)
@@ -158,9 +158,9 @@ msl_pgcache_put(void *p)
 		page_buffers_count--;
 	} else {
 		INIT_PSC_LISTENTRY((struct psc_listentry *)p);
-		lc_add(&page_buffers, p);
+		lc_add(&free_page_buffers, p);
 	}
-	LIST_CACHE_ULOCK(&page_buffers);
+	LIST_CACHE_ULOCK(&free_page_buffers);
 }
 
 void
@@ -181,12 +181,12 @@ msl_pgcache_reap(void)
 	nfree = bmpce_pool->ppm_nfree; 
 	psc_pool_try_shrink(bmpce_pool, nfree);
 
-	if (lc_nitems(&page_buffers) <= bmpce_pool->ppm_total)
+	if (lc_nitems(&free_page_buffers) <= bmpce_pool->ppm_total)
 		return;
 
-	nfree = lc_nitems(&page_buffers) - bmpce_pool->ppm_total;
+	nfree = lc_nitems(&free_page_buffers) - bmpce_pool->ppm_total;
 	for (i = 0; i < nfree; i++) {
-		p = lc_getnb(&page_buffers);
+		p = lc_getnb(&free_page_buffers);
 		if (!p)
 			break;
 		rc = munmap(p, BMPC_BUFSZ);
@@ -195,9 +195,9 @@ msl_pgcache_reap(void)
 		else
 			OPSTAT_INCR("munmap-reap-success");
 	}
-	LIST_CACHE_LOCK(&page_buffers);
+	LIST_CACHE_LOCK(&free_page_buffers);
 	page_buffers_count -= i;
-	LIST_CACHE_ULOCK(&page_buffers);
+	LIST_CACHE_ULOCK(&free_page_buffers);
 }
 
 /*
