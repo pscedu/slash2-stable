@@ -557,6 +557,7 @@ dircache_insert(struct fidc_membh *d, const char *name, uint64_t ino)
 
 	INIT_PSC_LISTENTRY(&dce->dce_entry);
 	psclist_add_tail(&dce->dce_entry, &fci->fcid_entlist);
+	psc_hashent_init(&msl_namecache_hashtbl, dce);
 	psc_hashbkt_add_item(&msl_namecache_hashtbl, b, dce);
 	psc_hashbkt_put(&msl_namecache_hashtbl, b);
 
@@ -588,6 +589,7 @@ dircache_delete(struct fidc_membh *d, const char *name)
 	dce = _psc_hashbkt_search(&msl_namecache_hashtbl, b, 0,
 		dircache_ent_cmp, &tmpdce, NULL, NULL, &tmpdce.dce_key);
 	if (dce) {
+		/* (gdb) p fci->u.d.count */
 		fci->fcid_count--;
 		OPSTAT_INCR("msl.dircache-delete-hash");
 		psclist_del(&dce->dce_entry, &fci->fcid_entlist);
