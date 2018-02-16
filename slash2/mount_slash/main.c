@@ -763,6 +763,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 			return (0);
 		}
 		OPSTAT_INCR("attr-timeout");
+		f->fcmh_flags &= ~FCMH_HAVE_ATTRS;
 	}
 
 	/* Attrs have expired or do not exist. */
@@ -1221,6 +1222,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 			goto rpc;
 		}
 		OPSTAT_INCR("msl.dircache-lookup-hit-ok");
+		FCMH_LOCK(c);
 		if (c->fcmh_flags & FCMH_HAVE_ATTRS) {
 			PFL_GETTIMEVAL(&now);
 			fci = fcmh_2_fci(c);
@@ -1228,8 +1230,10 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 			if (now.tv_sec < fci->fci_age.tv_sec) {
 				if (sstb)
 					*sstb = c->fcmh_sstb;
+				FCMH_ULOCK(c);
 				goto out;
 			}
+			c->fcmh_flags &= ~FCMH_HAVE_ATTRS;
 		}
 		fcmh_op_done(c);
 		c = NULL;
@@ -4015,7 +4019,9 @@ msreapthr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 
 		while (fidc_reap(0, SL_FIDC_REAPF_EXPIRED));
-
+		/*
+ 		 * Background reaping to make pages available before use.
+ 		 */
 		didwork = bmpce_reaper(bmpce_pool);
 		if (msl_bmpce_gen != last) {
 			idle = 0;
