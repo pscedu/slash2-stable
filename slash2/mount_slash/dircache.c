@@ -216,6 +216,7 @@ dircache_purge(struct fidc_membh *d)
 		dce->dce_flag = 0;
 		psc_pool_return(dircache_ent_pool, dce);
 	}
+	psc_assert(!fci->fcid_count);
 }
 
 /*
