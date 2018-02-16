@@ -260,9 +260,9 @@ postproc()
 			#
 			# This is done manually to match the version of the
 			# slash2 code base. It should be the last submit to
-			# to be accurate.
+			# to be accurate. Use + to allow lazy update.
 			#
-			echo slash2 version is 45166+
+			echo slash2 version is 45170+
 			echo core file is $base/$coredir/$cf
 			echo binary is $base/$coredir/$prog.$id
 			
