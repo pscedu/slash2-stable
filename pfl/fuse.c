@@ -236,6 +236,8 @@ pscfs_fuse_new(void)
 	/*
 	 * This should never fail (famous last words) since the fd
 	 * is only closed in fuse_listener_exit()
+	 *
+	 * Receive fuse_fs_info_t() from pscfs_fuse_newfs().
 	 */
 	psc_assert(fd_read_loop(pflfs_fds[0].fd, &fs,
 	    sizeof(fuse_fs_info_t)) == 0);
