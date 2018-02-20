@@ -196,7 +196,7 @@ slmconnthr_spawn(void)
 		if (r->res_type == SLREST_MDS)
 			; // slm_getmcsvcf(m, CSVCF_NORECON);
 		else if (RES_ISFS(r))
-			slm_geticsvcf(m, CSVCF_NORECON);
+			slm_geticsvcf(m, CSVCF_NORECON, 0);
 }
 
 /*
