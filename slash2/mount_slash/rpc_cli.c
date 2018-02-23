@@ -402,7 +402,14 @@ slc_rmc_getcsvc(struct sl_resm *resm, struct slrpc_cservice **csvcp, int timeout
 	*csvcp = slc_getmcsvc(resm, timeout);
 	if (*csvcp)
 		return (0);
-	return (resm->resm_csvc->csvc_lasterrno);
+
+	if (timeout) {
+		OPSTAT_INCR("msl.timeout-errno");
+		return (resm->resm_csvc->csvc_timeouterrno);
+	} else {
+		OPSTAT_INCR("msl.last-errno");
+		return (resm->resm_csvc->csvc_lasterrno);
+	}
 }
 
 void

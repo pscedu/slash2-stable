@@ -871,15 +871,22 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 		OPSTAT_INCR("csvc-wait");
 
-		rc = psc_waitq_waitrel_s(&csvc->csvc_waitq, &csvc->csvc_lock, timeout);
-
-		CSVC_LOCK(csvc);
-		if (rc) {
- 	 		psc_assert(rc == ETIMEDOUT);
-			OPSTAT_INCR("csvc-wait-timeout");
-			success = 0;
-			csvc->csvc_lasterrno = rc;
-			goto out2;
+		if (timeout) {
+			/*  XXX don't wait again */
+			rc = psc_waitq_waitrel_s(&csvc->csvc_waitq, 
+			    &csvc->csvc_lock, timeout);
+			CSVC_LOCK(csvc);
+			if (rc) {
+				success = 0;
+ 	 			psc_assert(rc == ETIMEDOUT);
+				OPSTAT_INCR("csvc-wait-timeout");
+				csvc->csvc_timeouterrno = rc;
+				goto out2;
+			}
+		} else {
+			psc_waitq_wait(&csvc->csvc_waitq, 
+			    &csvc->csvc_lock);
+			CSVC_LOCK(csvc);
 		}
 
 		OPSTAT_INCR("csvc-wait-recheck");
@@ -941,7 +948,10 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		goto out2;
 	}
 
-	csvc->csvc_lasterrno = rc;
+	if (timeout)
+		csvc->csvc_timeouterrno = rc;
+	else
+		csvc->csvc_lasterrno = rc;
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
 	csvc->csvc_flags &= ~CSVCF_CONNECTING;
 	psc_waitq_wakeall(&csvc->csvc_waitq);
