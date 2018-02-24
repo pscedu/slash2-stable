@@ -805,6 +805,7 @@ _pscrpc_set_check(struct pscrpc_request_set *set, int finish_one)
 			/* NB could be on delayed list */
 			pscrpc_unregister_reply(req);
 			req->rq_status = -EINTR;
+			OPSTAT_INCR("rpc.check-intr");
 			req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
 
 			spinlock(&imp->imp_lock);
@@ -1055,6 +1056,7 @@ pscrpc_expire_one_request(struct pscrpc_request *req, int force)
 	silent= req->rq_silent_timeout;
 	req->rq_err = req->rq_timedout = 1;
 	req->rq_status = -ETIMEDOUT;
+	OPSTAT_INCR("rpc.one-timeout");
 	freelock(&req->rq_lock);
 
 	if (!silent)
@@ -1396,6 +1398,7 @@ pscrpc_abort_inflight(struct pscrpc_import *imp)
 		 if (req->rq_import_generation < imp->imp_generation) {
 			req->rq_err = 1;
 			req->rq_status = -ETIMEDOUT;
+			OPSTAT_INCR("rpc.inflight-timeout");
 			pscrpc_wake_client_req(req);
 		 }
 		 //req->rq_abort_reply = 1;
