@@ -1040,7 +1040,7 @@ int
 pscrpc_expire_one_request(struct pscrpc_request *req, int force)
 {
 	int silent;
-	char buf[PSCRPC_NIDSTR_SIZE];
+	char buf[512];
 	struct pscrpc_import *imp = req->rq_import;
 
 	psc_assert(imp);
