@@ -344,6 +344,7 @@ interrupted_request(void *data)
 	DEBUG_REQ(PLL_DIAG, req, buf, "request interrupted");
 	spinlock(&req->rq_lock);
 	req->rq_intr = 1;
+	OPSTAT_INCR("pfl.rpc_intr");
 	freelock(&req->rq_lock);
 }
 

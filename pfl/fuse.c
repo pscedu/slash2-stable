@@ -150,6 +150,7 @@ pscfs_fuse_interrupt(__unusedx fuse_req_t req, void *d)
 
 	thr = pfr->pfr_thread;
 	pfr->pfr_interrupted = 1;
+	OPSTAT_INCR("msl.fuse-intr");
 	psclog_diag("op interrupted, thread = %p, pfr = %p, name = %s", 
 		thr, pfr, pfr->pfr_opname);
 }
