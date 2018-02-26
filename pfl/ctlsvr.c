@@ -765,6 +765,72 @@ psc_ctlparam_log_points(int fd, struct psc_ctlmsghdr *mh,
 
 
 static long long max_rss;
+static long long max_vsz;
+
+
+int
+psc_ctlparam_get_vsz(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
+{
+	long long vsz;
+	char buf[1024];
+	char *line, ch;
+	char statname[256];
+	int rc = 1, statfd, len, set, skip;
+
+	if (nlevels > 2)
+		return (psc_ctlsenderr(fd, mh, NULL, "invalid field"));
+
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0) {
+		if (nlevels == 2)
+			rc = psc_ctlsenderr(fd, mh, NULL, "sys.vsz: "
+			    "not thread specific");
+		return (rc);
+	}
+
+	levels[0] = "sys";
+	levels[1] = "vsz";
+
+	set = (mh->mh_type == PCMT_SETPARAM);
+
+	if (set) 
+		return (psc_ctlsenderr(fd, mh, NULL,
+		    "field is read-only", levels[1]));
+
+	skip = 0;
+	snprintf(statname, sizeof(statname), "/proc/%d/stat", pfl_pid);
+	statfd = open(statname, O_RDONLY);
+	if (statfd < 0) 
+		return (psc_ctlsenderr(fd, mh, NULL,
+		    "fail to open file %s", statname));
+
+	len = read(statfd, buf, 1024);
+	if (len < 0) 
+		return (psc_ctlsenderr(fd, mh, NULL,
+		    "fail to read file %s", statname));
+	close(statfd);
+	skip = 0;
+	line = (char *)buf;
+	while (1) {
+		ch = *line++;
+		if (ch == 0x20) {
+			skip++;
+			if (skip == 22)
+				break;
+		}
+	}
+	sscanf(line, "%lld ", &vsz);
+
+	if (vsz > max_vsz)
+		max_vsz = vsz;
+
+	line = (char *)buf;
+	snprintf(line, sizeof(buf), "%lldkB", vsz / 1024);
+	rc = psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
+	    levels, 2, line);
+	return (rc);
+}
 
 int
 psc_ctlparam_get_rss(int fd, struct psc_ctlmsghdr *mh,
@@ -821,7 +887,7 @@ psc_ctlparam_get_rss(int fd, struct psc_ctlmsghdr *mh,
 	sscanf(line, "%lld ", &rss);
 
 	if (rss > max_rss)
-		max_rss = rss;
+		max_rss = rss; 
 
 	line = (char *)buf;
 	snprintf(line, sizeof(buf), "%lldkB", rss * 4);
