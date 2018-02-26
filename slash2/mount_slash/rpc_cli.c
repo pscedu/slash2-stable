@@ -424,6 +424,14 @@ slc_rmc_getcsvc(struct sl_resm *resm, struct slrpc_cservice **csvcp, int timeout
 	} else
 		rc = resm->resm_csvc->csvc_lasterrno;
 	CSVC_ULOCK(resm->resm_csvc);
+	/*
+ 	 * We must fill csvcp if we return a success.
+ 	 */
+	if (!rc) {
+		*csvcp = slc_getmcsvc_nb(resm, timeout);
+		if (*csvcp == NULL)
+			rc = ETIMEDOUT;
+	}
 	return (rc);
 }
 
