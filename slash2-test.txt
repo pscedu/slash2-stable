@@ -283,6 +283,10 @@ Unit tests
 
 16. Verify silly-rename works by unlinking an opened file.
 
+17. Do 3 parallel self build in a loop with one kernel source tree tar/rm -rf/build in the background.
+
+    This has catched some regression recently for me.
+
 05/30/2017
 ----------
 
