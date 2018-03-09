@@ -122,7 +122,8 @@ loadprof()
 		tag=*)	[ x"$1" = x"${fl#tag=}" ] || return 1 ;;
 		[A-Z][A-Z_]*=*)
 
-			# Handle environment variables
+			# Handle environment variables. This allows the use
+			# of CTL_SOCK_FILE=xxx directly without ctlsock=xxx.
 
 			export "$fl";;
 		*)	warn "unknown setting $fl";;
