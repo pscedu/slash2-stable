@@ -122,7 +122,8 @@ loadprof()
 		tag=*)	[ x"$1" = x"${fl#tag=}" ] || return 1 ;;
 		[A-Z][A-Z_]*=*)
 
-			# Handle environment variables
+			# Handle environment variables. This allows the use
+			# of CTL_SOCK_FILE=xxx directly without ctlsock=xxx.
 
 			export "$fl";;
 		*)	warn "unknown setting $fl";;
@@ -262,7 +263,7 @@ postproc()
 			# slash2 code base. It should be the last submit to
 			# to be accurate. Use + to allow lazy update.
 			#
-			echo slash2 version is 45170+
+			echo slash2 version is 45194+
 			echo core file is $base/$coredir/$cf
 			echo binary is $base/$coredir/$prog.$id
 			
