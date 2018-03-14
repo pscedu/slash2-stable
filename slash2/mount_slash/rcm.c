@@ -355,7 +355,6 @@ slc_rcm_handler(struct pscrpc_request *rq)
 	case SRMT_BMAPDIO:
 		rc = msrcm_handle_bmapdio(rq);
 		break;
-
 	default:
 		psclog_errorx("unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -PFLERR_NOSYS;
