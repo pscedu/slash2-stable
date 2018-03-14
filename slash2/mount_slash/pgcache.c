@@ -566,6 +566,41 @@ bmpc_biorqs_flush(struct bmap *b)
 	}
 }
 
+void
+bmpc_biorqs_destroy_locked(struct bmap *b)
+{
+	struct psc_dynarray a = DYNARRAY_INIT;
+	struct bmap_pagecache *bmpc;
+	struct bmpc_ioreq *r;
+	int i;
+
+	BMAP_LOCK_ENSURE(b);
+
+	bmpc = bmap_2_bmpc(b);
+	while ((r = RB_ROOT(&bmpc->bmpc_biorqs)) != NULL) {
+		psc_dynarray_add(&a, r);
+		/*
+		 * Avoid another thread from reaching here and
+		 * destroying the same biorq again.
+		 */
+		BIORQ_LOCK(r);
+		psc_assert(r->biorq_flags & BIORQ_FLUSHRDY);
+		r->biorq_flags &= ~BIORQ_ONTREE;
+		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
+		BIORQ_ULOCK(r);
+	}
+	BMAP_ULOCK(b);
+
+	DYNARRAY_FOREACH(r, i, &a) {
+		OPSTAT_INCR("msl.biorq-destroy-batch");
+		msl_biorq_release(r);
+	}
+
+	psc_dynarray_free(&a);
+
+	BMAP_LOCK(b);
+}
+
 #define	PAGE_RECLAIM_BATCH	1
 
 /* Called from psc_pool_reap() and msl_pgcache_reap() */

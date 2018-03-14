@@ -327,6 +327,8 @@ extern struct psc_listcache	 msl_readahead_pages;
 
 extern struct psc_listcache	 bmpcLru;
 
+void   bmpc_biorqs_destroy_locked(struct bmap *);
+
 static __inline void
 bmpc_init(struct bmap_pagecache *bmpc)
 {

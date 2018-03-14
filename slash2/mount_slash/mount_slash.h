@@ -359,6 +359,10 @@ void	 parse_mapfile(void);
 void	 bmap_flushq_wake(int);
 void	 bmap_flush_resched(struct bmpc_ioreq *, int);
 
+void	 msreadahead_cancel(struct fidc_membh *);
+void	 slc_fcmh_invalidate_bmap(struct fidc_membh *, int);
+
+
 /* bmap flush modes (bmap_flushq_wake) */
 #define BMAPFLSH_RPCWAIT	(1 << 0)
 #define BMAPFLSH_EXPIRE		(1 << 1)
