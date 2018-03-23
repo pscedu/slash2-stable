@@ -70,9 +70,12 @@ bmap_remove(struct bmap *b)
 
 	DEBUG_BMAP(PLL_DIAG, b, "removing");
 
-	pfl_rwlock_wrlock(&f->fcmh_rwlock);
-	PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
-	pfl_rwlock_unlock(&f->fcmh_rwlock);
+	if (!(b->bcm_flags & BMAPF_DISCARD)) {
+		pfl_rwlock_wrlock(&f->fcmh_rwlock);
+		PSC_RB_XREMOVE(bmaptree, &f->fcmh_bmaptree, b);
+		pfl_rwlock_unlock(&f->fcmh_rwlock);
+	} else
+		OPSTAT_INCR("bmap-discard");
 
 	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
 	psc_pool_return(bmap_pool, b);

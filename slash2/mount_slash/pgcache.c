@@ -569,35 +569,30 @@ void
 bmpc_biorqs_destroy_locked(struct bmap *b)
 {
 	struct psc_dynarray a = DYNARRAY_INIT;
-	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r;
+	struct bmap_pagecache *bmpc;
 	int i;
 
 	BMAP_LOCK_ENSURE(b);
 
+	/*
+ 	 * To avoid double release of a ioreq.  This logic is protected by
+ 	 * BMAPF_SCHED and BMAP_LOCK.
+ 	 */
 	bmpc = bmap_2_bmpc(b);
-	while ((r = RB_ROOT(&bmpc->bmpc_biorqs)) != NULL) {
+	RB_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_biorqs)
 		psc_dynarray_add(&a, r);
-		/*
-		 * Avoid another thread from reaching here and
-		 * destroying the same biorq again.
-		 */
-		BIORQ_LOCK(r);
-		psc_assert(r->biorq_flags & BIORQ_FLUSHRDY);
-		r->biorq_flags &= ~BIORQ_ONTREE;
-		PSC_RB_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_biorqs, r);
-		BIORQ_ULOCK(r);
-	}
+
 	BMAP_ULOCK(b);
 
+	msl_bmap_cache_rls(b);
 	DYNARRAY_FOREACH(r, i, &a) {
-		OPSTAT_INCR("msl.biorq-destroy-batch");
+		/* p ((struct pfl_opstat *)pfl_opstats.pda_items[68]).opst_name */
+		OPSTAT_INCR("msl.biorq-discard-destroy");
 		msl_biorq_release(r);
 	}
-
-	psc_dynarray_free(&a);
-
 	BMAP_LOCK(b);
+	psc_dynarray_free(&a);
 }
 
 #define	PAGE_RECLAIM_BATCH	1
@@ -749,6 +744,7 @@ dump_bmpce_flags(uint32_t flags)
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");
+	fflush(stdout);
 }
 
 void
@@ -770,5 +766,6 @@ dump_biorq_flags(uint32_t flags)
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");
+	fflush(stdout);
 }
 #endif
