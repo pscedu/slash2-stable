@@ -2,7 +2,6 @@
 # $Id$
 # %ISC_START_LICENSE%
 # ---------------------------------------------------------------------
-# Copyright 2015-2016, Google, Inc.
 # Copyright 2013-2018, Pittsburgh Supercomputing Center
 # All rights reserved.
 #
@@ -263,7 +262,7 @@ postproc()
 			# slash2 code base. It should be the last submit to
 			# to be accurate. Use + to allow lazy update.
 			#
-			echo slash2 version is 45194+
+			echo slash2 version is 29+
 			echo core file is $base/$coredir/$cf
 			echo binary is $base/$coredir/$prog.$id
 			
