@@ -47,7 +47,10 @@ LEX:=		$(shell if ${NOTEMPTY} "${LEX}"; then			\
 			echo lex;					\
 		fi)
 
+# The following can/should be overridden with file local.mk in the same directory.
+ 
 INST_BASE?=	/local
+
 INST_BINDIR?=	${INST_BASE}/bin
 INST_SBINDIR?=	${INST_BASE}/sbin
 INST_LIBDIR?=	${INST_BASE}/lib
