@@ -1,0 +1,78 @@
+11/23/2015
+----------
+
+Self build in a loop generally works fine. But I see one instance of the following
+failure:
+
+lib/libzpool/libzpool-user.a: could not read symbols: File format not recognized
+
+Possible causes: (1) -511 error handling (2) read versus write race.
+
+11/30/2015
+----------
+
+Build Linux 4.2 kernel:
+
+kernel/sched/built-in.o: could not read symbols: File truncated
+make[1]: *** [kernel/built-in.o] Error 1
+make: *** [kernel] Error 2
+make: *** Waiting for unfinished jobs....
+  CC [M]  arch/x86/kvm/mtrr.o
+
+04/12/2016
+----------
+
+Saw the issue of 11/23/2015 again, the file size does not match between the good and bad
+files:
+
+-rw-rw-r-- 1 zhihui root 4783072 Apr 11 19:54 ./zfs-fuse/src/lib/libzpool/libzpool-user.a
+-rw-rw-r-- 1 zhihui root 4852730 Apr 11 21:07 ./zfs-fuse/src/lib/libzpool/libzpool-user.a
+
+Hard to reproduce, and no clue right now.
+
+04/23/2016
+----------
+
+Saw the following in my 4 way 4 hour parallel tests (the tests all passed though):
+
+[1461373640.06641400 sliricthr25:7ffee5ffb700:slvr slvr.c slvr_fsio 499] no backing file: 0x048c00000006315f:0 fd=-1
+[1461373640.06652100 sliricthr25:7ffee5ffb700:slvr ric.c sli_ric_handle_io 333] slvr@0xcce000 num=4 ref=1 ts=0:000000000 
+bii=0xa19a18 slab=0xcddc40 bmap=0xa199a0 fid=0x048c00000006315f iocb=(nil) flgs=f--l--- :: post io_prep rw=rd rv=-9
+[1461373640.06351100 sliricthr08:7fff277fe700:slvr slvr.c slvr_fsio 499] no backing file: 0x048c00000006315f:0 fd=-1
+[1461373640.06741200 sliricthr08:7fff277fe700:slvr ric.c sli_ric_handle_io 333] slvr@0xcda570 num=7 ref=1 ts=0:000000000 
+bii=0xa19a18 slab=0xcddc10 bmap=0xa199a0 fid=0x048c00000006315f iocb=(nil) flgs=f--l--- :: post io_prep rw=rd rv=-9
+
+
+05/01/2016
+----------
+
+I saw the following once in a looong while the following messsage in my tar-ssh.sh test:
+
+linux-git/scripts/.recordmcount.cmd
+linux-git/scripts/mksysmap
+linux-git/scripts/unifdef.c
+linux-git/scripts/gen_initramfs_list.sh
+tar: linux-git: file changed as we read it
+
+05/15/2016
+----------
+
+I use git to download a slash2 tree, replicate it to another IOS and try to build it there. The build fails
+with file .sconsign.dblite.  This must be tickled by replication.  See comments in file ino_compat.c.
+
+- FIXED -
+
+05/17/2016
+----------
+
+Rarely, the iozone -a test fails with the following ending:
+
+          131072   16384  809420  845865  1854258  1767181   99462  387310 1921290   117350   405174   140051   860074 1798069  1785815
+          262144      64  567824  679376   331244    17262
+Error writing block at 6291456
+write: Resource temporarily unavailable
+
+iozone: interrupted
+
+exiting iozone
+
