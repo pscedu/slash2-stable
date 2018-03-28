@@ -1,0 +1,1028 @@
+11/14/2016
+----------
+
+This file is used to record test results of slash2 stable tree.
+
+12/16/2016
+----------
+
+After I rework the throttling mechanism, I use bigfile3.c to create a test file and replicate it:
+
+zhihui@orange: ~/projects-orange/slash2/slmctl$ slmctl -sop | egrep "rate|repl-s"
+opstat                                          avg rate      max rate      cur rate         total
+repl-sched                                          0B/s       17.8G/s          0B/s         81.4G
+repl-schedwk-ok                                      0/s          32/s           0/s           652
+repl-success                                         0/s          32/s           0/s           652
+repl-success-aggr                                   0B/s        4.0G/s          0B/s         81.4G
+
+It is done in less than 15 minutes. So I have 80*1024/(15*60) = 91 MB/s
+
+This is on 10 year old hardware. Ethtool says the network speed is 1000Mb/s.
+
+01/05/2017
+----------
+
+zhihui@zebes: /zzh-slash2/zhihui$ time tar xf ~/gcc-6.3.0.tar.bz2 
+
+real	10m8.012s
+user	0m24.106s
+sys	0m17.363s
+
+zhihui@zebes: /zzh-slash2/zhihui$ cd gcc-6.3.0/
+zhihui@zebes: /zzh-slash2/zhihui/gcc-6.3.0$ ./configure --disable-multilib
+zhihui@zebes: /zzh-slash2/zhihui/gcc-6.3.0$ time make >& make.result
+
+real	70m38.089s
+user	149m42.010s
+sys	11m58.926s
+
+	<-- 09/11/2017: Failed due to ENOSPC to /tmp, will try TMPDIR next time.
+
+
+01/06/2017
+----------
+
+zhihui@yuzu: ~/projects-yuzu/slash2/tests$ bigfile.sh /zzh-slash2/zhihui/dir/
+Base name = /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat, file count = 9, seed = 1234, loop = 10.
+
+Try to allocate          123 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.00
+Try to allocate        24789 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.01
+Try to allocate    770924789 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.02
+Try to allocate       524789 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.03
+Try to allocate     22524789 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.04
+Try to allocate     57824789 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.05
+Try to allocate     52478900 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.06
+Try to allocate   2111524789 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.07
+Try to allocate   3111520000 bytes of working memory for file /zzh-slash2/zhihui/dir//yuzu.bigfile1.dat.08
+
+Memory for 9 files have been allocated/initialized successfully.
+
+Initial 9 files have been created successfully.
+
+Loop 0 on 9 files is done successfully.
+Loop 1 on 9 files is done successfully.
+Loop 2 on 9 files is done successfully.
+Loop 3 on 9 files is done successfully.
+Loop 4 on 9 files is done successfully.
+Loop 5 on 9 files is done successfully.
+Loop 6 on 9 files is done successfully.
+Loop 7 on 9 files is done successfully.
+Loop 8 on 9 files is done successfully.
+Loop 9 on 9 files is done successfully.
+
+Total elapsed time is 00:15:27.
+Seed = 4456, file name = /zzh-slash2/zhihui/dir//yuzu.bigfile2.dat, bsize = 5678, blocks = 1234567, size = 7009871426
+File has been created successfully.
+
+Total elapsed time is 00:05:55.
+Seed = 4456, file name = /zzh-slash2/zhihui/dir//yuzu.bigfile2.dat, bsize = 5678, blocks = 1234568, size = 7009871426
+No corruption has been found (last block has 0 bytes)
+
+Total elapsed time is 00:05:20.
+seed = 35438, # of threads = 5, block size = 71781, nblocks = 243456, file size = 87377575680.
+
+Thread   0 is done with errno = 0, fd =   4
+Thread   1 is done with errno = 0, fd =   5
+Thread   2 is done with errno = 0, fd =   6
+Thread   3 is done with errno = 0, fd =   7
+Thread   4 is done with errno = 0, fd =   8
+
+All threads has exited. Now verifying file contents ...
+
+
+Total elapsed time is 00:26:24.
+seed = 7738, # of threads = 6, block size = 71785, nblocks = 243656, file size = 104945075760.
+
+Thread   0 is done with errno = 0, fd =   4
+Thread   1 is done with errno = 0, fd =   5
+Thread   2 is done with errno = 0, fd =   6
+Thread   3 is done with errno = 0, fd =   7
+Thread   4 is done with errno = 0, fd =   8
+Thread   5 is done with errno = 0, fd =   9
+
+All threads has exited. Now verifying file contents ...
+
+
+Total elapsed time is 00:31:46.
+seed = 3873, # of threads = 7, block size = 91785, nblocks = 143659, file size = 92300189205.
+
+Thread   0 is done with errno = 0, fd =   4
+Thread   1 is done with errno = 0, fd =   5
+Thread   2 is done with errno = 0, fd =   6
+Thread   3 is done with errno = 0, fd =   7
+Thread   4 is done with errno = 0, fd =   8
+Thread   5 is done with errno = 0, fd =   9
+Thread   6 is done with errno = 0, fd =  10
+
+All threads has exited. Now verifying file contents ...
+
+
+Total elapsed time is 00:24:30.
+seed = 3805, # of threads = 9, block size = 1785, nblocks = 443957, file size = 7132169205.
+
+Thread   0 is done with errno = 0, fd =   4
+Thread   1 is done with errno = 0, fd =   5
+Thread   2 is done with errno = 0, fd =   6
+Thread   3 is done with errno = 0, fd =   7
+Thread   4 is done with errno = 0, fd =   8
+Thread   5 is done with errno = 0, fd =   9
+Thread   6 is done with errno = 0, fd =  10
+Thread   7 is done with errno = 0, fd =  11
+Thread   8 is done with errno = 0, fd =  12
+
+All threads has exited. Now verifying file contents ...
+
+
+Total elapsed time is 00:14:27.
+seed = 9805, # of threads = 3, block size = 111785, nblocks = 143206, file size = 48024848130.
+
+Thread   0 is done with errno = 0, fd =   4
+Thread   1 is done with errno = 0, fd =   5
+Thread   2 is done with errno = 0, fd =   6
+
+All threads has exited. Now verifying file contents ...
+
+
+Total elapsed time is 00:18:23.
+seed = 1805, # of threads = 5, block size = 81025, nblocks = 213258, file size = 86396147250.
+
+Thread   0 is done with errno = 0, fd =   4
+Thread   1 is done with errno = 0, fd =   5
+Thread   2 is done with errno = 0, fd =   6
+Thread   3 is done with errno = 0, fd =   7
+Thread   4 is done with errno = 0, fd =   8
+
+All threads has exited. Now verifying file contents ...
+
+
+Total elapsed time is 00:26:49.
+seed = 1234, # of threads = 11, block size = 21029, nblocks = 110052, file size = 25457118588.
+
+Thread   0 is done with errno = 0, fd =   4
+Thread   1 is done with errno = 0, fd =   5
+Thread   2 is done with errno = 0, fd =   6
+Thread   3 is done with errno = 0, fd =   7
+Thread   4 is done with errno = 0, fd =   8
+Thread   5 is done with errno = 0, fd =   9
+Thread   6 is done with errno = 0, fd =  10
+Thread   7 is done with errno = 0, fd =  11
+Thread   8 is done with errno = 0, fd =  12
+Thread   9 is done with errno = 0, fd =  13
+Thread  10 is done with errno = 0, fd =  14
+
+All threads has exited. Now verifying file contents ...
+
+
+Total elapsed time is 00:07:45.
+seed = 91234, # of threads = 13, block size = 51029, nblocks = 210052, file size = 139343665604.
+
+Thread   0 is done with errno = 0, fd =   4
+Thread   1 is done with errno = 0, fd =   5
+Thread   2 is done with errno = 0, fd =   6
+Thread   3 is done with errno = 0, fd =   7
+Thread   4 is done with errno = 0, fd =   8
+Thread   5 is done with errno = 0, fd =   9
+Thread   6 is done with errno = 0, fd =  10
+Thread   7 is done with errno = 0, fd =  11
+Thread   8 is done with errno = 0, fd =  12
+Thread   9 is done with errno = 0, fd =  13
+Thread  10 is done with errno = 0, fd =  14
+Thread  11 is done with errno = 0, fd =  16
+Thread  12 is done with errno = 0, fd =  15
+
+All threads has exited. Now verifying file contents ...
+
+
+Total elapsed time is 00:57:58.
+Total time 14090.21800062 seconds
+
+03/31/2017
+----------
+
+Basic tests
+-----------
+
+   * kernel compile
+   * self build
+   * tar over ssh
+   * iozone -a
+
+Run the above four tests in a loop for at least four hours.  Remove all files and repeat.
+Ideally, the process should continue for 24 hours.
+
+Unit tests
+----------
+
+1. Build everything on Ubuntu and CentOS.
+
+2. Build sliod, wokfs, and mount_slash on FreeBSD 9.0 with gmake (zfs-fuse is too Linux 
+   specific to build on FreeBSD, so slashd won't build).
+
+3. If zfs-fuse is changed, try to create a new ZFS pool.
+
+4. Check out two slash2 source trees, one in slash2, the other in a different file system.
+   Then do a recursive diff -dur -x .git comparison.  This can catch readlink regressions.
+
+5. Check out a slash2 source tree on one IOS, replicate it to another IOS. Then take the
+   first IOS offline and build the source tree. This makes sure that msctl functionality
+   and basic replication work.
+
+   It also makes sure that the client can skip the down IOS quickly.
+
+   To make it more interesting, replicate the source tree to a third IOS and kill the 
+   second IOS, and build the tree.
+
+6. Force MDS to always return DIO bmap lease (sys.force_dio=1) and do a self build.
+
+   self-build non DIO mode:
+
+	real	3m46.075s
+	user	4m42.471s
+	sys	1m33.065s
+
+   self-build DIO mode:
+
+	real	4m55.931s
+	user	4m45.384s
+	sys	1m35.727s
+
+   Also make sure that this test finishes within 4 minutes to detect possible performance
+   regression. Note that DIO is slower than the non DIO case.
+
+7. After all tests are done, run slmctl -sc and check the reference count of resources to
+   make sure there are no leaks.
+  
+   Only csvc structure for a client is allocated on the fly.
+
+8. Set up a logical I/O server, and make sure that I/O does spread across multiple I/O servers.
+
+9. Create a file on one I/O server, disable write on it, and try to overwrite the file after
+   waiting for leases and caches have expired.
+
+10. Run bigfile.sh.
+
+11. Test UID/GID map file on a remote client.
+
+12. Use FID namespace to read a regular file and list a directory. For example:
+
+	bash-4.2# pwd
+	/zzh-slash2/.slfidns
+	bash-4.2# ls -al 0x48c000000019b21
+	total 55943
+	qdrwxrwxrwx 3 root   root     3 Jun  7 14:17 .
+	d--x--x--x 2 root   root     2 Dec 31  1969 ..
+	drwxrwxr-x 2 zhihui pscstaff 2 Jun  7 11:55 dddd
+	bash-4.2# 
+
+13. Create a big file and replicate it to one or two IOSes.  Do several partial truncation, make 
+    sure that the component files on all IOSes are properly truncated each time.
+
+14. Use $msctl -s fcmh to verify all files are recycled after tests are done and wait for a while.
+
+15. Use slmctl/slictl/msctl to change the min/max sizes of a pool.
+
+16. Verify silly-rename works by unlinking an opened file.
+
+17. Do 3 parallel self build in a loop with one kernel source tree tar/rm -rf/build in the background.
+
+    This has catched some regression recently for me.
+
+05/30/2017
+----------
+
+zhihui@yuzu: /zzh-slash2/zhihui/linux-4.4$ time make -j 3
+
+.....
+
+  LD      drivers/video/fbdev/built-in.o
+  LD      drivers/video/built-in.o
+  LD      drivers/built-in.o
+
+real    117m28.634s
+user    57m15.873s
+sys     12m47.270s
+
+
+
+zhihui@yuzu: /zzh-slash2/zhihui$ time ~/iozone -a
+
+iozone test complete.
+
+real    15m33.789s
+user    0m3.465s
+sys     0m15.197s
+
+07/05/2017
+----------
+
+iozone -a results on yuzu:
+
+real	16m30.672s
+user	0m3.337s
+sys	0m16.350s
+
+I wonder if silly name slows down the unlink path a bit.
+
+
+07/06/2017
+----------
+
+
+iozone -a result on yuzu (I/O server is on /dev/md0 consisted of two disks), it runs for
+17 mins:
+
+	Iozone: Performance Test of File I/O
+	        Version $Revision: 3.408 $
+		Compiled for 64 bit mode.
+		Build: linux 
+
+	Contributors:William Norcott, Don Capps, Isom Crawford, Kirby Collins
+	             Al Slater, Scott Rhine, Mike Wisner, Ken Goss
+	             Steve Landherr, Brad Smith, Mark Kelly, Dr. Alain CYR,
+	             Randy Dunlap, Mark Montague, Dan Million, Gavin Brebner,
+	             Jean-Marc Zucconi, Jeff Blomberg, Benny Halevy, Dave Boone,
+	             Erik Habbinga, Kris Strecker, Walter Wong, Joshua Root,
+	             Fabrice Bacchella, Zhenghua Xue, Qin Li, Darren Sawyer.
+	             Ben England.
+
+	Run began: Thu Jul  6 11:00:25 2017
+
+	Auto Mode
+	Command line used: /home/zhihui/iozone -a
+	Output is in Kbytes/sec
+	Time Resolution = 0.000001 seconds.
+	Processor cache size set to 1024 Kbytes.
+	Processor cache line size set to 32 bytes.
+	File stride size set to 17 * record size.
+                                                            random  random    bkwd   record   stride                                   
+              KB  reclen   write rewrite    read    reread    read   write    read  rewrite     read   fwrite frewrite   fread  freread
+              64       4   27898   30131    20407    50355   55856   41800   47698    44540    58986    53199    54374   61010    66464
+              64       8   93019   91155    29411   126751  133629  116822  112702   103891   116165   123316   125448   78151    56934
+              64      16  118944  115515    27408   207157  211232  145824  167583   211899   127473   126991   103570  123999   125214
+              64      32  149896  156084   208606   272300  230257  214096  158855   193983   265565   359926   438043  262450   300328
+              64      64  376589  447537   653436   743988  546928  429630  333126   470274   653436   408077   429630  703068   581273
+             128       4   43167   51121    26739    69752   70025   52246   68848    57760    71346    53198    53288   68743    69257
+             128       8  100541  110836    27198   127741  137313  118939  111296   113676    77105    59786    55919   84389    83225
+             128      16  133490  108748    20648   179267  181571  151495  163093   147297   202531   189653   192164  204459   211632
+             128      32  317523  278343   264493   425478  325611  298459  294853   335166   458548   413039   274080  401307   447464
+             128      64  514339  535368   762811   757430  816154  627328  438331   592699   391360   415597   539674  554157   542400
+             128     128  472262  795593  1243315  1269781 1406136  907174  652488   919605  1142750   881842   852438 1243315  1346196
+             256       4   53668   49431    26577    71871   72871   49458   70734    54971    73585    37187    51150   74246    74899
+             256       8  102605   95090    29317   143667  142051  110731  133603   116840   134658   103355   102117  140656   138016
+             256      16  191609  184847    29585   280364  259935  213518  226393   213858   269188   226920   212294  254211   268919
+             256      32  292907  375328   431775   461267  443730  373240  417667   359977   498995   430218   387939  467900   471393
+             256      64  541253  579209   693718   773697  823544  530031  616807   610842   820398   753077   790209  826078   834424
+             256     128  570288  609455  1243036   995306 1213534  856386  706964  1007446  1407621  1132871  1766587 1347557  1243036
+             256     256  438296  682691  1660068  1376935 1286217  725106  927393   775373  1588832   768712   753077  812329   752549
+             512       4   28054   20728    25633    75472   75762   54162   71688    54346    74000    61339    54665   76076    75282
+             512       8   98252   96551    22436   101287  114515  102340  139630   106243   146198    76647   114059  145288   142304
+             512      16  168697  188594    28156   233986  270062  189626  254206   212794   144837   111721   128163  214131   248183
+             512      32  278575  358283   504956   509509  475864  380098  416598   387856   512060   424504   366476  474078   526111
+             512      64  554074  582478   798675   890404  774759  655558  699550   650593   840895   726285   630536  859060   819398
+             512     128  757274  847867  1296159  1354190 1402845  873740  962218   996139  1339827  1182661  1213400 1296159  1248678
+             512     256  624485  853257  1759070  1783912 1712772  946526 1254513   898225  1652157  1153441  1383861 1514652  1683237
+             512     512  663252  825699  1030558  1078159 1017858  388206  892254   438727  1130370   399992   502946 1242896  1350783
+            1024       4   20090   21370    26813    74907   44729   15988   75056    53708    73892    53596    21774   74613    76573
+            1024       8   27388   26092    26149   134969  136900  111280  139203   113046   147381   106432   104755  138378   113088
+            1024      16  198411  204387    26725   226949  189173  202365  272699   198567   278644   213862   189767  262965   253333
+            1024      32  326419  387429   501174   487853  506912  404239  493231   395966   503465   388340   398760  459413   462331
+            1024      64  538431  614637   825192   885048  848337  655639  771670   642016   883591   366783   556501  856970   934337
+            1024     128  585081  883591   735590   866478 1107005  664053  937805   830457  1287921   970656   597119  801328   899883
+            1024     256  408468  483460   729344   949834  751287  507691  814550   607336  1345623   876022   875308  832550  1556257
+            1024     512  532226  676819  1617808  1720874 1965834  675967 2011877   879610  2461573  1418508   890369 1347734  1381993
+            1024    1024  408623  455515  1508167  1379773 1319577  444806 1076755   504411  1812371   674587   677674 1920993  1854631
+            2048       4   24075   30026    36759    75362   74668   11444   75616    49617    75580    38412    40285   75933    75700
+            2048       8   29200   29071    40762   147497  147858   34354  145476    97001   147348   124107   123865  126458   143175
+            2048      16  200274  205315    41579   282825  280856   47416  281132   177039   279631   224709   221814  285438   280709
+            2048      32  346301  409672   503312   512012  471564  363444  505414   379048   528780   403779   413239  458991   502958
+            2048      64  505177  597070   793468   544259  815618  648110  850504   597943   852954   653684   667137  738042   751538
+            2048     128  695664  904984  1316907  1366995 1175768  979824 1248028  1117927  1359854  1038961  1063926 1318727  1281543
+            2048     256  604848  759377  1412398  1739978 1631886  712100 1782585  1038082  2070459  1146730  1070556 1944829  1924783
+            2048     512  504939  851854  2085540  2364545 2443928  959682 1928240  1060118  2420514  1113002  1204792 2485653  2488533
+            2048    1024  730635  855076  1884251  1798259 1836709  877795 1967097   923767  2421196  1273562  1799766 2745435  2429413
+            2048    2048  617989  800045  1349174  1442279 1573015  625914 1414259   714886  2356760   780491   903841 1926942  2370418
+            4096       4   26573   25426    40288    75927   75844   16687   75750    51136    75179    23912    25625   75905    75371
+            4096       8   60223  116698    50075   147258  148024   33633  149532    93167   148469   117182   120665  146856   148271
+            4096      16  206036  210494    51963   286231  282778   75647  283618   204625   282676   232145   223935  283146   282857
+            4096      32  366497  422922   528256   408910  522187  392218  463558   343770   511034   422132   416090  530164   515280
+            4096      64  537950  559025   427606   505813  606530  482800  760211   700424   830996   692686   684735  880305   882793
+            4096     128  683808  848564   685418   670046  785731  694815  877831   920244  1261018  1022440  1025063 1306473  1327778
+            4096     256  621652 1060563  1363069  1484631 1538614  987984 1849922  1032021  1880498  1043303  1016872 1764063  1445775
+            4096     512  666563  835929  1167284  1223392 1427633  725721 1464384   955456  2418063  1157064  1159641 1907855  2156972
+            4096    1024  583559 1013334  2090820  1744537 2001194  706589 1834318   756129  2306082   957639  1198305 2556982  2487022
+            4096    2048  516069  895913  1596967  1784772 1867822  860507 1838440    87191  1655602  1151866  1486687 1912315  2151300
+            4096    4096  470207  718828  1711005  1574862 2011740  898678 2047951   643132  2723157   636720   672486 2773270  2391139
+            8192       4   24968   22849    41024    75816   46945   22019   75610    53410    71289    23721    25481   75962    75638
+            8192       8   46517  117221    59928   148069   92350   42145  138610    82177   125848   117170    85432  139366   146079
+            8192      16  212855  237099    67110   285833  183332   95885  283627   188685   232002   227605   229019  281464   284376
+            8192      32  365599  434956   465611   540300  362525  410791  527023   344953   365257   422879   390314  530399   530399
+            8192      64  555355  662678   638101   853768  640910  720937  894323   561087   637214   699394   676189  861236   893254
+            8192     128  805983  923678  1178527  1335925 1110319 1059903 1317231  1025792   900605  1015244   926717 1392051  1386154
+            8192     256  791647 1030715  1553557  1843352 1574776  950692 1827372  1065028  1884500  1070870   930809 1718089   959024
+            8192     512  779436  521844  1607863  1470199 1635180  902308 1737024   891608  2251797  1058662   695361 1051727  1255296
+            8192    1024  561481  793476  1973585  1915386 2068143  978135 2308997  1046092  2817109  1045837  1002799 1593768  1595989
+            8192    2048  490483  780126  1646306  2109149 2457109 1013238 2180490    63870  2124537  1092422  1051888 2484649  2608186
+            8192    4096  632824  855106  1662315  1805574 2152352  985570 2403147   145978  2346687   958703  1467311 1657984  1958399
+            8192    8192  666224  735301  1956503  2518339 2509877  950666 1576004   804474  1816456   903994   940852 1521297  1650894
+           16384       4   24468   24634    43787    75867   48536   26015   74833    52777    70878    29766    25271   73805    75847
+           16384       8   83085  123511    64192   147672   92433   50330  146392    92725   130486   118088   119165  144089   146450
+           16384      16  212685  224761    75810   283225  186165   88168  281390   177371   233949   224300   232641  270603   277276
+           16384      32  378488  422006   512752   522399  355332  404232  519006   309670   381972   415256   412343  507590   522665
+           16384      64  584181  719667   862174   895440  655521  708617  857131   579105   596431   708442   637532  851998   873862
+           16384     128  769424  915151  1298558  1377480 1099814 1052949 1330720   840977   710743   996890   955169 1323977  1368074
+           16384     256  807649 1024260  1752475  1841959 1665369 1027077 1807798   562984  1962135  1008240   981723 1734516  1814193
+           16384     512  750492  998905  1396175  1940580 2260821 1044102 1700101   301898  1813188  1012548   870287 1571779  2395675
+           16384    1024  802546 1028429  1620405  2033493 2231890 1012176 2042620   226598  2420483   994726   943005 2044930  2320051
+           16384    2048  799372  845145  1695529  2168298 2528049 1016247 1953711    56972  1987904   998353   944652 1786322  1843986
+           16384    4096  760172  762187  1798430  2194822 2199248 1009247 1783772   117292  2422616  1077263   895346 1844184  2177574
+           16384    8192  761023  707188  1984459  2209004 2203620  957565 1676951   175460  1965221  1257198  1196186 1475527  1873751
+           16384   16384  750075  855072  1849843  1964771 1959337  959262 1365681   957511  1363622   925168   908161 1384362  1721740
+           32768      64  508924  584379    62024   200215  110623  661872  276322   558028   562693   685895   642046  805329   856345
+           32768     128  841048  907278  1199284  1273929  897063  996961 1213848   705644   750664   979294   816588 1156856  1310879
+           32768     256  787901  707045  1579797  1764190 1418830 1031701 1569048   468629  1913690  1003557   982339 1122768  1472647
+           32768     512  702470  974483  1551443  1950822 1944006  838442 1654619   281746  1913903   983612   990473 1281197  1723268
+           32768    1024  834365  922806  1613629  2036681 2169216 1001553 1699929   103043  1307848   680088   877017 1805608  2265658
+           32768    2048  844817  928116  1661238  2036289 1984970 1045968 1854756    57147  2089252   967867   972373 1943539  2185984
+           32768    4096  830934  878452  1825708  2212873 2230615 1016697 1560001    87357  1614975   841759   938349 1610698  1983537
+           32768    8192  799222  825971  2020097  2307772 2183657 1056825 1801325   131219  1993781  1096067  1025504 1576988  2003401
+           32768   16384  783249  936278  1276948  1499200 1583693  932549 1248732   135250  1501182  1317413  1325187 1339002  1593073
+           65536      64  497770  504580   127526   219071  131529  445571  461638   546319   576155   693254   666051  841532   851624
+           65536     128  811290 1033757  1237955  1328818  780012 1042836 1248946   732098   728533   961670   960712 1276733  1306983
+           65536     256  828320  974613  1657040  1798564 1641848 1029714 1758466   407897  1920131   994447   924422 1548984  1705337
+           65536     512  841630 1057337  1906269  2004538 1094530 1067500 2033258   174157  1322228  1019396  1024334 1470274  2013155
+           65536    1024  838099 1082508  1952745  2258451 2297891 1069468 1887770   119058  1775515   970429   981942 1674137  2080898
+           65536    2048  834172 1004473  2075430  2295320 1863834 1040570 2163408    57763    74072   883639   875809  188941  2323393
+           65536    4096  875764  995491   589431  2291149 1917666 1023076 1947061    91745  2431669   931332   911677 2181262  2281091
+           65536    8192  776539  801664  1577891  1961678 2023336  984023 1831069   107755  1589212   739257   743146 1898225  2207273
+           65536   16384  773150  910931  1812583  1848940 1804906 1020251 1127154   129644  1520798  1107852   983446 1778882  1850359
+          131072      64  527673  598194   172608   157388   79417  667998  334375   557610    61522   620814   624482  168659   257580
+          131072     128  859341  947626   370185   412514  106286  697051  456489   704642    54918   935613   754223  122085   262293
+          131072     256  853317  953376    54412   162822  105684  980161  314422   405587  1921814   981416   974483  715465   308973
+          131072     512  847277  903420   175880    67822  104097  913068  355370   219300  1719589  1028887   848598  748221   179692
+          131072    1024  870176  909288   408249   244136  106498  838484  243612   111478  1788354   932015  1007107 1918160  2114983
+          131072    2048  848747  870471  1996224  2229271 1535288  754458 2422410    59270  1165250   826186   840049 1705690  2266381
+          131072    4096  865647 1100132  1947666  2290221 2020159  852423 2375567    89595  2079582   680624   656413  164575   110582
+          131072    8192  790838  875541   157038   339881  102746  168233  145056   112355   403646   597348   692934  363070   317968
+          131072   16384  794732 1034605   217115   144031   79810   70689  208162   119179  1314504   896660   916933 1423537  1768187
+          262144      64  552143  529082    47910   753248  716058  501391  774762   591411    59906   682727   606271  643375   860789
+          262144     128  839774  929045   499409   492390  135459  989513 1202297   701903  1090617   769653   919735 1279106  1339512
+          262144     256  861159 1062456  1735373  1763640 1753434  847065 1552112   302809  1876908   990571   922924 1766409  1787182
+          262144     512  902433 1007130  1795740  1939968 1934115 1019932 1830728   202719  1933840   972914   901480 1802780  2003359
+          262144    1024  851841  966903  1836873  2171142 2132709 1033809 1576426    98620  1739139   939062   857360 1834611  1999727
+          262144    2048  854156  982456  2031385  2146469 1580816  743006 2268092    50433  1718693   852293   867945 2157864  2190760
+          262144    4096  848041 1052251  1933343  2250608 1881891  830005 2045234    87019  2131547   902727   821271 1608265  2109043
+          262144    8192  801381 1027612  1959795  1890101 1746102  943191 1509914   106975  2059454   838646   686113   75534   165348
+          262144   16384  793207  772010   223528   138951   95765   63070  221131   117491  1745913   721372   824139 1483603  1553241
+          524288      64  581909  584209    24419   104548  225859  334662  710344   559488    68143   638247   611135   40661    29026
+          524288     128  859516 1012314   238203   220254  285696  641365  731936   711050    66208   930031   754041   35558   491505
+          524288     256  847487  892192   414782    85612  293195  991317  644082   360685   790216   902106   900544  181921    49544
+          524288     512  816025 1017418   468609   293115  275812  998102  667649   202017   596042   964944   850694  698754    59208
+          524288    1024  866210  844321   386839   313952  213323  872501  877174    86093  1258791   889385   780884  339593   196297
+          524288    2048  866729  928260   163405   263931  122591  197763  680351    54417  1315052   886114   775558   56938   761781
+          524288    4096  829058  880617    30709    63291  155513   81682  249972    85369   363852   858780   679887  181507    56251
+          524288    8192  789391  921115   591502   181791  233862  105023  250343   107773  1266726   217617   729349   35285   789930
+          524288   16384  663082  844792   167159   348030   69554  106310   64535   116294   213072   179022    98503   33842   472686
+
+iozone test complete.
+
+iozone -a result on r100 (I/O server is on ZFS RAID 8+3). It runs for 47 mins:
+
+	Iozone: Performance Test of File I/O
+	        Version $Revision: 3.434 $
+		Compiled for 64 bit mode.
+		Build: linux-AMD64 
+
+	Contributors:William Norcott, Don Capps, Isom Crawford, Kirby Collins
+	             Al Slater, Scott Rhine, Mike Wisner, Ken Goss
+	             Steve Landherr, Brad Smith, Mark Kelly, Dr. Alain CYR,
+	             Randy Dunlap, Mark Montague, Dan Million, Gavin Brebner,
+	             Jean-Marc Zucconi, Jeff Blomberg, Benny Halevy, Dave Boone,
+	             Erik Habbinga, Kris Strecker, Walter Wong, Joshua Root,
+	             Fabrice Bacchella, Zhenghua Xue, Qin Li, Darren Sawyer,
+	             Vangel Bojaxhi, Ben England, Vikentsi Lapa,
+	             Alexey Skidanov.
+
+	Run began: Thu Jul  6 11:01:35 2017
+
+	Auto Mode
+	Command line used: /home/zhihui/iozone -a
+	Output is in kBytes/sec
+	Time Resolution = 0.000001 seconds.
+	Processor cache size set to 1024 kBytes.
+	Processor cache line size set to 32 bytes.
+	File stride size set to 17 * record size.
+                                                              random    random     bkwd    record    stride                                    
+              kB  reclen    write  rewrite    read    reread    read     write     read   rewrite      read   fwrite frewrite    fread  freread
+              64       4    26403    28839    17602    29534    46540    31265    33971     35854     32114    34005    27631    39529    48117
+              64       8    68744    54045    22433    44755    50111    55798    54506     37533     45747    47545    48264    56289    75747
+              64      16    69492    85358    32937   184389   170672   125272    59601    127232     64068    91810   167061   174330    69854
+              64      32   221516   221334   127534   252810   307554   206360    98011    220788     82271   334788   338589   212570   234481
+              64      64   338589   340306   383585   481234   209093   336889   211232    316997    438043   378715   281731   270108   374488
+             128       4    25396    26467    20769    33014    36687    28293    36529     41803     35360    34539    34233    38904    33515
+             128       8    45957    57322    24014    77719    85112    75257    82005     57630     69861    65907    64351    51322    63876
+             128      16   134190    94890    23920   126745   144951   109592   139454    139744    184187   149888    97705   148849    95379
+             128      32   221407   129559   135000   310544   283787   220317   177254    253503    259633   185012   280086   240124   251014
+             128      64   301138   356533   468962   414314   490380   322482   143020    317711    152745   468962   564055   447464   365764
+             128     128   241528   272273   908709   565838   282443   613002   394814    378663    780556   288981   492629   847059   166275
+             256       4    30454    32774    17868    32136    36051    32917    31530     29753     38449    27750    28030    35610    32631
+             256       8    44992    60633    25882    67459    55580    58327    59261     54180     79302    66929    56638    64516    75851
+             256      16    95957    94888    27544   145300    91821    81166   146709    120593     68632   115894   103435   154233   128456
+             256      32   109266   135799   185935   207976   215316   210010   274417    162643    277394   241735   252181   215100   195873
+             256      64   339061   365118   427989   328180   374935   299108   250009    232522    320442   422432   255725   287650   302564
+             256     128   326583   458706   790209   639967   721210   324412   500857    340891    301883   610842   641497   654798   522551
+             256     256   298029   300784   395659   744204   598249   394496   261199    378637    622890   250768   249254   381462   425951
+             512       4    27835      515    19382    40618    37098      333    36464       203     38562    28406      461    37869    37023
+             512       8    46955    61561    28390    67191    64305    56713    74095     55809     72883    51519     3990    70874    71719
+             512      16    97671   117755    31960   122316   106936   113576   106692    103205    129196    92151   108197   139015   117266
+             512      32   138898   149579   243456   227155   193802   158161   220123    140968    220689   198001   185035   212984   269757
+             512      64   260813   235397   313144   372128   364920   372064   259238    247582    383218   320816   305874   418628   476709
+             512     128   486648   400067   475758   595397   535024   470134   563229    480764    623578   542320   583744   599553   491887
+             512     256   500484   341097   536092   666546   879825   280064   450697    538918    608041   487531   647260   544658   530006
+             512     512   359002   383492   497585   693899   510964   308599   438368    473242    536226   426019   517614   555363   544658
+            1024       4    15261      488    21802    45452    44681      576    48966       106     40779      644      673    40086    43526
+            1024       8    60051     1758    28855    80962    90139     2097   102561      1559     75094    63665     2723    73790    68854
+            1024      16   116272   103068    34614   128851   137598   104812   156187    114374    153108    99612    96151   124923   135591
+            1024      32   172448   172365   241850   276990   226949   208041   261827    205090    213024   191510   185033   254927   232779
+            1024      64   321099   294583   339877   475643   467362   295271   397947    282084    447541   280775   316066   391134   369148
+            1024     128   502935   232200   578539   559254   596042   396880   410106    417968    451113   403290   342916   671423   558963
+            1024     256   459610   360201   586119   515119   544093   389184   622837    443887    567606   453878   599202   519795   497113
+            1024     512   347579   392348   562035   738880   726752   532226   407964    481023    682628   749060   947320   673212   612010
+            1024    1024   438763   344208   524620   664978   607422   388480   546725    390245    428263   413223   410067   551145   533085
+            2048       4    20104      768    27463    46119    41387      303    44924        78     42405      626    40932    44015    42178
+            2048       8    25981    73761    41942    93511    90171     1163   138369       234     76057     2846     2576    73061    87723
+            2048      16   116099   113030    49770   152209   155244     3839   143448       920    125845   115392   110972   135710   146990
+            2048      32   174891   227278   247578   280663   307510   199456   233524    228244    247907   164643   206469   247785   235619
+            2048      64   285315   329055   358409   393171   411497   309092   346524    375240    401965   336453   289381   451322   450423
+            2048     128   371620   372636   465558   558665   487626   429243   485888    500380    647085   373511   358544   538121   659353
+            2048     256   379903   500497   637197   580644   548008   426218   524582    501461    650614   446977   411754   531792   650565
+            2048     512   386710   487377   554876   579039   580997   403779   568877    480641    584635   449833   555306   588319   459310
+            2048    1024   309504   476376   569367   520734   693530   419577   614277    483128    560927   614453   684467   542540   538796
+            2048    2048   283694   486576   539372   706188   583999   400392   513389    407553    528390   422529   444434   568877   592744
+            4096       4    18948      698    41468    52158    51618      434    79217       172     50592      546      972    50448    51840
+            4096       8    82219     2229    59997    96265    93878      793    92504       143     83841     1564     2944    71919    83049
+            4096      16   118357   127486    67019   170283   177262     5024   178196       465    137004   121186   119438   148319   145397
+            4096      32   206628   251396   237121   312004   296037   222462   212591    257015    505367   358670   268499   288529   274198
+            4096      64   368312   396280   406712   422620   426005   327729   368209      4586    362545   290845   299615   380457   429262
+            4096     128   386126   488789   603060   666666   564647   424060   539521    461107    451498   344487   367320   584472   588416
+            4096     256   390879   566061   600216   655050   643011   428855   648815    590885    578625   396445   442144   514308   583242
+            4096     512   363989   501297   649551   610518   566678   463146   677364    498663    598918   407194   457656   544307   588678
+            4096    1024   402039   454255   511050   616587   674466   440139   521585    460749    632384   469346   621068   578041   680611
+            4096    2048   331928   563038   585149   615020   615924   440568   480706     14171    652338   595514   834063   586307   614097
+            4096    4096   350360   569911   662450   628428   770784   423579   561033    442235    528045   422485   517968   636319   554425
+            8192       4    22277      556    44949    49176    32331      438    69737      1666     43800      706      711    49862    49395
+            8192       8    35899     1245    85398   132638    85493      817   111653       369     87637    89801     2947    83870    98728
+            8192      16   157562   170559   114257   201704   135183     2857   224493       304    130541   137651   132948   144124   166375
+            8192      32   215273   255417   244940   290005   237981   248026   334135       914    220666   258986   229467   252753   309143
+            8192      64   304262   393880   412052   432547   367421   366059   394165      2651    357122   363607   391716   423860   472865
+            8192     128   358041   581365   504653   672575   625441   453702   562023      5959    477027   378958   378295   590679   622731
+            8192     256   338693   606635   636623   710134   666508   515642   605908      6704    532355   390652   488169   586696   668297
+            8192     512   402217   559105   616077   659789   681135   463370   542158      8499    663702   382570   471865   625247   578896
+            8192    1024   351892   473608   597916   648409   596214   485857   585097     10622    572587   414868   448163   565324   633817
+            8192    2048   345682   538910   552391   661708   611298   492310   508409      8752    504779   536964   566564   602836   592288
+            8192    4096   386908   513638   661122   576420   588333   439367   578049     18255    625828   771820   799774   621504   776126
+            8192    8192   413799   586525   803458   793879   811734   453601   631707    481405    629128   438145   540334   731497   760342
+           16384       4    21846      415    63506    65928    36860      565    68643      3291     51337      474     3438    28203    35786
+           16384       8    98776    42397    96950   116247    65608     1007   136814       687     90044    99689    27564   106093   107915
+           16384      16   150152   169406   150092    92117   157005     2363   129924       528    139617   143645   184413   178681   171398
+           16384      32   250022   289653   331901   342060   236196   266197   349623       589    134098   215550   268204   156941   181196
+           16384      64   353201   370887    58329   181880   238499   396151   172426      1384    318959   378051   367321   575338   527613
+           16384     128   380273   565435   640449   731464   642359   488346   667128      3418    449391   405475   430738   712223   811291
+           16384     256   648738   752761   965014   923043   706781   634471   682724      3005    519300   485321   472913   576656   780408
+           16384     512   621143   734709   771411   949022   744798   541888   708771      4038    558550   506632   540690   731425   905337
+           16384    1024   378478   547391   636392   780709   705996   524889   726054      5278    683695   489323   547793   624224   716015
+           16384    2048   389094   572424   727923   784748   655464   532829   653377      6049    626443   524773   518744   651920   751831
+           16384    4096   396793   632631   888551  1031935   899083   581979   737287      8703    690635   573308   646310   652800   797387
+           16384    8192   378051   541730   912902  1147585  1166282   724286   750623     37808    674290   744153   907142   616961   698739
+           16384   16384   370939   536004   749837   788331   661872   503314   662357    450392    626494   481317   539108   621362   821543
+           32768      64   442404   362421    92123   304932   229609   528863   369888      1136    328943   383359   441909   503047   496772
+           32768     128   413242   663424   643748   840292   577644   572197   848143      3247    410766   399872   466701   788090  1075280
+           32768     256   496718   663306   685509   720493   401298   609558   960622      1486    421920   557155   555643   936386   838140
+           32768     512   404253   635715   565706   975382   637768   565062   918158      1875    566030   539861   539327   759399   986903
+           32768    1024   464405   643001   387204  1137694   874094   690725   684805      2776    557544   503463   515600   834790   938939
+           32768    2048   500189   615570   904669  1068891   796674   683164   944514      3675    771973   510189   586211   170998   623877
+           32768    4096   472767   538894   215917    67478   204006   521750   623640      6590    788543   525201   530149   706831   725406
+           32768    8192   424658   579185   746829   786480   769109   546981   644848     11823    712300   588148   700066   739015   757657
+           32768   16384   418428   540947   952031  1112363   972490   652632   846409     65510    728374   700230   954643   823812   851385
+           65536      64   365520   393109   614657   164368   371991   614582   468342      1024    346929   507350   548106   364987   447729
+           65536     128   478829   631531   490296   844025   399317   864817  1035716      1769    453508   516972   561503   908937   924917
+           65536     256   551928   791831  1009705   909538   533090   395576   953613      1780    331731   589670   574670   869927   479924
+           65536     512   495464   610768   734337    84045   254370   802095   962505      1786    441343   536007   547396   962633   969081
+           65536    1024   501545   665105   897804   967390   528511   659149  1157079      3014    483931   590121   696805   426453   811862
+           65536    2048   489275   586252   496462  1028951   414187   858655   493200      4547    493835   696066   754378  1150883  1161902
+           65536    4096   487248   799687  1101076  1107307   702009   718556   730532     10544    892751   638329   736987  1041907  1125682
+           65536    8192   530012   813284  1075822  1206346   970056   783117   990177     19015    681813   734263   963055   283334   705560
+           65536   16384   484815   627102   537691   898024   497208   824081   557671     45814    778069   734502   998812  1065918   953543
+          131072      64   421262   470919   154839   527981   101826   586066   407289      1968    191040   231883   566937   611891   527269
+          131072     128   605519   871252   752224   829417   399407   837714  1002723      4217    252125   517475   659568   696287   343311
+          131072     256   559806   588399   860951   773071   231867    65810   838640      3942    431681   512130   719270   380039   575687
+          131072     512   558983   762924   672463   493864   177501   114189   299173      3872    452091   656502   652508   897550   851111
+          131072    1024   568324   815261  1026541  1012233   433816    74323   502985      3780    527129   580619   761944   426987   654682
+          131072    2048   566962   789756   685967   900107   340809   116578   468450      4606    557950   580905   686862  1052212   966571
+          131072    4096   622457   800806   958282   830316   752025   920585   464746     10844    614012   803866   646321  1099921  1014497
+          131072    8192   574723   798635   968700   913158   803024   986097   748708     19232    517296   707071   822799   951602   941161
+          131072   16384   500288   690583   801953   862287   178077   511167   611260     36094    547013   753123   883550   886826   847692
+          262144      64   425813   420955   606334   562505   222158   640610   637750     12157    451250   591032   643175   633345   489926
+          262144     128   530211   716984   925914   824707   715011   730132   947261      8771    687325   640215   576215   914554   833084
+          262144     256   516344   821729   845113   767973   491746   544479   685949      8526    440615   527014   586823   881606   704642
+          262144     512   498589   752493   855876   801176   637162   619109   805073      8248    409812   540699   710094   794939   696528
+          262144    1024   503949   702959   844424   862162   625933   509565  1025682      8209    492726   735696   685327   952225   926408
+          262144    2048   587866   650410  1059154   931153   607979   663832   523310      7717    502918   439680   132920   878931   788457
+          262144    4096   513110   829370   280303   724917   393722   207975   334791     12964    698970   631451   599126   933297   785720
+          262144    8192   532728   992887   966778   928633   922906   891228   958118     19540    691335   744590   711149   994649   964952
+          262144   16384   562639   619881   900272  1043741   912293   842939   887916     37261    952544   679816   887819   869705   786527
+          524288      64   391189   526264   560962   447709   271789   585943   616280      9886    385424   378670   270860   535971   483035
+          524288     128   595443   651732   980626   903079   420424   837536   840722      8553    396782   327953   587163   946371   652129
+          524288     256   611851   742329   150937   812813   395324    85460   683012     37607    616913   609246   639881   526325   408177
+          524288     512   552247   618987   198871   122000   270560   143095   665268      9522    411625   195171   123028   577683   671896
+          524288    1024   673668   632105   186051   713030   346445   264091   805103      8522    405920   476232   765397   762108   729485
+          524288    2048   663506   777159   954761   913207   484337    98858   561040      8379    315538   151803   542471   767486   782429
+          524288    4096   669509   675923   743000   683442   375201   729528   633054     11770    380745   207491   232513   318705   779717
+          524288    8192   714878   758023   902886   766195   392601   728447   484995     24442    683982   550696   646522   798427   772921
+          524288   16384   663425   913250  1002533   899308  1044439   957591   942426     31357   1057765   802980   788312   996673   881744
+
+iozone test complete.
+
+"iozone -u 4 -l 1 -i 0 -i 1 -r 256 -s 10240000 -b iozone.results -e" results on r100 and the same I/O server
+as above, it takes 23 minutes:
+
+	Iozone: Performance Test of File I/O
+	        Version $Revision: 3.434 $
+		Compiled for 64 bit mode.
+		Build: linux-AMD64 
+
+	Contributors:William Norcott, Don Capps, Isom Crawford, Kirby Collins
+	             Al Slater, Scott Rhine, Mike Wisner, Ken Goss
+	             Steve Landherr, Brad Smith, Mark Kelly, Dr. Alain CYR,
+	             Randy Dunlap, Mark Montague, Dan Million, Gavin Brebner,
+	             Jean-Marc Zucconi, Jeff Blomberg, Benny Halevy, Dave Boone,
+	             Erik Habbinga, Kris Strecker, Walter Wong, Joshua Root,
+	             Fabrice Bacchella, Zhenghua Xue, Qin Li, Darren Sawyer,
+	             Vangel Bojaxhi, Ben England, Vikentsi Lapa,
+	             Alexey Skidanov.
+
+	Run began: Thu Jul  6 11:55:46 2017
+
+	Record Size 256 kB
+	File size set to 10240000 kB
+	Include fsync in write timing
+	Command line used: /home/zhihui/iozone -u 4 -l 1 -i 0 -i 1 -r 256 -s 10240000 -b iozone.results -e
+	Output is in kBytes/sec
+	Time Resolution = 0.000001 seconds.
+	Processor cache size set to 1024 kBytes.
+	Processor cache line size set to 32 bytes.
+	File stride size set to 17 * record size.
+	Min process = 1 
+	Max process = 4 
+	Throughput test with 1 process
+	Each process writes a 10240000 kByte file in 256 kByte records
+
+	Children see throughput for  1 initial writers 	=  273687.22 kB/sec
+	Parent sees throughput for  1 initial writers 	=  273673.93 kB/sec
+	Min throughput per process 			=  273687.22 kB/sec 
+	Max throughput per process 			=  273687.22 kB/sec
+	Avg throughput per process 			=  273687.22 kB/sec
+	Min xfer 					= 10240000.00 kB
+
+	Children see throughput for  1 rewriters 	=  145021.92 kB/sec
+	Parent sees throughput for  1 rewriters 	=  145020.44 kB/sec
+	Min throughput per process 			=  145021.92 kB/sec 
+	Max throughput per process 			=  145021.92 kB/sec
+	Avg throughput per process 			=  145021.92 kB/sec
+	Min xfer 					= 10240000.00 kB
+
+	Children see throughput for  1 readers 		=  115496.04 kB/sec
+	Parent sees throughput for  1 readers 		=  115494.80 kB/sec
+	Min throughput per process 			=  115496.04 kB/sec 
+	Max throughput per process 			=  115496.04 kB/sec
+	Avg throughput per process 			=  115496.04 kB/sec
+	Min xfer 					= 10240000.00 kB
+
+	Children see throughput for 1 re-readers 	=   93756.56 kB/sec
+	Parent sees throughput for 1 re-readers 	=   93755.58 kB/sec
+	Min throughput per process 			=   93756.56 kB/sec 
+	Max throughput per process 			=   93756.56 kB/sec
+	Avg throughput per process 			=   93756.56 kB/sec
+	Min xfer 					= 10240000.00 kB
+
+
+	Each process writes a 10240000 kByte file in 256 kByte records
+
+	Children see throughput for  2 initial writers 	=  308299.16 kB/sec
+	Parent sees throughput for  2 initial writers 	=  305602.60 kB/sec
+	Min throughput per process 			=  153393.75 kB/sec 
+	Max throughput per process 			=  154905.41 kB/sec
+	Avg throughput per process 			=  154149.58 kB/sec
+	Min xfer 					= 10203392.00 kB
+
+	Children see throughput for  2 rewriters 	=  372409.72 kB/sec
+	Parent sees throughput for  2 rewriters 	=  370199.51 kB/sec
+	Min throughput per process 			=  185102.91 kB/sec 
+	Max throughput per process 			=  187306.81 kB/sec
+	Avg throughput per process 			=  186204.86 kB/sec
+	Min xfer 					= 10240000.00 kB
+
+	Children see throughput for  2 readers 		=  275152.56 kB/sec
+	Parent sees throughput for  2 readers 		=  275150.46 kB/sec
+	Min throughput per process 			=  105952.69 kB/sec 
+	Max throughput per process 			=  169199.88 kB/sec
+	Avg throughput per process 			=  137576.28 kB/sec
+	Min xfer 					= 6412288.00 kB
+
+	Children see throughput for 2 re-readers 	=  218752.70 kB/sec
+	Parent sees throughput for 2 re-readers 	=  218751.68 kB/sec
+	Min throughput per process 			=   93112.12 kB/sec 
+	Max throughput per process 			=  125640.59 kB/sec
+	Avg throughput per process 			=  109376.35 kB/sec
+	Min xfer 					= 7588864.00 kB
+
+
+	Each process writes a 10240000 kByte file in 256 kByte records
+
+	Children see throughput for  3 initial writers 	=  501837.67 kB/sec
+	Parent sees throughput for  3 initial writers 	=  484937.18 kB/sec
+	Min throughput per process 			=  162861.64 kB/sec 
+	Max throughput per process 			=  173516.12 kB/sec
+	Avg throughput per process 			=  167279.22 kB/sec
+	Min xfer 					= 10092544.00 kB
+
+	Children see throughput for  3 rewriters 	=  474264.75 kB/sec
+	Parent sees throughput for  3 rewriters 	=  463280.21 kB/sec
+	Min throughput per process 			=  154433.95 kB/sec 
+	Max throughput per process 			=  161577.59 kB/sec
+	Avg throughput per process 			=  158088.25 kB/sec
+	Min xfer 					= 10240000.00 kB
+
+	Children see throughput for  3 readers 		=  271743.57 kB/sec
+	Parent sees throughput for  3 readers 		=  271733.44 kB/sec
+	Min throughput per process 			=   88311.49 kB/sec 
+	Max throughput per process 			=   91808.12 kB/sec
+	Avg throughput per process 			=   90581.19 kB/sec
+	Min xfer 					= 9850112.00 kB
+
+	Children see throughput for 3 re-readers 	=  252715.50 kB/sec
+	Parent sees throughput for 3 re-readers 	=  252698.49 kB/sec
+	Min throughput per process 			=   70295.60 kB/sec 
+	Max throughput per process 			=  107526.41 kB/sec
+	Avg throughput per process 			=   84238.50 kB/sec
+	Min xfer 					= 6694912.00 kB
+
+
+	Each process writes a 10240000 kByte file in 256 kByte records
+
+	Children see throughput for  4 initial writers 	=  467964.72 kB/sec
+	Parent sees throughput for  4 initial writers 	=  460079.24 kB/sec
+	Min throughput per process 			=  115405.52 kB/sec 
+	Max throughput per process 			=  119545.17 kB/sec
+	Avg throughput per process 			=  116991.18 kB/sec
+	Min xfer 					= 10163712.00 kB
+
+	Children see throughput for  4 rewriters 	=  477143.01 kB/sec
+	Parent sees throughput for  4 rewriters 	=  467009.90 kB/sec
+	Min throughput per process 			=  116757.05 kB/sec 
+	Max throughput per process 			=  121108.93 kB/sec
+	Avg throughput per process 			=  119285.75 kB/sec
+	Min xfer 					= 10240000.00 kB
+
+	Children see throughput for  4 readers 		=  253552.91 kB/sec
+	Parent sees throughput for  4 readers 		=  253549.99 kB/sec
+	Min throughput per process 			=   59955.32 kB/sec 
+	Max throughput per process 			=   66098.25 kB/sec
+	Avg throughput per process 			=   63388.23 kB/sec
+	Min xfer 					= 9288448.00 kB
+
+	Children see throughput for 4 re-readers 	=  237484.17 kB/sec
+	Parent sees throughput for 4 re-readers 	=  237476.60 kB/sec
+	Min throughput per process 			=   51214.90 kB/sec 
+	Max throughput per process 			=   69565.61 kB/sec
+	Avg throughput per process 			=   59371.04 kB/sec
+	Min xfer 					= 7539200.00 kB
+
+
+
+"Throughput report Y-axis is type of test X-axis is number of processes"
+"Record size = 256 kBytes "
+"Output is in kBytes/sec"
+
+"  Initial write "  273687.22   308299.16   501837.67   467964.72 
+
+"        Rewrite "  145021.92   372409.72   474264.75   477143.01 
+
+"           Read "  115496.04   275152.56   271743.57   253552.91 
+
+"        Re-read "   93756.56   218752.70   252715.50   237484.17 
+
+
+iozone test complete.
+
+
+09/10/2017
+----------
+
+Three way bigfile.sh test result on two clients:
+
+On zebes:
+
+All tests have passed successfully! Total elapsed time: 86881.68781030 seconds.
+
+bash-4.2# ./msctl -p sys.pref_ios
+parameter                                               value
+================================================================================
+sys.pref_ios                                            lemon@PSC
+
+
+bash-4.2# mdadm --detail /dev/md127
+/dev/md127:
+        Version : 1.2
+  Creation Time : Thu Sep  4 13:02:29 2014
+     Raid Level : raid0
+     Array Size : 8302537728 (7917.92 GiB 8501.80 GB)
+   Raid Devices : 14
+  Total Devices : 14
+    Persistence : Superblock is persistent
+
+    Update Time : Thu Sep  4 13:02:29 2014
+          State : clean 
+ Active Devices : 14
+Working Devices : 14
+ Failed Devices : 0
+  Spare Devices : 0
+
+     Chunk Size : 512K
+
+           Name : lemon:0
+           UUID : 16eb0f75:dec6fbe6:90585f8e:aecf91d1
+         Events : 0
+
+    Number   Major   Minor   RaidDevice State
+       0       8       48        0      active sync   /dev/sdd
+       1       8       64        1      active sync   /dev/sde
+       2       8       80        2      active sync   /dev/sdf
+       3       8       96        3      active sync   /dev/sdg
+       4       8      112        4      active sync   /dev/sdh
+       5       8      128        5      active sync   /dev/sdi
+       6       8      144        6      active sync   /dev/sdj
+       7       8      160        7      active sync   /dev/sdk
+       8       8      176        8      active sync   /dev/sdl
+       9       8      192        9      active sync   /dev/sdm
+      10       8      208       10      active sync   /dev/sdn
+      11       8      224       11      active sync   /dev/sdo
+      12       8      240       12      active sync   /dev/sdp
+      13      65        0       13      active sync   /dev/sdq
+
+In the log:
+
+pool corrupt? m = 0x7fffe42e9620, total = 15937, min = 512, name = bmpce.
+pool corrupt? m = 0x7fffe42e9620, total = 16383, min = 512, name = bmpce.
+pool corrupt? m = 0x7fffe42e9620, total = 16384, min = 512, name = bmpce.
+
+
+On yuzu:
+
+All tests have passed successfully! Total elapsed time: 146702.28400432 seconds.
+
+bash-4.2# ./msctl -p sys.pref_ios
+parameter                                               value
+================================================================================
+sys.pref_ios                                            lime@PSC
+
+ssh-4.2# mdadm --detail /dev/md0
+/dev/md0:
+        Version : 1.2
+  Creation Time : Sat Jul  1 08:36:06 2017
+     Raid Level : raid0
+     Array Size : 1464886272 (1397.02 GiB 1500.04 GB)
+   Raid Devices : 2
+  Total Devices : 2
+    Persistence : Superblock is persistent
+
+    Update Time : Sat Jul  1 08:36:06 2017
+          State : clean 
+ Active Devices : 2
+Working Devices : 2
+ Failed Devices : 0
+  Spare Devices : 0
+
+     Chunk Size : 512K
+
+           Name : lime.psc.edu:0  (local to host lime.psc.edu)
+           UUID : a0d268c8:c0aebca2:5f0523bb:87a277ce
+         Events : 0
+
+    Number   Major   Minor   RaidDevice State
+       0       8        0        0      active sync   /dev/sda
+       1       8       16        1      active sync   /dev/sdb
+
+In the log:
+
+
+[1504982458.53610500 msnbrqthr12:7ffebb3fc700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe6809ece0 x41358242/t0 cb=0x7fffd7afb53d c0 o42->@54321-128.182.99.27@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1504982456 :: type == PSCRPC_MSG_ERR, rc == -501
+[1504982458.54361100 msnbrqthr3:7ffefdbf6700:rpc rpcclient.c pscrpc_check_status 496]req@0x7ffe70074410 x41358251/t0 cb=0x7fffd7afb53d c0 o42->@54321-128.182.99.27@tcp10:30 lens 264/192 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-501 to=60 sent=1504982456 :: type == PSCRPC_MSG_ERR, rc == -501
+
+01/24/2018
+----------
+
+With orange (mds), lemon (ios), and zebes:
+
+zhihui@zebes: /zzh-slash2/zhihui$ dd if=/dev/zero of=big1.out bs=1M count=102400
+102400+0 records in
+102400+0 records out
+107374182400 bytes (107 GB) copied, 929.024 s, 116 MB/s
+zhihui@zebes: /zzh-slash2/zhihui$ dd if=/dev/zero of=big2.out bs=1M count=102400
+102400+0 records in
+102400+0 records out
+107374182400 bytes (107 GB) copied, 927.585 s, 116 MB/s
+
+zhihui@zebes: /zzh-slash2/zhihui$ dd if=big1.out of=/dev/null bs=1M
+102400+0 records in
+102400+0 records out
+107374182400 bytes (107 GB) copied, 1115.18 s, 96.3 MB/s
+zhihui@zebes: /zzh-slash2/zhihui$ dd if=big2.out of=/dev/null bs=1M
+102400+0 records in
+102400+0 records out
+107374182400 bytes (107 GB) copied, 1114.48 s, 96.3 MB/s
+
+zhihui@zebes: ~$ uname -a
+Linux zebes.psc.edu 4.4.0-1.el7.x86_64.netboot #1 SMP Fri Jan 22 00:31:19 EST 2016 x86_64 x86_64 x86_64 GNU/Linux
+
+bash-4.2# uname -a
+Linux lemon.psc.edu 3.10.0-123.20.1.el7.netboot #2 SMP Fri Feb 6 15:16:28 EST 2015 x86_64 x86_64 x86_64 GNU/Linux
+
+
+bash-4.2# mdadm --detail /dev/md0
+/dev/md0:
+        Version : 1.2
+  Creation Time : Fri Nov 10 11:47:17 2017
+     Raid Level : raid0
+     Array Size : 7568259584 (7217.65 GiB 7749.90 GB)
+   Raid Devices : 13
+  Total Devices : 13
+    Persistence : Superblock is persistent
+
+    Update Time : Fri Nov 10 11:47:17 2017
+          State : clean 
+ Active Devices : 13
+Working Devices : 13
+ Failed Devices : 0
+  Spare Devices : 0
+
+     Chunk Size : 512K
+
+           Name : lemon.psc.edu:0  (local to host lemon.psc.edu)
+           UUID : b60b3195:91f9e253:0b037690:3fbb4779
+         Events : 0
+
+    Number   Major   Minor   RaidDevice State
+       0       8       64        0      active sync   /dev/sde
+       1       8       80        1      active sync   /dev/sdf
+       2       8       96        2      active sync   /dev/sdg
+       3       8      112        3      active sync   /dev/sdh
+       4       8      128        4      active sync   /dev/sdi
+       5       8      144        5      active sync   /dev/sdj
+       6       8      160        6      active sync   /dev/sdk
+       7       8      176        7      active sync   /dev/sdl
+       8       8      192        8      active sync   /dev/sdm
+       9       8      208        9      active sync   /dev/sdn
+      10       8      224       10      active sync   /dev/sdo
+      11       8      240       11      active sync   /dev/sdp
+      12      65        0       12      active sync   /dev/sdq
+
+
+01/25/2018
+----------
+
+zhihui@zebes: /zzh-slash2/zhihui/linux-4.14.15$ time tar xvf ~/linux-4.14.15.tar.xz 
+
+real	6m57.846s
+user	0m12.508s
+sys	0m11.930s
+
+zhihui@zebes: /zzh-slash2/zhihui/linux-4.14.15$ time make -j 3
+
+
+  LD [M]  sound/soundcore.ko
+  LD [M]  sound/synth/emux/snd-emux-synth.ko
+  LD [M]  sound/synth/snd-util-mem.ko
+  LD [M]  sound/usb/6fire/snd-usb-6fire.ko
+  LD [M]  sound/usb/caiaq/snd-usb-caiaq.ko
+  LD [M]  sound/usb/misc/snd-ua101.ko
+  LD [M]  sound/usb/snd-usb-audio.ko
+  LD [M]  sound/usb/snd-usbmidi-lib.ko
+  LD [M]  sound/usb/usx2y/snd-usb-us122l.ko
+  LD [M]  sound/usb/usx2y/snd-usb-usx2y.ko
+  LD [M]  virt/lib/irqbypass.ko
+
+real	188m14.159s
+user	83m34.130s
+sys	19m21.552s
+
+
+zhihui@zebes: /zzh-slash2/zhihui/linux-4.14.15$ find . | wc -l
+112592
+zhihui@zebes: /zzh-slash2/zhihui/linux-4.14.15$ 
+
+
+02/10/2018
+----------
+
+128 iozone -a parallel test on orange/lemon/zebes: Total elapsed time: 168928 seconds.
+
