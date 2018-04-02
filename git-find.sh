@@ -25,7 +25,7 @@ if [ $# -eq 1 ]
 then
     if [ $commit -gt $total ]
     then
-        echo "Total number of commit is only $total"
+        echo "Total number of commit is only $total. Try git pull or git checkout master first."
         exit 0
     fi
 else
