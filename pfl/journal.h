@@ -37,7 +37,7 @@ struct psc_journal_enthdr;
 struct psc_ctlop;
 
 #define	PJ_MAX_TRY			3		/* number of retry before giving up */
-#define	PJ_MAX_BUF			8192		/* number of journal buffers to keep around */
+#define	PJ_MAX_BUF			16384		/* number of journal buffers to keep around */
 
 #define PJH_MAGIC			UINT64_C(0x45678912aabbccff)
 #define PJH_VERSION			0x02
