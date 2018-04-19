@@ -433,7 +433,9 @@ pjournal_get_buf(struct psc_journal *pj, size_t size)
 	    offsetof(struct psc_journal_enthdr, pje_data));
 
 	PJ_LOCK(pj);
+	OPSTAT_INCR("journal-get-buf");
 	while (!psc_dynarray_len(&pj->pj_bufs)) {
+		OPSTAT_INCR("journal-get-buf-wait");
 		pj->pj_flags |= PJF_WANTBUF;
 		psc_waitq_wait(&pj->pj_waitq, &pj->pj_lock);
 		PJ_LOCK(pj);
@@ -453,9 +455,11 @@ pjournal_put_buf(struct psc_journal *pj, void *buf)
 	pje = DATA_2_PJE(buf);
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
+	OPSTAT_INCR("journal-put-buf");
 	PJ_LOCK(pj);
 	psc_dynarray_add(&pj->pj_bufs, pje);
 	if (pj->pj_flags & PJF_WANTBUF) {
+		OPSTAT_INCR("journal-put-buf-wake");
 		pj->pj_flags &= ~PJF_WANTBUF;
 		psc_waitq_wakeall(&pj->pj_waitq);
 	}
