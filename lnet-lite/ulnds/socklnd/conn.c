@@ -690,8 +690,11 @@ usocklnd_destroy_conn(usock_conn_t *conn)
 		 *
 		 * 05/04/2018: Hit again on client.
 		 */
+#if 0
                 LASSERT (conn->uc_peer != NULL);
-                lnet_finalize(conn->uc_peer->up_ni, conn->uc_rx_lnetmsg, -EIO);
+#endif
+                if (conn->uc_peer != NULL)
+                	lnet_finalize(conn->uc_peer->up_ni, conn->uc_rx_lnetmsg, -EIO);
         }
 
         if (!list_empty(&conn->uc_tx_list)) {
