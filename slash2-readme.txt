@@ -161,6 +161,8 @@ list is currently as follows:
 	6. After all tests are done, run slmctl -sc and check the reference count of resources to
 	   make sure there are no leaks.
 
+	7. scp a small file into slash2 and check md5sum afterwards.
+
 06/03/2016
 ----------
 
