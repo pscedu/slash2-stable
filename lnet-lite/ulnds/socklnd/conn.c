@@ -687,9 +687,16 @@ usocklnd_destroy_conn(usock_conn_t *conn)
 		/*
 		 * 07/13/2017: Hit NULL assert below, called 
 		 * from usocklnd_poll_thread().
+		 *
+		 * 05/04/2018: Hit again on client.
 		 */
+#if 0
                 LASSERT (conn->uc_peer != NULL);
-                lnet_finalize(conn->uc_peer->up_ni, conn->uc_rx_lnetmsg, -EIO);
+#endif
+                if (conn->uc_peer != NULL)
+                	lnet_finalize(conn->uc_peer->up_ni, conn->uc_rx_lnetmsg, -EIO);
+		else
+			fprintf(stderr, "usocklnd_destroy_conn(): NULL uc_peer.\n");
         }
 
         if (!list_empty(&conn->uc_tx_list)) {

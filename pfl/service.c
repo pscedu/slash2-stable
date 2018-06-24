@@ -611,6 +611,7 @@ pscrpc_grow_req_bufs(struct pscrpc_service *svc)
 		rqbd = pscrpc_alloc_rqbd(svc);
 
 		if (rqbd == NULL) {
+			/* 01/29/2018: Crash here on signal 7 */
 			CERROR("%s: Can't allocate request buffer",
 				svc->srv_name);
 			return (-ENOMEM);
@@ -731,6 +732,7 @@ pscrpcthr_main(struct psc_thread *thr)
 			 svc->srv_n_active_reqs < (svc->srv_nthreads - 1)))
 		);
 #endif
+		/* 01/22/2018: Program terminated with signal 7, Bus error. */
 		(void)pscrpc_svr_wait_event(&svc->srv_waitq,
 		    pscrpcthr_waitevent(thr, svc) || !prt->prt_alive,
 		    &lwi, NULL);
