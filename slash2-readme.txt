@@ -1,3 +1,22 @@
+06/24/2018
+----------
+
+Add callback RPC so that slash2 works better when different clients access the same set of files.
+
+
+My test machines:
+
+bash-4.2# slmctl -sc
+resource                                      host type    flags stkvers txcr  #ref      uptime
+===============================================================================================
+PSC
+  lemon                              lemon.psc.edu local    -OW-   18950    8     2    2d06h22m
+  lime                                lime.psc.edu local    -OW-   45862    8     2    0d00h09m
+  polybius                        polybius.psc.edu local    -OW-   45862    8     2    0d00h03m
+clients
+                                      yuzu.psc.edu          -O--   45862    8     2    0d00h09m
+                                     zebes.psc.edu          -O--   45862    8     2    0d00h00m
+
 11/17/2017
 ----------
 
