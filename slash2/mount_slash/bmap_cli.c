@@ -48,7 +48,8 @@
 #define BMAP_DIOWAIT_NSEC	(500 * 1000 * 1000)
 #define BMAP_DIOWAIT_MAX_TRIES	32
 
-const struct timespec slc_bmap_diowait_max = { 60, 0 };
+#define BMAP_DIOWAIT_MAX_SEC	10
+const struct timespec slc_bmap_diowait_max = { BMAP_DIOWAIT_MAX_SEC, 0 };
 
 enum {
 	MSL_BMODECHG_CBARG_BMAP,
@@ -169,6 +170,19 @@ msl_bmap_stash_lease(struct bmap *b, const struct srt_bmapdesc *sbd,
 	if (b->bcm_flags & BMAPF_WR)
 		psc_assert(sbd->sbd_ios != IOS_ID_ANY);
 
+	/*
+ 	 * If we renew a lease repeatedly, we can get of DIO if
+ 	 * other parties have lost interest.
+ 	 */
+	if (!(sbd->sbd_flags & SRM_LEASEBMAPF_DIO)) {
+		OPSTAT_INCR("bmap-non-dio");
+		if (b->bcm_flags & BMAPF_DIO) {
+			OPSTAT_INCR("bmap-clear-dio");
+			b->bcm_flags &= ~BMAPF_DIO;
+		}
+	} else
+		OPSTAT_INCR("bmap-dio");
+
 	if (msl_force_dio)
 		b->bcm_flags |= BMAPF_DIO;
 
@@ -258,6 +272,7 @@ msl_bmap_retrieve_cb(struct pscrpc_request *rq,
 int
 msl_bmap_retrieve(struct bmap *b, int flags)
 {
+	int ret;
 	int blocking = !(flags & BMAPGETF_NONBLOCK), rc, nretries = 0;
 	struct timespec diowait_duration = { 0, BMAP_DIOWAIT_NSEC };
 	struct bmap_cli_info *bci = bmap_2_bci(b);
@@ -320,14 +335,16 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		rc = mp->rc;
  out:
 	if (rc == -SLERR_BMAP_DIOWAIT) {
-		OPSTAT_INCR("bmap-retrieve-diowait");
 
 		/* Retry for bmap to be DIO ready. */
 		DEBUG_BMAP(PLL_DIAG, b,
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
 		nretries++;
-		if (msl_bmap_diowait(&diowait_duration, nretries))
+		OPSTAT_INCR("bmap-retrieve-diowait");
+		ret = msl_bmap_diowait(&diowait_duration, nretries);
+		OPSTAT_INCR("bmap-retrieve-diowait-done");
+		if (ret)
 			goto retry;
 	}
 
@@ -335,6 +352,7 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		sl_csvc_decref(csvc);
 		csvc = NULL;
 	}
+
 	if (rc == -SLERR_BMAP_IN_PTRUNC)
 		rc = EAGAIN;
 
@@ -358,6 +376,11 @@ msl_bmap_retrieve(struct bmap *b, int flags)
 		pscrpc_req_finished(rq);
 		rq = NULL;
 		goto retry;
+	}
+
+	if (rc == -SLERR_BMAP_DIOWAIT) {
+		OPSTAT_INCR("msl.bmap-dio-wait");
+		rc = ETIMEDOUT;
 	}
 
 	if (!rc) {
@@ -476,6 +499,7 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 		pfr = pft->pft_pfr;
 	}
 
+	OPSTAT_INCR("msl.bmap-extend");
 	BMAP_LOCK_ENSURE(b);
 
 	/* already waiting for LEASEEXT reply */
@@ -544,8 +568,11 @@ msl_bmap_lease_extend(struct bmap *b, int blocking)
 	}
 
 	BMAP_LOCK(b);
-	if (!rc)
-		 msl_bmap_stash_lease(b, &mp->sbd, "extend");
+	if (!rc) {
+		OPSTAT_INCR("msl.bmap-extend-ok");
+		msl_bmap_stash_lease(b, &mp->sbd, "extend");
+	} else
+		OPSTAT_INCR("msl.bmap-extend-err");
 	b->bcm_flags &= ~(BMAPF_LEASEEXTREQ | BMAPF_LOADING);
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease extension req (rc=%d) (secs=%ld)", rc, secs);
@@ -610,6 +637,7 @@ msl_bmap_modeset_cb(struct pscrpc_request *rq,
 __static int
 msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 {
+	int ret;
 	int blocking = !(flags & BMAPGETF_NONBLOCK), rc, nretries = 0;
 	struct timespec diowait_duration = { 0, BMAP_DIOWAIT_NSEC };
 	struct slrpc_cservice *csvc = NULL;
@@ -680,14 +708,16 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, int flags)
 		rc = mp->rc;
  out:
 	if (rc == -SLERR_BMAP_DIOWAIT) {
-		OPSTAT_INCR("bmap-modeset-diowait");
 
 		/* Retry for bmap to be DIO ready. */
 		DEBUG_BMAP(PLL_DIAG, b,
 		    "SLERR_BMAP_DIOWAIT (try=%d)", nretries);
 
 		nretries++;
-		if (msl_bmap_diowait(&diowait_duration, nretries))
+		OPSTAT_INCR("bmap-modeset-diowait");
+		ret = msl_bmap_diowait(&diowait_duration, nretries);
+		OPSTAT_INCR("bmap-modeset-diowait-done");
+		if (ret)
 			goto retry;
 	}
 
@@ -1093,6 +1123,10 @@ msbwatchthr_main(struct psc_thread *thr)
 		LIST_CACHE_ULOCK(&msl_bmaptimeoutq);
 
 		DYNARRAY_FOREACH(b, i, &bmaps) {
+		
+			/*
+ 			 * Investigate: what is we get a DIO bmap?
+ 			 */
 			BMAP_LOCK(b);
 			msl_bmap_lease_extend(b, 0);
 			BMAP_LOCK(b);
@@ -1209,8 +1243,15 @@ msbreleasethr_main(struct psc_thread *thr)
 			lc_remove(&msl_bmaptimeoutq, bci);
 
 			if (b->bcm_flags & BMAPF_WR) {
-				/* Setup a msg to an ION. */
-				psc_assert(bmap_2_ios(b) != IOS_ID_ANY);
+				/*
+ 				 * 06/06/2018: trigger asserts here. Perhaps
+ 				 * the bmap is not fully set up or could not
+ 				 * be renewed. So I changed assert to skip.
+ 				 */
+				if (bmap_2_ios(b) == IOS_ID_ANY) {
+					OPSTAT_INCR("msl.bmap-release-write-skip");
+					goto skip;
+				}
 
 				resm = libsl_ios2resm(bmap_2_ios(b));
 				rmci = resm2rmci(resm);
@@ -1231,6 +1272,7 @@ msbreleasethr_main(struct psc_thread *thr)
 			rmci->rmci_bmaprls.nbmaps++;
 			psc_dynarray_add_ifdne(&rels, resm);
 
+ skip:
 			DEBUG_BMAP(PLL_DEBUG, b, "release");
 			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
 		}

@@ -68,12 +68,12 @@ struct fcmh_cli_info_dir {
  */
 struct fcmh_cli_info {
 	struct sl_resm			*fci_resm;
-	struct timeval			 fci_age;	/* attr update time */
 
+	long				 fci_expire;	/* attr expire time */
 	uint64_t                         fci_pino;	/* silly rename fields */
 	int                         	 fci_nopen;
 	char                            *fci_name;
-	uint32_t		 	 fci_xattrsize;
+	uint32_t		 	 fci_xattrsize; /* for dir or regular file */
 
 	union {
 		struct fcmh_cli_info_file f;
@@ -88,7 +88,6 @@ struct fcmh_cli_info {
 #define fcid_dircache_rwlock	u.d.dircache_rwlock
 	} u;
 	struct psc_listentry		 fci_lentry;	/* all fcmhs with dirty attributes */
-	struct timespec			 fci_etime;	/* attr expire time */
 };
 
 #define fcmh_2_dc_rwlock(f)	(&fcmh_2_fci(f)->fcid_dircache_rwlock)
@@ -111,7 +110,7 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 	return (fcmh - 1);
 }
 
-/* Client-specific fcmh_flags */
+/* Client-specific fcmh_flags: _FCMH_FLGSHFT = (1 <<  9) */
 #define FCMHF_INIT_DIRCACHE		(_FCMH_FLGSHFT << 0)	/* dircache initialized */
 #define FCMH_CLI_TRUNC			(_FCMH_FLGSHFT << 1)	/* truncate in progress */
 #define FCMH_CLI_DIRTY_DSIZE		(_FCMH_FLGSHFT << 2)	/* has dirty datesize */
@@ -126,10 +125,13 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 #define FCMH_SETATTRF_CLOBBER		(1 << 0)		/* overwrite any local updates (file size, etc) */
 #define FCMH_SETATTRF_HAVELOCK		(1 << 1)		/* fcmh spinlock doens't need to be obtained */
 
-void	slc_fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
+void	slc_fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int, int32_t);
 
-#define slc_fcmh_setattr(f, sstb)		slc_fcmh_setattrf((f), (sstb), 0)
-#define slc_fcmh_setattr_locked(f, sstb)	slc_fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK)
+#define slc_fcmh_setattr(f, sstb, timeout) \
+	slc_fcmh_setattrf((f), (sstb), 0, (timeout))
+
+#define slc_fcmh_setattr_locked(f, sstb, timeout) \
+	slc_fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK, (timeout))
 
 int	fcmh_checkcreds(struct fidc_membh *, struct pscfs_req *,
 	    const struct pscfs_creds *, int);

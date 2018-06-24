@@ -31,8 +31,10 @@
 #include "pfl/waitq.h"
 
 #include "bmap.h"
+#include "fidc_mds.h"
 #include "bmap_mds.h"
 #include "journal_mds.h"
+#include "slashd.h"
 
 struct bmap_timeo_table	 slm_bmap_leases;
 
@@ -239,8 +241,42 @@ slmbmaptimeothr_begin(struct psc_thread *thr)
 	struct bmap *b;
 	struct bmap_mds_lease *bml;
 	int rc, nsecs = 0;
+	struct timeval now;
+
+	struct fidc_membh *f;
+	struct fcmh_mds_info *fmi;
+	struct fcmh_mds_callback *cb, *tmp;
 
 	while (pscthr_run(thr)) {
+		/*
+		 * We walk the callback list to expire callback even if
+		 * there is NO sharing of files among clients.
+		 */
+		spinlock(&slm_fcmh_callbacks.ftt_lock);
+		PFL_GETTIMEVAL(&now);
+		PLL_FOREACH_SAFE(cb, tmp, &slm_fcmh_callbacks.ftt_callbacks) {
+			f = cb->fmc_fcmh; 
+			if (!FCMH_TRYLOCK(f))
+				continue;
+			if (cb->fmc_expire > now.tv_sec) {
+				FCMH_ULOCK(f);
+				break;
+			}
+			fmi = fcmh_2_fmi(f);
+			psc_assert(fmi->fmi_cb_count > 0);
+			fmi->fmi_cb_count--;
+
+			psclog_diag("fid="SLPRI_FID ", callback = %p, expire = %d, count = %d", 
+			    fcmh_2_fid(f), cb, cb->fmc_expire, fmi->fmi_cb_count);
+
+			psclist_del(&cb->fmc_lentry, &fmi->fmi_callbacks);
+			pll_remove(&slm_fcmh_callbacks.ftt_callbacks, cb);
+			psc_pool_return(slm_callback_pool, cb);
+			fcmh_op_done_type(f, FCMH_OPCNT_CALLBACK);
+			OPSTAT_INCR("slm-callbacks-free");
+		}
+		freelock(&slm_fcmh_callbacks.ftt_lock);
+
 		spinlock(&slm_bmap_leases.btt_lock);
 		bml = pll_peekhead(&slm_bmap_leases.btt_leases);
 		if (!bml) {

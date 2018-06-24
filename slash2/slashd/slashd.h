@@ -46,6 +46,11 @@ struct srt_stat;
 
 struct slm_sth;
 struct bmap_mds_lease;
+extern int slm_lease_timeout;
+extern int slm_callback_timeout;
+
+#define CALLBACK_TIMEO_MAX             240     /* max/default callback timeout */
+#define CALLBACK_TIMEO_MIN             40      /* minimum callback timeout */
 
 extern sqlite3	*db_handle;
 
@@ -312,6 +317,8 @@ slfid_t	slm_get_curr_slashfid(void);
 void	slm_set_curr_slashfid(slfid_t);
 int	slm_get_next_slashfid(slfid_t *);
 
+int	slm_fcmh_coherent_callback(struct fidc_membh *, struct pscrpc_export *, int32_t *);
+
 int	slm_ptrunc_prepare(struct fidc_membh *, struct srt_stat *, int);
 
 int	mdscoh_req(struct bmap_mds_lease *);
@@ -359,6 +366,7 @@ extern int	mds_read_file(void *, void *, uint64_t, size_t *, off_t);
 extern int	mds_write_file(void *, void *, uint64_t, size_t *, off_t);
 extern int	mds_release_file(void *);
 
+extern struct fcmh_timeo_table	slm_fcmh_callbacks;
 
 /*
  * List of fault point that will be auto-registered on startup.

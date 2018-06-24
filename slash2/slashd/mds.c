@@ -53,6 +53,14 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
+
+/*
+ * Longer timeout values reduce RPC cost, but need more memory to
+ * keep track of them.
+ */
+int			slm_lease_timeout = BMAP_TIMEO_MAX;
+int			slm_callback_timeout = CALLBACK_TIMEO_MAX;
+
 #define	SLM_CBARG_SLOT_CSVC	0
 
 struct pfl_odt		*slm_bia_odt;
@@ -139,12 +147,15 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 {
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct bmap_mds_lease *bml, *tmp;
+	struct fidc_membh *f = b->bcm_fcmh;
+	struct fcmh_mds_info *fmi;
 	int rc = 0, force_dio = 0;
 
 	BMAP_LOCK_ENSURE(b);
 
-	if (b->bcm_flags & BMAPF_DIO)
-		return (0);
+	fmi = fcmh_2_fmi(f);
+
+	b->bcm_flags &= ~BMAPF_DIO;
 
 	/*
 	 * We enter into DIO mode in three cases:
@@ -193,8 +204,19 @@ mds_bmap_directio(struct bmap *b, enum rw rw, int want_dio,
 			} while (tmp != bml);
 		}
 	}
+	/*
+	 * XXX if the file is shared, force DIO as well.
+	 */
 	if (!rc && (want_dio || force_dio)) {
-		OPSTAT_INCR("bmap-dio-set");
+		OPSTAT_INCR("bmap-dio-set-1");
+		b->bcm_flags |= BMAPF_DIO;
+	}
+
+	psclog_diag("fid="SLPRI_FID ", callback = %d", 
+	    fcmh_2_fid(f), fmi->fmi_cb_count);
+
+	if (fmi->fmi_cb_count > 1 && !(b->bcm_flags & BMAPF_DIO)) {
+		OPSTAT_INCR("bmap-dio-set-2");
 		b->bcm_flags |= BMAPF_DIO;
 	}
 	return (rc);
@@ -368,6 +390,13 @@ slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
 	int i, nr, begin;
 	struct sl_resource *pios, *r;
 
+	/*
+	 * 04/04/2018:
+	 *
+	 * When piosid is IOS_ID_ANY, this will return an empty list.
+	 * As a result, creating a new file will be rejected with
+	 * EHOSTDOWN.
+	 */
 	pios = libsl_id2res(piosid);
 	if (!pios || (!RES_ISFS(pios) && !RES_ISCLUSTER(pios)))
 		return;
@@ -1350,7 +1379,7 @@ mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
 
 	bml->bml_flags = flags;
 	bml->bml_start = time(NULL);
-	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
+	bml->bml_expire = bml->bml_start + slm_lease_timeout;
 	bml->bml_bmi = bmap_2_bmi(b);
 
 	bml->bml_exp = e;
@@ -1428,7 +1457,7 @@ mds_bia_odtable_startup_cb(void *data, int64_t item,
 	 * susceptible to gross changes in the system time.
 	 */
 	bml->bml_start = bia->bia_start;
-	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
+	bml->bml_expire = bml->bml_start + slm_lease_timeout;
 	if (bml->bml_expire <= time(NULL))
 		OPSTAT_INCR("bmap-restart-expired");
 
@@ -1552,6 +1581,10 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int lflags,
 	if (rc) {
 		bml->bml_flags |= BML_FREEING;
 		goto out;
+	}
+	if (b->bcm_flags & BMAPF_DIO) {
+		OPSTAT_INCR("bmap-dio-lease-2");
+		bml->bml_flags |= BML_DIO;
 	}
 
 	slm_fill_bmapdesc(sbd, b);
@@ -1706,6 +1739,10 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	if (rc)
 		goto out;
 
+	rc = slm_fcmh_coherent_callback(f, exp, NULL);
+	if (rc)
+		goto out;
+
 	/* Lookup the original lease to ensure it actually exists. */
 	obml = mds_bmap_getbml(b, sbd_in->sbd_seq,
 	    sbd_in->sbd_nid, sbd_in->sbd_pid);
@@ -1720,7 +1757,14 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		bml->bml_flags |= BML_FREEING;
 		goto out;
 	}
-
+	/*
+	 * DIO information will be informed to the client with
+	 * slm_fill_bmapdesc(). BML_DIO is for MDS internal use.
+	 */
+	if (b->bcm_flags & BMAPF_DIO) {
+		OPSTAT_INCR("bmap-dio-lease-1");
+		bml->bml_flags |= BML_DIO;
+	}
 	/* 
 	 * Do some post setup on the new lease. This is probably a 
 	 * good idea because the bmap replication table can change
@@ -1764,6 +1808,11 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	    sbd_in->sbd_seq, bml ? bml->bml_seq : 0,
 	    exp->exp_connection->c_peer.nid,
 	    exp->exp_connection->c_peer.pid);
+
+	if (!rc)
+		OPSTAT_INCR("bmap-renew-ok");
+	else
+		OPSTAT_INCR("bmap-renew-err");
 
 	if (b)
 		bmap_op_done(b);

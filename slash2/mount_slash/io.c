@@ -2018,7 +2018,7 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 	struct fcmh_cli_info *fci;
 	struct msl_fhent *mfh;
 	struct fidc_membh *f;
-	struct timespec ts;
+	struct timespec ts;	
 
 	mfh = q->mfsrq_mfh;
 	f = mfh->mfh_fcmh;
@@ -2037,9 +2037,12 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 		f->fcmh_flags |= FCMH_CLI_DIRTY_DSIZE;
 	}
 	if (!(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE)) {
+
+		/*
+ 		 * XXX If we are not allowed to cache attributes,
+ 		 * flush it immediately.
+ 		 */
 		fci = fcmh_2_fci(f);
-		fci->fci_etime.tv_sec = ts.tv_sec + msl_attributes_timeout;
-		fci->fci_etime.tv_nsec = ts.tv_nsec;
 		f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
 		lc_addtail(&msl_attrtimeoutq, fci);
 		fcmh_op_start_type(f, FCMH_OPCNT_DIRTY_QUEUE);
@@ -2084,6 +2087,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	off_t roff;
 
 	f = mfh->mfh_fcmh;
+
+	if (msl_read_only && rw == SL_WRITE)
+		PFL_GOTOERR(out3, rc = EROFS);
 
 	/* XXX EBADF if fd is not open for writing */
 

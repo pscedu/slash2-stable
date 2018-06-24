@@ -49,8 +49,13 @@
 #include "mount_slash.h"
 #include "rpc_cli.h"
 
-extern struct psc_waitq		msl_bmap_waitq;
 
+extern struct psc_waitq		 msl_bmap_waitq;
+
+/*
+ * If we fully truncate a file and then write to it in a loop, this 
+ * will trigger get bmap RPC repeatedly.
+ */
 void
 slc_fcmh_invalidate_bmap(struct fidc_membh *f, __unusedx int wait)
 {
@@ -114,8 +119,9 @@ slc_fcmh_invalidate_bmap(struct fidc_membh *f, __unusedx int wait)
  */ 
 void
 slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
-    int flags)
+    int flags, int32_t timeout)
 {
+	struct timeval now;
 	struct fcmh_cli_info *fci;
 
 	if (flags & FCMH_SETATTRF_HAVELOCK)
@@ -139,9 +145,7 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 			goto out;
 		}
 		if (fcmh_2_gen(f) < sstb->sst_gen) {
-#if 0
 			slc_fcmh_invalidate_bmap(f, 0);
-#endif
 			OPSTAT_INCR("msl.generation-forwards");
 			DEBUG_FCMH(PLL_DIAG, f, "attempt to set attr with "
 				"gen %"PRIu64" from old gen %"PRIu64,
@@ -200,7 +204,8 @@ slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb,
 		dircache_init(f);
 
 	fci = fcmh_2_fci(f);
-	PFL_GETTIMEVAL(&fci->fci_age);
+	PFL_GETTIMEVAL(&now);
+	fci->fci_expire = now.tv_sec + timeout;
 
 	DEBUG_FCMH(PLL_DEBUG, f, "attr set");
 
