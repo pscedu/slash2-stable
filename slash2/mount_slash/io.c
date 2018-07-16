@@ -1083,7 +1083,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	struct msl_fsrqinfo *q;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
-	struct pscfs_req *pfr;
+	struct pscfs_req *pfr = NULL;
 	struct iovec *iovs;
 	struct sl_resm *m;
 	struct bmap *b;
