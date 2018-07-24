@@ -307,8 +307,9 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 		psc_waitq_wakeone(&msl_flush_attrq);
 	}
 	if (fcmh_isdir(f)) {
+		OPSTAT_INCR("msl.dir-callback");
 		DIRCACHE_WRLOCK(f);
-		dircache_purge(f);
+		dircache_trim(f, 1);
 		DIRCACHE_ULOCK(f);
 		goto out;
 	}
