@@ -1879,6 +1879,8 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	/*
  	 * XXX Looks like we never free a page inside a callback. If we
  	 * use reference count properly, we should be able to do so.
+ 	 *
+ 	 * mslfsop_readdir() will free the page when it sees the error.
  	 */
 	p->dcp_rc = rc;
 	p->dcp_refcnt--;
