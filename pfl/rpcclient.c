@@ -718,6 +718,7 @@ pscrpc_queue_wait(struct pscrpc_request *req)
 			pscrpc_unregister_bulk(req);
 	}
 
+	/* 07/26/2018: signal 7 here due to garbage req value */
 	psc_assert(!req->rq_receiving_reply);
 	req->rq_phase = PSCRPC_RQ_PHASE_INTERPRET;
 
