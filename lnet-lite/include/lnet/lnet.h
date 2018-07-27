@@ -60,6 +60,14 @@
 #include <lnet/api.h>
 
 #define LNET_NIDSTR_COUNT  1024    /* # of nidstrings */
-#define LNET_NIDSTR_SIZE   32      /* size of each one (see below for usage) */
+
+/*
+ * Bump to 256 for similar reason as PSCRPC_NIDSTR_SIZE
+ *
+ * usocklnd_tear_peer_conn() and other places use this
+ * as a log buffer.
+ *
+ */
+#define LNET_NIDSTR_SIZE   256      /* size of each one (see below for usage) */
 
 #endif
