@@ -305,6 +305,7 @@ dircache_trim(struct fidc_membh *d, int force)
 
 	PFL_GETTIMEVAL(&now);
 	fci = fcmh_get_pri(d);
+	/* odd crash due to psc_assert(hd->plh_magic == PLENT_MAGIC) */
 	psclist_for_each_entry_safe(dce, tmp, &fci->fcid_entlist, dce_entry) {
 		if (!force && dce->dce_expire > now.tv_sec)
 			break;
