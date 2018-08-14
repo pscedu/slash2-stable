@@ -306,7 +306,7 @@ msrcm_handle_file_cb(struct pscrpc_request *rq)
 		lc_move2head(&msl_attrtimeoutq, fci);
 		psc_waitq_wakeone(&msl_flush_attrq);
 	}
-	if (fcmh_isdir(f)) {
+	if (fcmh_isdir(f) && msl_enable_namecache) {
 		OPSTAT_INCR("msl.dir-callback");
 		DIRCACHE_WRLOCK(f);
 		dircache_trim(f, 1);
